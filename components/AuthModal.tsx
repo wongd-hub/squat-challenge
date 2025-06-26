@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { sendLoginCode, verifyLoginCode, isSupabaseConfigured } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { Mail, Shield, AlertCircle, CheckCircle, User } from 'lucide-react';
 
 interface AuthModalProps {
@@ -16,7 +16,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<'email' | 'name' | 'code'>('email');
+  const [step, setStep] = useState<'form' | 'code'>('form');
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [code, setCode] = useState('');
@@ -25,7 +25,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   const [success, setSuccess] = useState('');
   const [isNewUser, setIsNewUser] = useState(false);
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isSupabaseConfigured()) {
@@ -38,45 +38,58 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
       return;
     }
 
+    // Check if user exists first
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id, display_name')
+      .eq('email', email.trim())
+      .single();
+
+    const userExists = !!existingProfile;
+
+    if (!userExists && !displayName.trim()) {
+      setError('Please enter your display name for account creation');
+      return;
+    }
+
+    if (!userExists && displayName.trim().length < 2) {
+      setError('Display name must be at least 2 characters long');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const result = await sendLoginCode(email.trim());
-      
-      if (result.isNewUser) {
-        setIsNewUser(true);
-        setStep('name');
-        setSuccess('Welcome! Please enter your display name to continue.');
-      } else {
-        setIsNewUser(false);
-        setStep('code');
-        setSuccess('Check your email for a 6-digit verification code');
+      // Call the edge function to send login code
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-login-code`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          displayName: userExists ? undefined : displayName.trim()
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send verification code');
       }
+
+      setIsNewUser(result.isNewUser);
+      setStep('code');
+      setSuccess('Check your email for a 6-digit verification code');
     } catch (error: any) {
       console.error('❌ Error sending code:', error);
       setError(error.message || 'Failed to send verification code. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleNameSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!displayName.trim()) {
-      setError('Please enter your display name');
-      return;
-    }
-
-    if (displayName.trim().length < 2) {
-      setError('Display name must be at least 2 characters long');
-      return;
-    }
-
-    setStep('code');
-    setSuccess('Check your email for a 6-digit verification code');
   };
 
   const handleVerifyCode = async (e: React.FormEvent) => {
@@ -96,11 +109,36 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
     setError('');
 
     try {
-      const result = await verifyLoginCode(email, code.trim(), isNewUser ? displayName.trim() : undefined);
-      
-      if (result.success && result.data.user) {
+      // Call the edge function to verify code
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/verify-login-code`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          code: code.trim(),
+          displayName: isNewUser ? displayName.trim() : undefined
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Invalid verification code');
+      }
+
+      if (result.success) {
         setSuccess('Successfully signed in!');
-        onAuthSuccess?.(result.data.user);
+        
+        // The edge function should have created the session
+        // Refresh the auth state
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          onAuthSuccess?.(session.user);
+        }
         
         // Close modal after a brief delay
         setTimeout(() => {
@@ -117,7 +155,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   };
 
   const resetForm = () => {
-    setStep('email');
+    setStep('form');
     setEmail('');
     setDisplayName('');
     setCode('');
@@ -135,11 +173,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   };
 
   const goBack = () => {
-    if (step === 'code') {
-      setStep(isNewUser ? 'name' : 'email');
-    } else if (step === 'name') {
-      setStep('email');
-    }
+    setStep('form');
     setError('');
   };
 
@@ -160,15 +194,11 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            {step === 'email' ? 'Sign In to Squat Challenge' : 
-             step === 'name' ? 'Welcome to Squat Challenge!' : 
-             'Verify Your Email'}
+            {step === 'form' ? 'Sign In to Squat Challenge' : 'Verify Your Email'}
           </DialogTitle>
           <DialogDescription>
-            {step === 'email' 
-              ? 'Enter your email to get started'
-              : step === 'name'
-              ? 'Choose a display name for the leaderboard'
+            {step === 'form' 
+              ? 'Enter your email and name (for new accounts) to get started'
               : 'Enter the 6-digit code sent to your email'
             }
           </DialogDescription>
@@ -191,8 +221,8 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
             </Alert>
           )}
 
-          {step === 'email' ? (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
+          {step === 'form' ? (
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input
@@ -205,6 +235,24 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   className="glass-subtle"
                 />
               </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Display Name</Label>
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="Your Name (required for new accounts)"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  disabled={isLoading}
+                  maxLength={50}
+                  className="glass-subtle"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Only required for new accounts. This name will appear on the leaderboard.
+                </p>
+              </div>
+              
               <Button 
                 type="submit" 
                 className="w-full" 
@@ -213,53 +261,15 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                 {isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Checking...
+                    Sending Code...
                   </>
                 ) : (
                   <>
                     <Mail className="w-4 h-4 mr-2" />
-                    Continue
+                    Send Verification Code
                   </>
                 )}
               </Button>
-            </form>
-          ) : step === 'name' ? (
-            <form onSubmit={handleNameSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input
-                  id="displayName"
-                  type="text"
-                  placeholder="Your Name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  disabled={isLoading}
-                  maxLength={50}
-                  className="glass-subtle"
-                />
-                <p className="text-xs text-muted-foreground">
-                  This name will appear on the leaderboard
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={goBack}
-                  disabled={isLoading}
-                  className="flex-1"
-                >
-                  Back
-                </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1" 
-                  disabled={isLoading}
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Continue
-                </Button>
-              </div>
             </form>
           ) : (
             <form onSubmit={handleVerifyCode} className="space-y-4">
