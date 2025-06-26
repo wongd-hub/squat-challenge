@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { SquatDial } from '@/components/SquatDial';
 import { DailyTarget } from '@/components/DailyTarget';
 import { ProgressChart } from '@/components/ProgressChart';
@@ -256,15 +256,21 @@ export default function Home() {
     }
   };
 
-  // ALWAYS use enhanced demo values for better count-up effect - regardless of actual data
-  const baseProgressTotal = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const totalSquats = Math.max(baseProgressTotal + 4847, 4847); // Ensure minimum of 4847
-  const currentStreak = Math.max(calculateStreak(progressData) + 18, 18); // Ensure minimum of 18
-  const weeklyGoal = 1250; // Fixed high goal
-  const baseWeeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const weeklyProgress = Math.max(baseWeeklyProgress + 892, 892); // Ensure minimum of 892
-
-  console.log('Enhanced demo values:', { totalSquats, currentStreak, weeklyGoal, weeklyProgress });
+  // STABLE enhanced demo values using useMemo - these won't change on re-renders
+  const enhancedStats = useMemo(() => {
+    console.log('🔢 Calculating enhanced stats (this should only happen once)');
+    
+    // Fixed impressive values for demo purposes
+    const stats = {
+      totalSquats: 4847,
+      currentStreak: 18,
+      weeklyGoal: 1250,
+      weeklyProgress: 892
+    };
+    
+    console.log('✨ Enhanced demo stats:', stats);
+    return stats;
+  }, []); // Empty dependency array means this only calculates once
 
   // Calculate display values based on challenge status
   const getDisplayDay = () => {
@@ -496,12 +502,12 @@ export default function Home() {
             </div>
           )}
 
-          {/* Stats Overview - Single Row on Desktop with Enhanced Values */}
+          {/* Stats Overview - Using stable enhanced values */}
           <StatsOverview
-            totalSquats={totalSquats}
-            streak={currentStreak}
-            weeklyGoal={weeklyGoal}
-            weeklyProgress={weeklyProgress}
+            totalSquats={enhancedStats.totalSquats}
+            streak={enhancedStats.currentStreak}
+            weeklyGoal={enhancedStats.weeklyGoal}
+            weeklyProgress={enhancedStats.weeklyProgress}
           />
 
           {/* Progress Chart */}

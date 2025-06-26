@@ -23,10 +23,11 @@ export function CountUp({
   const animationRef = useRef<number>();
 
   // Debug log
-  console.log('CountUp component:', { value, hasStarted, displayValue });
+  console.log('CountUp render:', { value, hasStarted, displayValue });
 
   useEffect(() => {
     if (!startOnView) {
+      console.log('CountUp: Starting animation immediately (not waiting for view)');
       startAnimation();
       return;
     }
@@ -34,7 +35,7 @@ export function CountUp({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !hasStarted) {
-          console.log('CountUp element in view, starting animation for value:', value);
+          console.log('CountUp: Element in view, starting animation for value:', value);
           startAnimation();
           setHasStarted(true);
         }
@@ -55,7 +56,7 @@ export function CountUp({
   }, [value, hasStarted, startOnView]);
 
   const startAnimation = () => {
-    console.log('Starting CountUp animation from 0 to', value);
+    console.log('CountUp: Starting animation from 0 to', value);
     const startTime = Date.now();
     const startValue = 0;
     const endValue = value;
@@ -75,7 +76,7 @@ export function CountUp({
         animationRef.current = requestAnimationFrame(animate);
       } else {
         setDisplayValue(endValue);
-        console.log('CountUp animation completed at value:', endValue);
+        console.log('CountUp: Animation completed at value:', endValue);
       }
     };
 
