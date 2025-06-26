@@ -29,7 +29,7 @@ export default function CountUp({
   onEnd,
 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const motionValue = useMotionValue(direction === "down" ? to : from);
+  const motionValue = useMotionValue(from); // Always start from the 'from' value
 
   const damping = 20 + 40 * (1 / duration);
   const stiffness = 100 * (1 / duration);
@@ -43,7 +43,7 @@ export default function CountUp({
 
   useEffect(() => {
     if (ref.current) {
-      ref.current.textContent = String(direction === "down" ? to : from);
+      ref.current.textContent = String(from); // Always start displaying the 'from' value
     }
   }, [from, to, direction]);
 
@@ -54,6 +54,8 @@ export default function CountUp({
       }
 
       const timeoutId = setTimeout(() => {
+        // For "up" direction: animate from 'from' to 'to'
+        // For "down" direction: animate from 'to' to 'from'
         motionValue.set(direction === "down" ? from : to);
       }, delay * 1000);
 
