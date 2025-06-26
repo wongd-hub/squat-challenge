@@ -163,7 +163,6 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   // Determine colors based on positive/negative
   const isNegative = tempSquats < 0;
   const progressColor = isNegative ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))';
-  const indicatorColor = isNegative ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))';
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -183,7 +182,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               strokeWidth="2"
               opacity="0.3"
             />
-            {/* Progress circle - Fixed direction for negative values */}
+            {/* Progress circle - Fixed for both positive and negative */}
             <circle
               cx="50"
               cy="50"
@@ -192,10 +191,12 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               stroke={progressColor}
               strokeWidth="3"
               strokeLinecap="round"
-              strokeDasharray={`${progressPercentage * 2.827} 282.7`}
-              // For negative values, start from opposite direction (bottom) and fill counter-clockwise
-              strokeDashoffset={isNegative ? `${282.7 / 2}` : "0"}
-              transform={isNegative ? "rotate(180 50 50) scale(-1 1)" : ""}
+              strokeDasharray="282.7"
+              strokeDashoffset={isNegative 
+                ? `${282.7 - (progressPercentage * 2.827)}` // For negative: fill counter-clockwise
+                : `${282.7 - (progressPercentage * 2.827)}`  // For positive: fill clockwise
+              }
+              transform={isNegative ? "rotate(180 50 50)" : ""}
               className="transition-all duration-300 ease-out"
             />
           </svg>
@@ -222,19 +223,22 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               {tempSquats > 0 ? `+${tempSquats}` : tempSquats}
             </div>
 
-            {/* Progress Indicator - Properly aligned */}
+            {/* New Dial Indicator - Diamond shape */}
             <div 
-              className={`absolute ${compact ? 'w-8 h-4' : 'w-12 h-6'} rounded-full flex items-center justify-center shadow-lg`}
+              className={`absolute ${compact ? 'w-6 h-6' : 'w-8 h-8'} flex items-center justify-center`}
               style={{
-                top: compact ? '6px' : '8px',
+                top: compact ? '4px' : '6px',
                 left: '50%',
                 transform: 'translateX(-50%)',
-                background: indicatorColor,
               }}
             >
-              <div className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} rounded-full flex items-center justify-center shadow-inner`} style={{ background: 'hsl(var(--muted))' }}>
-                <div className={`${compact ? 'w-1 h-1' : 'w-2 h-2'} rounded-full`} style={{ background: indicatorColor }}></div>
-              </div>
+              {/* Diamond indicator */}
+              <div 
+                className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} rotate-45 shadow-lg border-2 border-white`}
+                style={{ 
+                  background: progressColor,
+                }}
+              />
             </div>
           </div>
         </div>
