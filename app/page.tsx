@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { SquatDial } from '@/components/SquatDial';
 import { DailyTarget } from '@/components/DailyTarget';
 import { ProgressChart } from '@/components/ProgressChart';
@@ -256,21 +256,11 @@ export default function Home() {
     }
   };
 
-  // STABLE enhanced demo values using useMemo - these won't change on re-renders
-  const enhancedStats = useMemo(() => {
-    console.log('🔢 Calculating enhanced stats (this should only happen once)');
-    
-    // Fixed impressive values for demo purposes
-    const stats = {
-      totalSquats: 4847,
-      currentStreak: 18,
-      weeklyGoal: 1250,
-      weeklyProgress: 892
-    };
-    
-    console.log('✨ Enhanced demo stats:', stats);
-    return stats;
-  }, []); // Empty dependency array means this only calculates once
+  // Calculate actual values from data
+  const totalSquats = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
+  const currentStreak = calculateStreak(progressData);
+  const weeklyGoal = 850;
+  const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
 
   // Calculate display values based on challenge status
   const getDisplayDay = () => {
@@ -502,12 +492,12 @@ export default function Home() {
             </div>
           )}
 
-          {/* Stats Overview - Using stable enhanced values */}
+          {/* Stats Overview */}
           <StatsOverview
-            totalSquats={enhancedStats.totalSquats}
-            streak={enhancedStats.currentStreak}
-            weeklyGoal={enhancedStats.weeklyGoal}
-            weeklyProgress={enhancedStats.weeklyProgress}
+            totalSquats={totalSquats}
+            streak={currentStreak}
+            weeklyGoal={weeklyGoal}
+            weeklyProgress={weeklyProgress}
           />
 
           {/* Progress Chart */}
