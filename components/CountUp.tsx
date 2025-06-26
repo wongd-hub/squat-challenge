@@ -1,91 +1,110 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from "react";
+import { useInView, useMotionValue, useSpring } from "framer-motion";
 
 interface CountUpProps {
-  value: number;
+  to: number;
+  from?: number;
+  direction?: "up" | "down";
+  delay?: number;
   duration?: number;
   className?: string;
-  formatter?: (value: number) => string;
-  startOnView?: boolean;
+  startWhen?: boolean;
+  separator?: string;
+  onStart?: () => void;
+  onEnd?: () => void;
 }
 
-export function CountUp({ 
-  value, 
-  duration = 2000, 
-  className = '', 
-  formatter = (val) => val.toString(),
-  startOnView = true 
+export default function CountUp({
+  to,
+  from = 0,
+  direction = "up",
+  delay = 0,
+  duration = 2,
+  className = "",
+  startWhen = true,
+  separator = "",
+  onStart,
+  onEnd,
 }: CountUpProps) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const [hasStarted, setHasStarted] = useState(false);
-  const elementRef = useRef<HTMLDivElement>(null);
-  const animationRef = useRef<number>();
+  const ref = useRef<HTMLSpanElement>(null);
+  const motionValue = useMotionValue(direction === "down" ? to : from);
 
-  // Debug log
-  console.log('CountUp render:', { value, hasStarted, displayValue });
+  const damping = 20 + 40 * (1 / duration);
+  const stiffness = 100 * (1 / duration);
+
+  const springValue = useSpring(motionValue, {
+    damping,
+    stiffness,
+  });
+
+  const isInView = useInView(ref, { once: true, margin: "0px" });
 
   useEffect(() => {
-    if (!startOnView) {
-      console.log('CountUp: Starting animation immediately (not waiting for view)');
-      startAnimation();
-      return;
+    if (ref.current) {
+      ref.current.textContent = String(direction === "down" ? to : from);
     }
+  }, [from, to, direction]);
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasStarted) {
-          console.log('CountUp: Element in view, starting animation for value:', value);
-          startAnimation();
-          setHasStarted(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
+  useEffect(() => {
+    if (isInView && startWhen) {
+      if (typeof onStart === "function") {
+        onStart();
+      }
 
-    if (elementRef.current) {
-      observer.observe(elementRef.current);
+      const timeoutId = setTimeout(() => {
+        motionValue.set(direction === "down" ? from : to);
+      }, delay * 1000);
+
+      const durationTimeoutId = setTimeout(
+        () => {
+          if (typeof onEnd === "function") {
+            onEnd();
+          }
+        },
+        delay * 1000 + duration * 1000
+      );
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(durationTimeoutId);
+      };
     }
+  }, [
+    isInView,
+    startWhen,
+    motionValue,
+    direction,
+    from,
+    to,
+    delay,
+    onStart,
+    onEnd,
+    duration,
+  ]);
 
-    return () => {
-      observer.disconnect();
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+  useEffect(() => {
+    const unsubscribe = springValue.on("change", (latest) => {
+      if (ref.current) {
+        const options = {
+          useGrouping: !!separator,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        };
+
+        const formattedNumber = Intl.NumberFormat("en-US", options).format(
+          Number(latest.toFixed(0))
+        );
+
+        ref.current.textContent = separator
+          ? formattedNumber.replace(/,/g, separator)
+          : formattedNumber;
       }
-    };
-  }, [value, hasStarted, startOnView]);
+    });
 
-  const startAnimation = () => {
-    console.log('CountUp: Starting animation from 0 to', value);
-    const startTime = Date.now();
-    const startValue = 0;
-    const endValue = value;
+    return () => unsubscribe();
+  }, [springValue, separator]);
 
-    const animate = () => {
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Easing function for smooth animation
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
-
-      setDisplayValue(currentValue);
-
-      if (progress < 1) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        setDisplayValue(endValue);
-        console.log('CountUp: Animation completed at value:', endValue);
-      }
-    };
-
-    animationRef.current = requestAnimationFrame(animate);
-  };
-
-  return (
-    <div ref={elementRef} className={className}>
-      {formatter(displayValue)}
-    </div>
-  );
+  return <span className={`${className}`} ref={ref} />;
 }
