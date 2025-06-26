@@ -16,18 +16,43 @@ interface LeaderboardEntry {
   rank: number;
 }
 
+// Function to scramble names (except for "Darren Wong")
+const scrambleName = (name: string): string => {
+  if (name === "Darren Wong" || name === "Darren W") {
+    return name; // Don't scramble your name
+  }
+  
+  // List of scrambled names to use
+  const scrambledNames = [
+    "Alex K", "Jordan M", "Casey R", "Taylor B", "Morgan L",
+    "Riley P", "Avery S", "Quinn T", "Blake W", "Sage N",
+    "River C", "Phoenix D", "Rowan F", "Skylar H", "Emery J"
+  ];
+  
+  // Use a simple hash of the original name to consistently map to the same scrambled name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    const char = name.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  const index = Math.abs(hash) % scrambledNames.length;
+  return scrambledNames[index];
+};
+
 export function LeaderboardPreview() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
 
   useEffect(() => {
-    // Mock leaderboard data - in production this would come from Supabase
+    // Mock leaderboard data with scrambled names
     const mockData: LeaderboardEntry[] = [
-      { id: '1', name: 'Darren W', todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
-      { id: '2', name: 'Grissel A', todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
-      { id: '3', name: 'Afzal A', todaySquats: 60, totalSquats: 3124, streak: 15, rank: 3 },
-      { id: '4', name: 'Ching C', todaySquats: 0, totalSquats: 2764, streak: 0, rank: 4 },
-      { id: '5', name: 'Braidan S', todaySquats: 0, totalSquats: 1336, streak: 0, rank: 5 },
+      { id: '1', name: scrambleName('Darren W'), todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
+      { id: '2', name: scrambleName('Grissel A'), todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
+      { id: '3', name: scrambleName('Afzal A'), todaySquats: 60, totalSquats: 3124, streak: 15, rank: 3 },
+      { id: '4', name: scrambleName('Ching C'), todaySquats: 0, totalSquats: 2764, streak: 0, rank: 4 },
+      { id: '5', name: scrambleName('Braidan S'), todaySquats: 0, totalSquats: 1336, streak: 0, rank: 5 },
     ];
 
     setLeaderboardData(mockData);

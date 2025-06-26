@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface ShinyTextProps {
     text: string;
@@ -10,44 +10,43 @@ interface ShinyTextProps {
 }
 
 const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5, className = '' }) => {
-    const [animationDelay, setAnimationDelay] = useState(0);
-    const [animationDuration, setAnimationDuration] = useState(speed);
+    const [isShining, setIsShining] = useState(false);
+    const timeoutRef = useRef<NodeJS.Timeout>();
+    const intervalRef = useRef<NodeJS.Timeout>();
 
     useEffect(() => {
-        if (!disabled) {
-            // Generate random delay between 0-8 seconds for initial start
-            const randomDelay = Math.random() * 8;
-            setAnimationDelay(randomDelay);
+        if (disabled) return;
 
-            // Generate random duration between speed and speed * 1.5
-            const randomDuration = speed + (Math.random() * speed * 0.5);
-            setAnimationDuration(randomDuration);
+        const scheduleShine = () => {
+            // Clear any existing timeouts
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            if (intervalRef.current) clearTimeout(intervalRef.current);
 
-            // Set up random re-triggering
-            const scheduleNextAnimation = () => {
-                // Random interval between 8-20 seconds
-                const nextInterval = (8 + Math.random() * 12) * 1000;
+            // Random delay between 0-8 seconds for initial start
+            const randomDelay = Math.random() * 8000;
+            
+            timeoutRef.current = setTimeout(() => {
+                // Start shining
+                setIsShining(true);
                 
+                // Stop shining after the animation duration
                 setTimeout(() => {
-                    // Generate new random values
-                    const newDelay = Math.random() * 2; // Shorter delay for subsequent animations
-                    const newDuration = speed + (Math.random() * speed * 0.5);
-                    
-                    setAnimationDelay(newDelay);
-                    setAnimationDuration(newDuration);
-                    
-                    // Schedule the next one
-                    scheduleNextAnimation();
-                }, nextInterval);
-            };
+                    setIsShining(false);
+                }, speed * 1000);
+                
+                // Schedule next shine (8-20 seconds)
+                const nextInterval = (8 + Math.random() * 12) * 1000;
+                intervalRef.current = setTimeout(scheduleShine, nextInterval);
+            }, randomDelay);
+        };
 
-            // Start the random scheduling after initial animation
-            const initialTimeout = setTimeout(scheduleNextAnimation, (randomDelay + randomDuration) * 1000);
+        // Start the scheduling
+        scheduleShine();
 
-            return () => {
-                clearTimeout(initialTimeout);
-            };
-        }
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+            if (intervalRef.current) clearTimeout(intervalRef.current);
+        };
     }, [disabled, speed]);
 
     if (disabled) {
@@ -60,15 +59,14 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
 
     return (
         <div
-            className={`inline-block ${className}`}
+            className={`inline-block ${className} ${isShining ? 'animate-shine' : ''}`}
             style={{
                 background: 'linear-gradient(120deg, hsl(var(--muted-foreground)) 30%, rgba(255, 255, 255, 0.9) 50%, hsl(var(--muted-foreground)) 70%)',
                 backgroundSize: '200% 100%',
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 color: 'transparent',
-                animation: `shine ${animationDuration}s ease-in-out infinite`,
-                animationDelay: `${animationDelay}s`,
+                animationDuration: `${speed}s`,
                 // Fallback for browsers that don't support background-clip: text
             }}
         >

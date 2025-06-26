@@ -17,25 +17,51 @@ interface LeaderboardEntry {
   rank: number;
 }
 
+// Function to scramble names (except for "Darren Wong")
+const scrambleName = (name: string): string => {
+  if (name === "Darren Wong" || name === "Darren W") {
+    return name; // Don't scramble your name
+  }
+  
+  // List of scrambled names to use
+  const scrambledNames = [
+    "Alex K", "Jordan M", "Casey R", "Taylor B", "Morgan L",
+    "Riley P", "Avery S", "Quinn T", "Blake W", "Sage N",
+    "River C", "Phoenix D", "Rowan F", "Skylar H", "Emery J",
+    "Cameron G", "Drew H", "Finley K", "Hayden L", "Kendall M"
+  ];
+  
+  // Use a simple hash of the original name to consistently map to the same scrambled name
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    const char = name.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  const index = Math.abs(hash) % scrambledNames.length;
+  return scrambledNames[index];
+};
+
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
 
   useEffect(() => {
-    // Mock leaderboard data - in production this would come from your database
+    // Mock leaderboard data with scrambled names
     const mockData: LeaderboardEntry[] = [
-      { id: '1', name: 'Darren W', todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
-      { id: '2', name: 'Grissel A', todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
-      { id: '3', name: 'Afzal A', todaySquats: 60, totalSquats: 3124, streak: 15, rank: 3 },
-      { id: '4', name: 'Ching C', todaySquats: 0, totalSquats: 2764, streak: 0, rank: 4 },
-      { id: '5', name: 'Braidan S', todaySquats: 0, totalSquats: 1336, streak: 0, rank: 5 },
-      { id: '6', name: 'David M', todaySquats: 0, totalSquats: 1286, streak: 0, rank: 6 },
-      { id: '7', name: 'Isaac H', todaySquats: 0, totalSquats: 955, streak: 0, rank: 7 },
-      { id: '8', name: 'Devika L', todaySquats: 0, totalSquats: 581, streak: 0, rank: 8 },
-      { id: '9', name: 'Vincent D', todaySquats: 0, totalSquats: 543, streak: 0, rank: 9 },
-      { id: '10', name: 'Wentao L', todaySquats: 0, totalSquats: 30, streak: 0, rank: 10 },
-      { id: '11', name: 'Peter H', todaySquats: 0, totalSquats: 0, streak: 0, rank: 11 },
-      { id: '12', name: 'Jake C', todaySquats: 0, totalSquats: 0, streak: 0, rank: 12 },
+      { id: '1', name: scrambleName('Darren W'), todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
+      { id: '2', name: scrambleName('Grissel A'), todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
+      { id: '3', name: scrambleName('Afzal A'), todaySquats: 60, totalSquats: 3124, streak: 15, rank: 3 },
+      { id: '4', name: scrambleName('Ching C'), todaySquats: 0, totalSquats: 2764, streak: 0, rank: 4 },
+      { id: '5', name: scrambleName('Braidan S'), todaySquats: 0, totalSquats: 1336, streak: 0, rank: 5 },
+      { id: '6', name: scrambleName('David M'), todaySquats: 0, totalSquats: 1286, streak: 0, rank: 6 },
+      { id: '7', name: scrambleName('Isaac H'), todaySquats: 0, totalSquats: 955, streak: 0, rank: 7 },
+      { id: '8', name: scrambleName('Devika L'), todaySquats: 0, totalSquats: 581, streak: 0, rank: 8 },
+      { id: '9', name: scrambleName('Vincent D'), todaySquats: 0, totalSquats: 543, streak: 0, rank: 9 },
+      { id: '10', name: scrambleName('Wentao L'), todaySquats: 0, totalSquats: 30, streak: 0, rank: 10 },
+      { id: '11', name: scrambleName('Peter H'), todaySquats: 0, totalSquats: 0, streak: 0, rank: 11 },
+      { id: '12', name: scrambleName('Jake C'), todaySquats: 0, totalSquats: 0, streak: 0, rank: 12 },
     ];
 
     setLeaderboardData(mockData);

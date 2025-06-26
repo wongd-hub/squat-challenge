@@ -408,7 +408,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
           </div>
         </div>
 
-        {/* Enhanced Progress Indicator */}
+        {/* Enhanced Progress Indicator - Fixed mobile clipping */}
         <div className="mt-4 p-4 glass-strong rounded-xl border border-primary/10">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium">
@@ -418,7 +418,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
               {getProgressDisplayDay()}/{CHALLENGE_CONFIG.TOTAL_DAYS} days
             </span>
           </div>
-          <div className="relative">
+          <div className="relative pt-6 pb-2">
             <div className="w-full bg-muted/30 rounded-full h-3 overflow-hidden">
               <div 
                 className={`h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${
@@ -432,9 +432,9 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
               </div>
             </div>
-            {/* Progress percentage - Fixed mobile clipping */}
-            <div className="absolute -top-6 left-0 right-0 flex justify-center">
-              <span className="text-xs font-medium text-primary bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50 whitespace-nowrap">
+            {/* Progress percentage - Fixed mobile clipping with better positioning */}
+            <div className="absolute top-0 left-0 right-0 flex justify-center">
+              <span className="text-xs font-medium text-primary bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full border border-border/50 whitespace-nowrap shadow-sm">
                 {getProgressPercentage().toFixed(1)}%
               </span>
             </div>
