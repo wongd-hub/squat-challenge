@@ -49,29 +49,57 @@ export default function LeaderboardPage() {
   });
 
   const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Trophy className="w-5 h-5 text-yellow-500" />;
-      case 2:
-        return <Medal className="w-5 h-5 text-gray-400" />;
-      case 3:
-        return <Award className="w-5 h-5 text-amber-600" />;
-      default:
-        return <span className="w-5 h-5 flex items-center justify-center text-sm font-bold text-muted-foreground">#{rank}</span>;
+    // Only show special icons for all-time leaderboard
+    if (activeTab === 'total') {
+      switch (rank) {
+        case 1:
+          return <Trophy className="w-5 h-5 text-yellow-500" />;
+        case 2:
+          return <Medal className="w-5 h-5 text-gray-400" />;
+        case 3:
+          return <Award className="w-5 h-5 text-amber-600" />;
+        default:
+          return <span className="w-5 h-5 flex items-center justify-center text-sm font-bold text-muted-foreground">#{rank}</span>;
+      }
+    } else {
+      // For daily leaderboard, just show rank numbers
+      return <span className="w-5 h-5 flex items-center justify-center text-sm font-bold text-muted-foreground">#{rank}</span>;
     }
   };
 
   const getRankBadgeColor = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700';
-      case 2:
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700';
-      case 3:
-        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700';
-      default:
-        return 'bg-muted/50 text-muted-foreground border-border';
+    // Only show special badges for all-time leaderboard
+    if (activeTab === 'total') {
+      switch (rank) {
+        case 1:
+          return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700';
+        case 2:
+          return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-300 dark:border-gray-700';
+        case 3:
+          return 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700';
+        default:
+          return 'bg-muted/50 text-muted-foreground border-border';
+      }
+    } else {
+      return 'bg-muted/50 text-muted-foreground border-border';
     }
+  };
+
+  const getBadgeText = (rank: number) => {
+    // Only show special badges for all-time leaderboard
+    if (activeTab === 'total') {
+      switch (rank) {
+        case 1:
+          return '🥇 Champion';
+        case 2:
+          return '🥈 Runner-up';
+        case 3:
+          return '🥉 Third Place';
+        default:
+          return null;
+      }
+    }
+    return null;
   };
 
   return (
@@ -143,7 +171,8 @@ export default function LeaderboardPage() {
               {/* Leaderboard Entries */}
               {sortedData.map((entry, index) => {
                 const displayRank = index + 1;
-                const isTopThree = displayRank <= 3;
+                const isTopThree = displayRank <= 3 && activeTab === 'total';
+                const badgeText = getBadgeText(displayRank);
                 
                 return (
                   <div
@@ -159,9 +188,9 @@ export default function LeaderboardPage() {
                           {getRankIcon(displayRank)}
                           <div>
                             <div className="font-semibold text-foreground">{entry.name}</div>
-                            {isTopThree && (
+                            {badgeText && (
                               <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                                {displayRank === 1 ? '🥇 Champion' : displayRank === 2 ? '🥈 Runner-up' : '🥉 Third Place'}
+                                {badgeText}
                               </Badge>
                             )}
                           </div>
@@ -193,9 +222,9 @@ export default function LeaderboardPage() {
                       <div className="col-span-5 flex items-center">
                         <div>
                           <div className="font-semibold text-foreground">{entry.name}</div>
-                          {isTopThree && (
+                          {badgeText && (
                             <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                              {displayRank === 1 ? '🥇 Champion' : displayRank === 2 ? '🥈 Runner-up' : '🥉 Third Place'}
+                              {badgeText}
                             </Badge>
                           )}
                         </div>

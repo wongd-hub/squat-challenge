@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { storage, database, auth, isSupabaseConfigured, getChallengeDay, getDateFromChallengeDay, CHALLENGE_CONFIG } from '@/lib/supabase';
-import { Calendar, Info, Users, LogOut, User } from 'lucide-react';
+import { Calendar, Info, Users, LogOut, User, Trophy, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -233,6 +233,9 @@ export default function Home() {
   const weeklyGoal = 350; // 50 squats × 7 days
   const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
 
+  // Check if challenge has ended
+  const isChallengeComplete = currentDay > CHALLENGE_CONFIG.TOTAL_DAYS;
+
   // Get display name for user
   const getDisplayName = () => {
     if (userProfile?.display_name) {
@@ -261,11 +264,11 @@ export default function Home() {
   return (
     <div className="min-h-screen gradient-bg">
       <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
-        {/* Mobile-Optimized Header */}
+        {/* Centered Header */}
         <div className="mb-6 md:mb-8">
           {/* Top Row - Title and Controls */}
           <div className="flex justify-between items-start mb-4">
-            <div className="flex-1 text-center md:text-left">
+            <div className="flex-1 text-center">
               <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                 Squat Challenge
               </h1>
@@ -274,7 +277,7 @@ export default function Home() {
               </p>
             </div>
             
-            {/* Controls - Stacked on mobile */}
+            {/* Controls - Right aligned */}
             <div className="flex flex-col items-end gap-2 ml-4">
               <div className="flex items-center gap-2">
                 {user ? (
@@ -300,8 +303,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Status Badges Row - Centered on desktop */}
-          <div className="flex flex-wrap justify-center md:justify-center gap-2 mb-4">
+          {/* Status Badges Row - Centered */}
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
             <Badge variant="outline" className="text-xs glass-subtle">
               <Calendar className="w-3 h-3 mr-1" />
               Day {currentDay} of {CHALLENGE_CONFIG.TOTAL_DAYS}
@@ -311,7 +314,7 @@ export default function Home() {
             </Badge>
           </div>
 
-          {/* Action Buttons Row - Centered on desktop */}
+          {/* Action Buttons Row - Centered */}
           <div className="flex flex-wrap justify-center gap-2">
             <Button
               variant="ghost"
@@ -330,6 +333,29 @@ export default function Home() {
             </Link>
           </div>
         </div>
+
+        {/* Challenge Complete Message */}
+        {isChallengeComplete && (
+          <Card className="mb-6 md:mb-8 glass-strong border-green-500/20 max-w-4xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-center justify-center">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+                <span className="bg-gradient-to-r from-yellow-600 to-orange-600 dark:from-yellow-400 dark:to-orange-400 bg-clip-text text-transparent">
+                  Challenge Complete!
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-3">
+              <div className="text-4xl mb-4">🎉</div>
+              <p className="text-lg font-semibold text-green-600 dark:text-green-400">
+                Congratulations! You've completed the 23-day squat challenge!
+              </p>
+              <p className="text-muted-foreground">
+                Check out your progress below and see how you compare on the leaderboard.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Data Source Info */}
         {!isSupabaseConfigured() && (
@@ -368,32 +394,34 @@ export default function Home() {
 
         {/* Centered Content Layout */}
         <div className="space-y-6 md:space-y-8 max-w-5xl mx-auto">
-          {/* Mobile-First Layout: Squat Dial at Top, Desktop: Side by side */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-            {/* Squat Dial */}
-            <Card className="glass-strong">
-              <CardContent className="p-4 md:p-8">
-                <div className="text-center mb-6">
-                  <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Squat Dial</h2>
-                  <p className="text-sm md:text-base text-muted-foreground">Drag clockwise to add, counter-clockwise to subtract</p>
-                </div>
-                <SquatDial
-                  onSquatsChange={handleSquatsUpdate}
-                  currentSquats={todaySquats}
-                  targetSquats={todayTarget}
-                  currentDay={currentDay}
-                  compact={false}
-                />
-              </CardContent>
-            </Card>
+          {/* Only show squat dial and daily target if challenge is not complete */}
+          {!isChallengeComplete && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+              {/* Squat Dial */}
+              <Card className="glass-strong">
+                <CardContent className="p-4 md:p-8">
+                  <div className="text-center mb-6">
+                    <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Squat Dial</h2>
+                    <p className="text-sm md:text-base text-muted-foreground">Drag clockwise to add, counter-clockwise to subtract</p>
+                  </div>
+                  <SquatDial
+                    onSquatsChange={handleSquatsUpdate}
+                    currentSquats={todaySquats}
+                    targetSquats={todayTarget}
+                    currentDay={currentDay}
+                    compact={false}
+                  />
+                </CardContent>
+              </Card>
 
-            {/* Daily Target */}
-            <DailyTarget
-              targetSquats={todayTarget}
-              completedSquats={todaySquats}
-              day={currentDay}
-            />
-          </div>
+              {/* Daily Target */}
+              <DailyTarget
+                targetSquats={todayTarget}
+                completedSquats={todaySquats}
+                day={currentDay}
+              />
+            </div>
+          )}
 
           {/* Stats Overview - Single Row on Desktop */}
           <StatsOverview
