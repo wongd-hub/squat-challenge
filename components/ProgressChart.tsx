@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Target, CheckCircle } from 'lucide-react';
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { getChallengeDay, CHALLENGE_CONFIG } from '@/lib/supabase';
 
 interface ProgressData {
   date: string;
@@ -28,66 +29,65 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   const [currentDay, setCurrentDay] = useState(1);
   const [challengeData, setChallengeData] = useState<any[]>([]);
 
-  // Generate 23-day challenge data
+  // Generate challenge data using actual daily targets from database
   const generateChallengeDays = useCallback(() => {
-    // Only access localStorage on client side
     if (typeof window === 'undefined') return [];
 
-    const challengeStart = new Date();
-    const startDateStr = localStorage.getItem('challengeStartDate');
-    if (startDateStr) {
-      challengeStart.setTime(new Date(startDateStr).getTime());
-    }
+    const today = new Date().toISOString().split('T')[0];
+    const todayDay = getChallengeDay(today);
 
-    return Array.from({ length: 23 }, (_, i) => {
+    // Use the actual daily targets from the database
+    const totalDays = Math.max(dailyTargets.length, CHALLENGE_CONFIG.TOTAL_DAYS);
+    
+    return Array.from({ length: totalDays }, (_, i) => {
+      const dayNumber = i + 1;
+      const challengeStart = new Date(CHALLENGE_CONFIG.START_DATE);
       const dayDate = new Date(challengeStart);
       dayDate.setDate(challengeStart.getDate() + i);
       const dateStr = dayDate.toISOString().split('T')[0];
       
       // Find existing progress data for this day
       const existingData = data.find(d => d.date === dateStr);
-      // Get target from dailyTargets array
-      const targetSquats = dailyTargets.find(t => t.day === i + 1)?.target_squats || 50;
+      
+      // Get target from dailyTargets array (from database)
+      const targetSquats = dailyTargets.find(t => t.day === dayNumber)?.target_squats ?? 50;
       const completedSquats = existingData?.squats_completed || 0;
       
       return {
-        day: i + 1,
+        day: dayNumber,
         date: dateStr,
-        dayLabel: `Day ${i + 1}`,
+        dayLabel: `Day ${dayNumber}`,
         target_squats: targetSquats,
         squats_completed: completedSquats,
         // For stacked bar: show remaining target as separate value
         remaining_target: Math.max(0, targetSquats - completedSquats),
-        isToday: i + 1 === currentDay,
-        isPast: i + 1 < currentDay,
-        isFuture: i + 1 > currentDay,
-        completionRate: targetSquats > 0 ? (completedSquats / targetSquats) * 100 : 0,
-        isCompleted: completedSquats >= targetSquats,
+        isToday: dayNumber === todayDay,
+        isPast: dayNumber < todayDay,
+        isFuture: dayNumber > todayDay,
+        completionRate: targetSquats > 0 ? (completedSquats / targetSquats) * 100 : 100,
+        isCompleted: targetSquats === 0 ? true : completedSquats >= targetSquats,
         isRestDay: targetSquats === 0
       };
     });
-  }, [data, currentDay, dailyTargets]);
+  }, [data, dailyTargets]);
 
   useEffect(() => {
-    // Only run on client side
     if (typeof window === 'undefined') return;
 
     // Calculate current day
-    const startDate = localStorage.getItem('challengeStartDate');
-    if (startDate) {
-      const start = new Date(startDate);
-      const today = new Date();
-      const diffTime = Math.abs(today.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      setCurrentDay(Math.min(diffDays, 23));
-    }
+    const today = new Date().toISOString().split('T')[0];
+    const todayDay = getChallengeDay(today);
+    setCurrentDay(todayDay);
   }, []);
 
   useEffect(() => {
-    // Generate challenge data after component mounts
-    const data = generateChallengeDays();
-    setChallengeData(data);
-  }, [generateChallengeDays]);
+    // Generate challenge data when dailyTargets or data changes
+    if (dailyTargets.length > 0) {
+      const challengeData = generateChallengeDays();
+      setChallengeData(challengeData);
+      console.log('📊 Generated challenge data with', challengeData.length, 'days using database targets');
+    }
+  }, [generateChallengeDays, dailyTargets]);
 
   useEffect(() => {
     // Auto-scroll to current day
@@ -143,7 +143,8 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   const totalCompleted = challengeData.reduce((acc, day) => acc + day.squats_completed, 0);
   const totalTarget = challengeData.reduce((acc, day) => acc + day.target_squats, 0);
   const overallCompletion = totalTarget > 0 ? (totalCompleted / totalTarget) * 100 : 0;
-  const completedDays = challengeData.filter(day => day.isCompleted || day.isRestDay).length;
+  const completedDays = challengeData.filter(day => day.isCompleted).length;
+  const totalDays = challengeData.length;
 
   return (
     <Card className="glass">
@@ -152,12 +153,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
           <div>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              23-Day Challenge Progress
+              {totalDays}-Day Challenge Progress
             </CardTitle>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
               <span>Total: {totalCompleted.toLocaleString()} / {totalTarget.toLocaleString()} squats</span>
               <span>Overall: {overallCompletion.toFixed(1)}%</span>
-              <span>Days completed: {completedDays}/23</span>
+              <span>Days completed: {completedDays}/{totalDays}</span>
             </div>
           </div>
           
@@ -283,7 +284,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             <div className="text-sm text-muted-foreground">Overall Progress</div>
           </div>
           <div className="text-center p-4 glass-subtle rounded-xl">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{23 - currentDay + 1}</div>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{Math.max(0, totalDays - currentDay + 1)}</div>
             <div className="text-sm text-muted-foreground">Days Remaining</div>
           </div>
         </div>
@@ -292,12 +293,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
         <div className="mt-6 p-4 glass-subtle rounded-xl">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">Challenge Progress</span>
-            <span className="text-sm text-muted-foreground">{currentDay}/23 days</span>
+            <span className="text-sm text-muted-foreground">{currentDay}/{totalDays} days</span>
           </div>
           <div className="w-full bg-muted/30 rounded-full h-2">
             <div 
               className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(currentDay / 23) * 100}%` }}
+              style={{ width: `${Math.min((currentDay / totalDays) * 100, 100)}%` }}
             ></div>
           </div>
         </div>

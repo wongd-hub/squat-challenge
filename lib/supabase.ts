@@ -10,8 +10,8 @@ export const auth = supabase.auth
 
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
-  START_DATE: '2024-01-01',
-  TOTAL_DAYS: 30
+  START_DATE: '2025-01-01', // Updated to 2025
+  TOTAL_DAYS: 23 // Updated to match the database
 }
 
 // Utility function to check if Supabase is configured
@@ -38,11 +38,17 @@ export const getDateFromChallengeDay = (day: number): string => {
 export const database = {
   getDailyTargets: async () => {
     if (!isSupabaseConfigured()) {
-      // Return default targets for offline mode
-      const defaultTargets = Array.from({ length: CHALLENGE_CONFIG.TOTAL_DAYS }, (_, i) => ({
-        day: i + 1,
-        target_squats: i % 7 === 6 ? 0 : 50 // Rest day every 7th day
-      }))
+      // Return the correct targets for offline mode (matching database)
+      const defaultTargets = [
+        { day: 1, target_squats: 120 }, { day: 2, target_squats: 75 }, { day: 3, target_squats: 140 },
+        { day: 4, target_squats: 143 }, { day: 5, target_squats: 0 }, { day: 6, target_squats: 128 },
+        { day: 7, target_squats: 103 }, { day: 8, target_squats: 170 }, { day: 9, target_squats: 167 },
+        { day: 10, target_squats: 130 }, { day: 11, target_squats: 200 }, { day: 12, target_squats: 0 },
+        { day: 13, target_squats: 163 }, { day: 14, target_squats: 174 }, { day: 15, target_squats: 160 },
+        { day: 16, target_squats: 170 }, { day: 17, target_squats: 210 }, { day: 18, target_squats: 191 },
+        { day: 19, target_squats: 0 }, { day: 20, target_squats: 220 }, { day: 21, target_squats: 170 },
+        { day: 22, target_squats: 230 }, { day: 23, target_squats: 150 }
+      ]
       return { data: defaultTargets, error: null }
     }
 
@@ -51,6 +57,8 @@ export const database = {
         .from('daily_targets')
         .select('*')
         .order('day')
+      
+      console.log('📊 Loaded daily targets from Supabase:', data?.length || 0, 'targets')
       return { data, error }
     } catch (error) {
       console.error('Error fetching daily targets:', error)
