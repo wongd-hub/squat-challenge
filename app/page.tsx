@@ -157,19 +157,39 @@ export default function Home() {
         // Load recent progress for chart (last 7 days)
         const { data: recentProgress } = await database.getUserProgress(user.id, 7);
         if (recentProgress) {
-          setProgressData(recentProgress);
-          const todayProgress = recentProgress.find(p => p.date === today);
+          // Add target_squats to each progress entry by looking up from dailyTargets
+          const progressWithTargets = recentProgress.map(progress => {
+            const progressDay = getChallengeDay(progress.date);
+            const target = dailyTargets.find(t => t.day === progressDay)?.target_squats || 50;
+            return {
+              ...progress,
+              target_squats: target
+            };
+          });
+          
+          setProgressData(progressWithTargets);
+          const todayProgress = progressWithTargets.find(p => p.date === today);
           setTodaySquats(todayProgress?.squats_completed || 0);
         }
 
         // Load ALL challenge progress for stats (challenge dates only)
         const { data: challengeProgress } = await database.getChallengeProgress(user.id);
         if (challengeProgress) {
-          setChallengeProgressData(challengeProgress);
-          console.log(`✅ Loaded ${challengeProgress.length} challenge progress records from Supabase`);
+          // Add target_squats to each challenge progress entry
+          const challengeProgressWithTargets = challengeProgress.map(progress => {
+            const progressDay = getChallengeDay(progress.date);
+            const target = dailyTargets.find(t => t.day === progressDay)?.target_squats || 50;
+            return {
+              ...progress,
+              target_squats: target
+            };
+          });
+          
+          setChallengeProgressData(challengeProgressWithTargets);
+          console.log(`✅ Loaded ${challengeProgressWithTargets.length} challenge progress records from Supabase`);
           
           // Calculate total squats from challenge data
-          const totalSquats = challengeProgress.reduce((acc, day) => acc + day.squats_completed, 0);
+          const totalSquats = challengeProgressWithTargets.reduce((acc, day) => acc + day.squats_completed, 0);
           console.log(`📊 Total challenge squats: ${totalSquats}`);
         }
       } catch (error) {
@@ -194,20 +214,41 @@ export default function Home() {
       const sampleData = Array.from({ length: 7 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (6 - i));
+        const challengeDay = getChallengeDay(date.toISOString().split('T')[0]);
+        const target = dailyTargets.find(t => t.day === challengeDay)?.target_squats || 50;
+        
         return {
           date: date.toISOString().split('T')[0],
           squats_completed: Math.floor(Math.random() * 150) + 50, // Higher values: 50-200
-          target_squats: 120 + (i * 10) // Varying targets
+          target_squats: target
         };
       });
       setProgressData(sampleData);
       setChallengeProgressData(sampleData); // For local storage, use same data
     } else {
-      setProgressData(savedProgress.slice(-7)); // Last 7 days for chart
+      // Add target_squats to saved progress
+      const progressWithTargets = savedProgress.map(progress => {
+        const progressDay = getChallengeDay(progress.date);
+        const target = dailyTargets.find(t => t.day === progressDay)?.target_squats || 50;
+        return {
+          ...progress,
+          target_squats: target
+        };
+      });
+      
+      setProgressData(progressWithTargets.slice(-7)); // Last 7 days for chart
       
       // Get challenge progress from local storage
       const challengeProgress = storage.getChallengeProgress();
-      setChallengeProgressData(challengeProgress);
+      const challengeProgressWithTargets = challengeProgress.map(progress => {
+        const progressDay = getChallengeDay(progress.date);
+        const target = dailyTargets.find(t => t.day === progressDay)?.target_squats || 50;
+        return {
+          ...progress,
+          target_squats: target
+        };
+      });
+      setChallengeProgressData(challengeProgressWithTargets);
     }
     console.log('✅ Loaded data from local storage');
   };
@@ -234,7 +275,15 @@ export default function Home() {
         // Reload challenge progress to update stats
         const { data: challengeProgress } = await database.getChallengeProgress(user.id);
         if (challengeProgress) {
-          setChallengeProgressData(challengeProgress);
+          const challengeProgressWithTargets = challengeProgress.map(progress => {
+            const progressDay = getChallengeDay(progress.date);
+            const target = dailyTargets.find(t => t.day === progressDay)?.target_squats || 50;
+            return {
+              ...progress,
+              target_squats: target
+            };
+          });
+          setChallengeProgressData(challengeProgressWithTargets);
         }
       } catch (error) {
         console.error('❌ Error saving to Supabase:', error);
@@ -248,7 +297,15 @@ export default function Home() {
       
       // Update challenge progress data for local storage
       const challengeProgress = storage.getChallengeProgress();
-      setChallengeProgressData(challengeProgress);
+      const challengeProgressWithTargets = challengeProgress.map(progress => {
+        const progressDay = getChallengeDay(progress.date);
+        const target = dailyTargets.find(t => t.day === progressDay)?.target_squats || 50;
+        return {
+          ...progress,
+          target_squats: target
+        };
+      });
+      setChallengeProgressData(challengeProgressWithTargets);
     }
     
     // Update progress data for chart

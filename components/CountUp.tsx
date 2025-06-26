@@ -21,7 +21,7 @@ export default function CountUp({
   from = 0,
   direction = "up",
   delay = 0,
-  duration = 2,
+  duration = 1, // Reduced from 2 to 1 (half the time)
   className = "",
   startWhen = true,
   separator = "",

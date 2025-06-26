@@ -86,7 +86,7 @@ export const database = {
     try {
       const { data, error } = await supabase
         .from('user_progress')
-        .select('*')
+        .select('date, squats_completed') // Removed target_squats since we get it from daily_targets
         .eq('user_id', userId)
         .order('date', { ascending: false })
         .limit(days)
@@ -111,7 +111,7 @@ export const database = {
     try {
       const { data, error } = await supabase
         .from('user_progress')
-        .select('*')
+        .select('date, squats_completed') // Removed target_squats since we get it from daily_targets
         .eq('user_id', userId)
         .gte('date', startDate)
         .lte('date', endDate)
@@ -131,13 +131,14 @@ export const database = {
     }
 
     try {
+      // Only store squats_completed, not target_squats (since we have daily_targets table)
       const { data, error } = await supabase
         .from('user_progress')
         .upsert({
           user_id: userId,
           date,
-          squats_completed: squatsCompleted,
-          target_squats: targetSquats
+          squats_completed: squatsCompleted
+          // Removed target_squats since we get it from daily_targets table
         })
         .select()
       return { data, error }
@@ -217,12 +218,12 @@ export const storage = {
     const existing = localStorage.getItem(progressKey)
     let history = existing ? JSON.parse(existing) : []
     
-    // Update or add today's entry
+    // Update or add today's entry (without target_squats since we get it from daily_targets)
     const todayIndex = history.findIndex((entry: any) => entry.date === today)
     const todayEntry = {
       date: today,
-      squats_completed: squats,
-      target_squats: 50
+      squats_completed: squats
+      // Removed target_squats since we get it from daily_targets table
     }
     
     if (todayIndex >= 0) {

@@ -28,7 +28,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
             to={totalSquats}
             separator=","
             direction="up"
-            duration={2.5}
+            duration={1.2} // Reduced from 2.5 to 1.2
             className="text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"
           />
           <p className="text-xs text-muted-foreground">All time record</p>
@@ -47,7 +47,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
               from={0}
               to={streak}
               direction="up"
-              duration={2}
+              duration={1} // Reduced from 2 to 1
               className=""
             />
           </div>
@@ -68,7 +68,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
             to={weeklyProgress}
             separator=","
             direction="up"
-            duration={2.2}
+            duration={1.1} // Reduced from 2.2 to 1.1
             className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400"
           />
           <p className="text-xs text-muted-foreground mb-2">
@@ -79,7 +79,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
               from={0}
               to={weeklyPercentage}
               direction="up"
-              duration={2.5}
+              duration={1.2} // Reduced from 2.5 to 1.2
               className=""
             />% complete
           </Badge>
