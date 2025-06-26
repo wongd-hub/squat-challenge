@@ -29,12 +29,12 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
                 // Start shining
                 setIsShining(true);
                 
-                // Stop shining after the animation duration (fixed 6 seconds)
+                // Stop shining after the animation duration (6 seconds)
                 animationTimeoutRef.current = setTimeout(() => {
                     setIsShining(false);
-                    // Schedule next shine immediately after this one ends
+                    // Schedule next shine
                     scheduleShine();
-                }, 6000); // Fixed 6-second animation duration
+                }, 6000);
                 
             }, randomDelay);
         };
@@ -45,7 +45,6 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
             setIsShining(true);
             animationTimeoutRef.current = setTimeout(() => {
                 setIsShining(false);
-                // Start the regular scheduling
                 scheduleShine();
             }, 6000);
         }, initialDelay);
@@ -66,16 +65,17 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
 
     return (
         <span
-            className={`inline-block ${className} ${isShining ? 'animate-shine' : ''}`}
+            className={`inline-block ${className}`}
             style={{
                 background: isShining 
-                    ? 'linear-gradient(110deg, hsl(var(--muted-foreground)) 45%, rgba(255, 255, 255, 0.8) 50%, hsl(var(--muted-foreground)) 55%)'
-                    : 'transparent',
+                    ? 'linear-gradient(110deg, currentColor 45%, rgba(255, 255, 255, 0.8) 50%, currentColor 55%)'
+                    : 'none',
                 backgroundSize: '200% 100%',
                 WebkitBackgroundClip: isShining ? 'text' : 'unset',
                 backgroundClip: isShining ? 'text' : 'unset',
-                color: isShining ? 'transparent' : 'hsl(var(--muted-foreground))',
-                transition: 'all 0.3s ease',
+                WebkitTextFillColor: isShining ? 'transparent' : 'unset',
+                color: isShining ? 'transparent' : 'inherit',
+                animation: isShining ? 'shine 6s ease-in-out' : 'none',
             }}
         >
             {text}
