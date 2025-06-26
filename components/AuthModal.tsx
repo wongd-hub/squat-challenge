@@ -146,13 +146,13 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md glass-strong">
+      <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
+            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             {step === 'form' ? 'Sign In to Squat Challenge' : 'Enter Verification Code'}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-600 dark:text-gray-300">
             {step === 'form' 
               ? 'Enter your email and name to receive a 6-digit verification code'
               : 'Enter the 6-digit code we sent to your email'
@@ -162,14 +162,14 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
 
         <div className="space-y-4">
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
             </Alert>
           )}
 
           {success && (
-            <Alert className="border-green-500/20 bg-green-50 dark:bg-green-950/20">
+            <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
               <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertDescription className="text-green-800 dark:text-green-200">
                 {success}
@@ -180,7 +180,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           {step === 'form' ? (
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email" className="text-gray-900 dark:text-white">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
@@ -188,13 +188,13 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
-                  className="glass-subtle"
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                   autoComplete="email"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name (Optional)</Label>
+                <Label htmlFor="displayName" className="text-gray-900 dark:text-white">Display Name (Optional)</Label>
                 <Input
                   id="displayName"
                   type="text"
@@ -203,17 +203,17 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={isLoading}
                   maxLength={50}
-                  className="glass-subtle"
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
                   autoComplete="name"
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   This name will appear on the leaderboard. Leave blank to use your email.
                 </p>
               </div>
               
               <Button 
                 type="submit" 
-                className="w-full" 
+                className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white" 
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -232,7 +232,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           ) : (
             <form onSubmit={handleVerifyCode} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="code" className="flex items-center gap-2">
+                <Label htmlFor="code" className="flex items-center gap-2 text-gray-900 dark:text-white">
                   <Hash className="w-4 h-4" />
                   6-Digit Verification Code
                 </Label>
@@ -244,13 +244,13 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   disabled={isLoading}
                   maxLength={6}
-                  className="glass-subtle text-center text-2xl tracking-[0.5em] font-mono"
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-center text-2xl tracking-[0.5em] font-mono"
                   autoComplete="one-time-code"
                 />
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>📧 Code sent to: <strong>{email}</strong></p>
+                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                  <p>📧 Code sent to: <strong className="text-gray-900 dark:text-white">{email}</strong></p>
                   {displayName && (
-                    <p>👤 Display name: <strong>{displayName}</strong></p>
+                    <p>👤 Display name: <strong className="text-gray-900 dark:text-white">{displayName}</strong></p>
                   )}
                   <p>⏰ Code expires in 10 minutes</p>
                 </div>
@@ -262,13 +262,13 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   variant="outline" 
                   onClick={goBack}
                   disabled={isLoading}
-                  className="flex-1"
+                  className="flex-1 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   Back
                 </Button>
                 <Button 
                   type="submit" 
-                  className="flex-1" 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white" 
                   disabled={isLoading || code.length !== 6}
                 >
                   {isLoading ? (
@@ -288,7 +288,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           )}
 
           <div className="text-center">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
               🔒 No password required! We'll send you a secure 6-digit code to sign in.
             </p>
           </div>
