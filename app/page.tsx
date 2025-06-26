@@ -18,6 +18,7 @@ import Link from 'next/link';
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0);
   const [progressData, setProgressData] = useState<any[]>([]);
+  const [allProgressData, setAllProgressData] = useState<any[]>([]); // Store ALL progress data
   const [currentDay, setCurrentDay] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
   const [dailyTargets, setDailyTargets] = useState<any[]>([]);
@@ -152,12 +153,19 @@ export default function Home() {
       // Load from Supabase
       try {
         console.log('📡 Loading user data from Supabase...');
-        const { data: userProgress } = await database.getUserProgress(user.id, 7);
-        if (userProgress) {
-          setProgressData(userProgress);
-          const todayProgress = userProgress.find(p => p.date === today);
+        
+        // Load ALL progress data (no limit)
+        const { data: allUserProgress } = await database.getUserProgress(user.id, 365); // Get up to 1 year
+        if (allUserProgress) {
+          setAllProgressData(allUserProgress);
+          console.log(`✅ Loaded ${allUserProgress.length} total progress records from Supabase`);
+          
+          // Set recent 7 days for chart
+          const recentProgress = allUserProgress.slice(0, 7);
+          setProgressData(recentProgress);
+          
+          const todayProgress = allUserProgress.find(p => p.date === today);
           setTodaySquats(todayProgress?.squats_completed || 0);
-          console.log('✅ Loaded user progress from Supabase');
         }
       } catch (error) {
         console.error('❌ Error loading Supabase data:', error);
@@ -188,8 +196,10 @@ export default function Home() {
         };
       });
       setProgressData(sampleData);
+      setAllProgressData(sampleData); // For local storage, all data is the same as recent data
     } else {
       setProgressData(savedProgress.slice(-7)); // Last 7 days
+      setAllProgressData(savedProgress); // All saved progress
     }
     console.log('✅ Loaded data from local storage');
   };
@@ -238,6 +248,22 @@ export default function Home() {
     }
     
     setProgressData(updatedProgress.slice(-7));
+    
+    // Also update all progress data
+    const updatedAllProgress = [...allProgressData];
+    const todayAllIndex = updatedAllProgress.findIndex(p => p.date === today);
+    
+    if (todayAllIndex >= 0) {
+      updatedAllProgress[todayAllIndex].squats_completed = newSquats;
+    } else {
+      updatedAllProgress.push({
+        date: today,
+        squats_completed: newSquats,
+        target_squats: todayTarget
+      });
+    }
+    
+    setAllProgressData(updatedAllProgress);
   };
 
   const handleSignOut = async () => {
@@ -256,11 +282,16 @@ export default function Home() {
     }
   };
 
-  // Calculate actual values from data
-  const totalSquats = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const currentStreak = calculateStreak(progressData);
+  // Calculate stats from ALL progress data
+  const totalSquats = allProgressData.reduce((acc, day) => acc + day.squats_completed, 0);
+  const currentStreak = calculateStreak(allProgressData);
+  
+  // Calculate weekly progress (last 7 days)
   const weeklyGoal = 850;
-  const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
+  const last7Days = allProgressData
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 7);
+  const weeklyProgress = last7Days.reduce((acc, day) => acc + day.squats_completed, 0);
 
   // Calculate display values based on challenge status
   const getDisplayDay = () => {

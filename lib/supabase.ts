@@ -73,7 +73,7 @@ export const database = {
     }
   },
 
-  getUserProgress: async (userId: string, days: number = 7) => {
+  getUserProgress: async (userId: string, days: number = 365) => { // Default to 365 days instead of 7
     if (!isSupabaseConfigured()) {
       return { data: [], error: null }
     }
@@ -85,6 +85,8 @@ export const database = {
         .eq('user_id', userId)
         .order('date', { ascending: false })
         .limit(days)
+      
+      console.log(`📊 Loaded ${data?.length || 0} progress records from Supabase (limit: ${days})`)
       return { data, error }
     } catch (error) {
       console.error('Error fetching user progress:', error)
