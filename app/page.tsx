@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SquatDial } from '@/components/SquatDial';
 import { DailyTarget } from '@/components/DailyTarget';
 import { ProgressChart } from '@/components/ProgressChart';
@@ -30,6 +30,9 @@ export default function Home() {
   const [challengeComplete, setChallengeComplete] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [weightLiftingEmoji, setWeightLiftingEmoji] = useState('🏋️‍♂️');
+  
+  // Ref for leaderboard section
+  const leaderboardRef = useRef<HTMLDivElement>(null);
 
   // Set random weight lifting emoji on mount
   useEffect(() => {
@@ -350,6 +353,14 @@ export default function Home() {
     }
   };
 
+  // Function to scroll to leaderboard
+  const scrollToLeaderboard = () => {
+    leaderboardRef.current?.scrollIntoView({ 
+      behavior: 'smooth',
+      block: 'start'
+    });
+  };
+
   // Calculate stats from CHALLENGE progress data only
   const totalSquats = challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0);
   const currentStreak = calculateStreak(challengeProgressData);
@@ -490,12 +501,15 @@ export default function Home() {
               <Info className="w-3 h-3 mr-1" />
               How it works
             </Button>
-            <Link href="/leaderboard">
-              <Button variant="ghost" size="sm" className="glass-subtle text-xs">
-                <Users className="w-3 h-3 mr-1" />
-                Leaderboard
-              </Button>
-            </Link>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="glass-subtle text-xs"
+              onClick={scrollToLeaderboard}
+            >
+              <Users className="w-3 h-3 mr-1" />
+              Leaderboard
+            </Button>
           </div>
         </div>
 
@@ -609,7 +623,9 @@ export default function Home() {
           <ProgressChart data={progressData} dailyTargets={dailyTargets} />
 
           {/* Leaderboard Preview */}
-          <LeaderboardPreview />
+          <div ref={leaderboardRef}>
+            <LeaderboardPreview />
+          </div>
         </div>
       </div>
     </div>

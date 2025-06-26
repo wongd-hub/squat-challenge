@@ -249,7 +249,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
       <CardContent>
         <div 
           ref={scrollRef}
-          className="overflow-x-auto pb-4"
+          className="overflow-x-auto pb-2"
           style={{ 
             scrollbarWidth: 'thin',
             scrollbarColor: 'hsl(var(--muted)) transparent'
@@ -382,8 +382,8 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
           </div>
         </div>
         
-        {/* Enhanced Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+        {/* Enhanced Summary Stats - Reduced spacing */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
           <div className="text-center p-4 glass-strong rounded-xl border border-primary/20 hover:border-primary/40 transition-all duration-300">
             <div className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 dark:from-primary dark:to-blue-400 bg-clip-text text-transparent">
               {totalCompleted.toLocaleString()}
@@ -408,8 +408,8 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
           </div>
         </div>
 
-        {/* Enhanced Progress Indicator - Fixed mobile clipping */}
-        <div className="mt-4 p-4 glass-strong rounded-xl border border-primary/10">
+        {/* Enhanced Progress Indicator - Fixed mobile clipping and better positioning */}
+        <div className="mt-2 p-4 glass-strong rounded-xl border border-primary/10">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium">
               {challengeComplete ? 'Challenge Complete!' : 'Challenge Progress'}
@@ -432,8 +432,8 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
               </div>
             </div>
-            {/* Progress percentage - Fixed mobile clipping with better positioning */}
-            <div className="absolute top-0 left-0 right-0 flex justify-center">
+            {/* Progress percentage - Fixed positioning to prevent clipping */}
+            <div className="absolute top-0 left-1/2 transform -translate-x-1/2">
               <span className="text-xs font-medium text-primary bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full border border-border/50 whitespace-nowrap shadow-sm">
                 {getProgressPercentage().toFixed(1)}%
               </span>

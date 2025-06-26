@@ -9,7 +9,7 @@ interface ShinyTextProps {
     className?: string;
 }
 
-const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5, className = '' }) => {
+const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6, className = '' }) => {
     const [isShining, setIsShining] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout>();
     const intervalRef = useRef<NodeJS.Timeout>();
@@ -29,7 +29,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
                 // Start shining
                 setIsShining(true);
                 
-                // Stop shining after the animation duration
+                // Stop shining after the animation duration (speed controls the duration)
                 setTimeout(() => {
                     setIsShining(false);
                 }, speed * 1000);
@@ -59,19 +59,28 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
 
     return (
         <div
-            className={`inline-block ${className} ${isShining ? 'animate-shine' : ''}`}
+            className={`inline-block ${className}`}
             style={{
                 background: 'linear-gradient(120deg, hsl(var(--muted-foreground)) 30%, rgba(255, 255, 255, 0.9) 50%, hsl(var(--muted-foreground)) 70%)',
                 backgroundSize: '200% 100%',
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 color: 'transparent',
-                animationDuration: `${speed}s`,
+                animation: isShining ? `shine ${speed}s linear` : 'none',
                 // Fallback for browsers that don't support background-clip: text
             }}
         >
             {text}
             <style jsx>{`
+                @keyframes shine {
+                    0% { 
+                        background-position: 200% 0;
+                    }
+                    100% { 
+                        background-position: -200% 0;
+                    }
+                }
+                
                 @supports not (-webkit-background-clip: text) {
                     div {
                         color: hsl(var(--muted-foreground)) !important;
