@@ -61,16 +61,15 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     setDialRotation(totalRotation.current);
     const squats = calculateSquats(totalRotation.current);
     
-    // Apply limits: can't go below 0 total squats, can't exceed target
+    // Only prevent going below 0 total squats
     const newTotal = currentSquats + squats;
-    const maxSquats = targetSquats - currentSquats; // Maximum squats we can add
-    const minSquats = -currentSquats; // Maximum squats we can remove (to reach 0)
+    const minSquats = -currentSquats; // Can't remove more than current squats
     
-    // Clamp tempSquats to valid range
-    const clampedSquats = Math.max(minSquats, Math.min(maxSquats, squats));
+    // Only clamp to prevent negative total
+    const clampedSquats = Math.max(minSquats, squats);
     setTempSquats(clampedSquats);
     
-    // If we hit a limit, adjust the rotation to match
+    // If we hit the minimum limit, adjust the rotation to match
     if (clampedSquats !== squats) {
       const clampedRotation = clampedSquats * 36;
       totalRotation.current = clampedRotation;
@@ -78,7 +77,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     }
     
     lastAngle.current = currentAngle;
-  }, [getAngleFromPoint, calculateSquats, currentSquats, targetSquats]);
+  }, [getAngleFromPoint, calculateSquats, currentSquats]);
 
   const handleEnd = useCallback(() => {
     isDragging.current = false;
@@ -152,9 +151,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     }
   };
 
-  // Check if target is reached
-  const isTargetReached = currentSquats >= targetSquats;
-  const canBankSquats = tempSquats !== 0 && !isTargetReached;
+  const canBankSquats = tempSquats !== 0;
 
   const progressPercentage = Math.abs(tempSquats / 10) * 100; // Progress for current 10-squat cycle
   const dialSize = compact ? 'w-48 h-48' : 'w-80 h-80';
@@ -170,7 +167,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
       <div className="relative mb-8">
         {/* Outer Ring */}
         <div className={`${dialSize} rounded-full glass-strong shadow-2xl flex items-center justify-center relative`}>
-          {/* Progress Ring - Fixed for proper direction */}
+          {/* Progress Ring - FIXED for proper direction */}
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
             {/* Background circle */}
             <circle
@@ -182,7 +179,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               strokeWidth="2"
               opacity="0.3"
             />
-            {/* Progress circle - Fixed direction */}
+            {/* Progress circle - FIXED direction */}
             {tempSquats !== 0 && (
               <circle
                 cx="50"
@@ -194,7 +191,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
                 strokeLinecap="round"
                 strokeDasharray="282.7"
                 strokeDashoffset={282.7 - (progressPercentage * 2.827)}
-                transform={isNegative ? "rotate(-90 50 50) scale(-1 1) translate(-100 0)" : "rotate(-90 50 50)"}
+                transform={isNegative ? "rotate(-90 50 50) scale(1 -1)" : "rotate(-90 50 50)"}
                 className="transition-all duration-300 ease-out"
               />
             )}
@@ -222,7 +219,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               {tempSquats > 0 ? `+${tempSquats}` : tempSquats}
             </div>
 
-            {/* New Circular Indicator */}
+            {/* Circular Indicator */}
             <div 
               className={`absolute ${compact ? 'w-6 h-6' : 'w-8 h-8'} flex items-center justify-center`}
               style={{
@@ -261,11 +258,6 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
             {isNegative ? `Removing ${Math.abs(tempSquats)} squats` : `Adding ${tempSquats} squats`}
           </p>
         )}
-        {isTargetReached && (
-          <p className={`${compact ? 'text-sm' : 'text-base'} text-green-600 dark:text-green-400 mt-2 font-semibold`}>
-            🎉 Target reached! Great job!
-          </p>
-        )}
       </div>
 
       {/* Bank Button with StarBorder */}
@@ -278,7 +270,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         disabled={!canBankSquats}
       >
         <span className={`${compact ? 'text-base' : 'text-lg'} font-medium`}>
-          {isTargetReached ? 'Target Reached!' : isNegative ? 'Remove Squats' : 'Bank Squats'}
+          {isNegative ? 'Remove Squats' : 'Bank Squats'}
         </span>
       </StarBorder>
     </div>
