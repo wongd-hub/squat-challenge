@@ -21,7 +21,7 @@ export default function CountUp({
   from = 0,
   direction = "up",
   delay = 0,
-  duration = 1, // Reduced from 2 to 1 (half the time)
+  duration = 1,
   className = "",
   startWhen = true,
   separator = "",
@@ -112,5 +112,5 @@ export default function CountUp({
     return () => unsubscribe();
   }, [springValue, separator]);
 
-  return <span className={`${className}`} ref={ref} />;
+  return <span className={className} ref={ref} />;
 }
