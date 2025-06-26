@@ -29,7 +29,12 @@ export default function CountUp({
   onEnd,
 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const motionValue = useMotionValue(from); // Always start from the 'from' value
+  
+  // Initialize motion value based on direction
+  const initialValue = direction === "up" ? from : to;
+  const targetValue = direction === "up" ? to : from;
+  
+  const motionValue = useMotionValue(initialValue);
 
   const damping = 20 + 40 * (1 / duration);
   const stiffness = 100 * (1 / duration);
@@ -41,12 +46,14 @@ export default function CountUp({
 
   const isInView = useInView(ref, { once: true, margin: "0px" });
 
+  // Set initial display value
   useEffect(() => {
     if (ref.current) {
-      ref.current.textContent = String(from); // Always start displaying the 'from' value
+      ref.current.textContent = String(initialValue);
     }
-  }, [from, to, direction]);
+  }, [initialValue]);
 
+  // Trigger animation when in view
   useEffect(() => {
     if (isInView && startWhen) {
       if (typeof onStart === "function") {
@@ -54,9 +61,7 @@ export default function CountUp({
       }
 
       const timeoutId = setTimeout(() => {
-        // For "up" direction: animate from 'from' to 'to'
-        // For "down" direction: animate from 'to' to 'from'
-        motionValue.set(direction === "down" ? from : to);
+        motionValue.set(targetValue);
       }, delay * 1000);
 
       const durationTimeoutId = setTimeout(
@@ -77,15 +82,14 @@ export default function CountUp({
     isInView,
     startWhen,
     motionValue,
-    direction,
-    from,
-    to,
+    targetValue,
     delay,
     onStart,
     onEnd,
     duration,
   ]);
 
+  // Update display as animation progresses
   useEffect(() => {
     const unsubscribe = springValue.on("change", (latest) => {
       if (ref.current) {
