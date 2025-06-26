@@ -10,7 +10,7 @@ export const auth = supabase.auth
 
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
-  START_DATE: '2025-01-01', // Updated to 2025
+  START_DATE: '2025-06-10', // Updated to 2025
   TOTAL_DAYS: 23 // Updated to match the database
 }
 
