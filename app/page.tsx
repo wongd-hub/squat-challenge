@@ -263,6 +263,21 @@ export default function Home() {
     return 'User';
   };
 
+  // Calculate display values based on challenge status
+  const getDisplayDay = () => {
+    if (challengeComplete) {
+      return CHALLENGE_CONFIG.TOTAL_DAYS; // Show final day instead of current day
+    }
+    return Math.min(currentDay, CHALLENGE_CONFIG.TOTAL_DAYS);
+  };
+
+  const getDisplayDayText = () => {
+    if (challengeComplete) {
+      return `Challenge Complete (${CHALLENGE_CONFIG.TOTAL_DAYS} days)`;
+    }
+    return `Day ${getDisplayDay()} of ${CHALLENGE_CONFIG.TOTAL_DAYS}`;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-bg flex items-center justify-center">
@@ -313,7 +328,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-2 mb-4">
             <Badge variant="outline" className="text-xs glass-subtle">
               <Calendar className="w-3 h-3 mr-1" />
-              Day {currentDay} of {CHALLENGE_CONFIG.TOTAL_DAYS}
+              {getDisplayDayText()}
             </Badge>
             <Badge variant="outline" className={`text-xs ${dataSource === 'supabase' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'}`}>
               {dataSource === 'supabase' ? '📡 Online' : '💾 Offline'}
@@ -354,11 +369,16 @@ export default function Home() {
             <CardContent className="text-center space-y-3">
               <div className="text-4xl mb-4">🎉</div>
               <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                Congratulations! You've completed the 23-day squat challenge!
+                Congratulations! You've completed the {CHALLENGE_CONFIG.TOTAL_DAYS}-day squat challenge!
               </p>
               <p className="text-muted-foreground">
                 Check out your progress below and see how you compare on the leaderboard.
               </p>
+              <div className="mt-4 p-4 glass-subtle rounded-xl">
+                <p className="text-sm text-muted-foreground">
+                  Challenge ran from {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)}
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -414,7 +434,7 @@ export default function Home() {
                     onSquatsChange={handleSquatsUpdate}
                     currentSquats={todaySquats}
                     targetSquats={todayTarget}
-                    currentDay={currentDay}
+                    currentDay={getDisplayDay()}
                     compact={false}
                   />
                 </CardContent>
@@ -424,7 +444,7 @@ export default function Home() {
               <DailyTarget
                 targetSquats={todayTarget}
                 completedSquats={todaySquats}
-                day={currentDay}
+                day={getDisplayDay()}
               />
             </div>
           )}

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Target, CheckCircle } from 'lucide-react';
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { getChallengeDay, CHALLENGE_CONFIG } from '@/lib/supabase';
+import { getChallengeDay, CHALLENGE_CONFIG, isChallengeComplete } from '@/lib/supabase';
 
 interface ProgressData {
   date: string;
@@ -28,6 +28,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [currentDay, setCurrentDay] = useState(1);
   const [challengeData, setChallengeData] = useState<any[]>([]);
+  const [challengeComplete, setChallengeComplete] = useState(false);
 
   // Generate challenge data using actual daily targets from database
   const generateChallengeDays = useCallback(() => {
@@ -35,6 +36,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
 
     const today = new Date().toISOString().split('T')[0];
     const todayDay = getChallengeDay(today);
+    const isComplete = isChallengeComplete();
 
     // Use the actual daily targets from the database
     const totalDays = Math.max(dailyTargets.length, CHALLENGE_CONFIG.TOTAL_DAYS);
@@ -61,9 +63,9 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
         squats_completed: completedSquats,
         // For stacked bar: show remaining target as separate value
         remaining_target: Math.max(0, targetSquats - completedSquats),
-        isToday: dayNumber === todayDay,
+        isToday: !isComplete && dayNumber === todayDay,
         isPast: dayNumber < todayDay,
-        isFuture: dayNumber > todayDay,
+        isFuture: !isComplete && dayNumber > todayDay,
         completionRate: targetSquats > 0 ? (completedSquats / targetSquats) * 100 : 100,
         isCompleted: targetSquats === 0 ? true : completedSquats >= targetSquats,
         isRestDay: targetSquats === 0
@@ -74,10 +76,13 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Calculate current day
+    // Calculate current day and challenge status
     const today = new Date().toISOString().split('T')[0];
     const todayDay = getChallengeDay(today);
+    const isComplete = isChallengeComplete();
+    
     setCurrentDay(todayDay);
+    setChallengeComplete(isComplete);
   }, []);
 
   useEffect(() => {
@@ -90,12 +95,16 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   }, [generateChallengeDays, dailyTargets]);
 
   useEffect(() => {
-    // Auto-scroll to current day
-    if (scrollRef.current && currentDay > 6) {
+    // Auto-scroll to current day (only if challenge is not complete)
+    if (scrollRef.current && !challengeComplete && currentDay > 6) {
       const scrollPosition = (currentDay - 6) * 60; // Approximate width per bar
       scrollRef.current.scrollLeft = scrollPosition;
+    } else if (scrollRef.current && challengeComplete) {
+      // Scroll to the end when challenge is complete
+      const scrollPosition = (CHALLENGE_CONFIG.TOTAL_DAYS - 6) * 60;
+      scrollRef.current.scrollLeft = scrollPosition;
     }
-  }, [currentDay]);
+  }, [currentDay, challengeComplete]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -132,7 +141,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs text-muted-foreground">Progress</span>
                     <span className={`text-xs font-bold ${data.completionRate >= 100 ? 'text-green-600 dark:text-green-400' : 'text-orange-500'}`}>
-                      {data.completionRate.toFixed(1)}%
+                      {Math.min(data.completionRate, 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className="w-full bg-muted/30 rounded-full h-2">
@@ -157,7 +166,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
               </>
             )}
           </div>
-          {data.isToday && (
+          {data.isToday && !challengeComplete && (
             <Badge className="mt-3 w-full justify-center bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0">
               📅 Today
             </Badge>
@@ -170,9 +179,24 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
 
   const totalCompleted = challengeData.reduce((acc, day) => acc + day.squats_completed, 0);
   const totalTarget = challengeData.reduce((acc, day) => acc + day.target_squats, 0);
-  const overallCompletion = totalTarget > 0 ? (totalCompleted / totalTarget) * 100 : 0;
+  const overallCompletion = totalTarget > 0 ? Math.min((totalCompleted / totalTarget) * 100, 100) : 0;
   const completedDays = challengeData.filter(day => day.isCompleted).length;
   const totalDays = challengeData.length;
+
+  // Calculate display values for progress indicator
+  const getProgressDisplayDay = () => {
+    if (challengeComplete) {
+      return CHALLENGE_CONFIG.TOTAL_DAYS;
+    }
+    return Math.min(currentDay, CHALLENGE_CONFIG.TOTAL_DAYS);
+  };
+
+  const getProgressPercentage = () => {
+    if (challengeComplete) {
+      return 100;
+    }
+    return Math.min((currentDay / CHALLENGE_CONFIG.TOTAL_DAYS) * 100, 100);
+  };
 
   return (
     <Card className="glass overflow-hidden">
@@ -182,6 +206,11 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
               {totalDays}-Day Challenge Progress
+              {challengeComplete && (
+                <Badge className="ml-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+                  Complete
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
               <span>Total: {totalCompleted.toLocaleString()} / {totalTarget.toLocaleString()} squats</span>
@@ -208,10 +237,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
               <div className="w-3 h-3 rounded bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm"></div>
               <span className="text-muted-foreground">Rest Day</span>
             </div>
-            <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
-              <div className="w-3 h-3 rounded border-2 border-blue-500 bg-transparent shadow-sm"></div>
-              <span className="text-muted-foreground">Today</span>
-            </div>
+            {!challengeComplete && (
+              <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
+                <div className="w-3 h-3 rounded border-2 border-blue-500 bg-transparent shadow-sm"></div>
+                <span className="text-muted-foreground">Today</span>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -297,10 +328,10 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                       <Cell 
                         key={`completed-${index}`} 
                         fill={fillColor}
-                        stroke={entry.isToday ? 'hsl(var(--primary))' : 'transparent'}
-                        strokeWidth={entry.isToday ? 3 : 0}
+                        stroke={entry.isToday && !challengeComplete ? 'hsl(var(--primary))' : 'transparent'}
+                        strokeWidth={entry.isToday && !challengeComplete ? 3 : 0}
                         style={{
-                          filter: entry.isToday ? 'drop-shadow(0 0 8px hsl(var(--primary) / 0.5))' : 'none',
+                          filter: entry.isToday && !challengeComplete ? 'drop-shadow(0 0 8px hsl(var(--primary) / 0.5))' : 'none',
                           transition: 'all 0.3s ease'
                         }}
                       />
@@ -320,11 +351,11 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                       key={`remaining-${index}`} 
                       fill={entry.isRestDay ? 'transparent' : 'hsl(var(--muted) / 0.3)'}
                       fillOpacity={entry.isRestDay ? 0 : 0.6}
-                      stroke={entry.isToday ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
-                      strokeWidth={entry.isToday ? 3 : 1}
-                      strokeDasharray={entry.isToday ? "0" : "2,2"}
+                      stroke={entry.isToday && !challengeComplete ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
+                      strokeWidth={entry.isToday && !challengeComplete ? 3 : 1}
+                      strokeDasharray={entry.isToday && !challengeComplete ? "0" : "2,2"}
                       style={{
-                        filter: entry.isToday ? 'drop-shadow(0 0 8px hsl(var(--primary) / 0.3))' : 'none',
+                        filter: entry.isToday && !challengeComplete ? 'drop-shadow(0 0 8px hsl(var(--primary) / 0.3))' : 'none',
                         transition: 'all 0.3s ease'
                       }}
                     />
@@ -368,22 +399,34 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             <div className="text-sm text-muted-foreground">Overall Progress</div>
           </div>
           <div className="text-center p-4 glass-strong rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{Math.max(0, totalDays - currentDay + 1)}</div>
-            <div className="text-sm text-muted-foreground">Days Remaining</div>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              {challengeComplete ? '🎉' : Math.max(0, CHALLENGE_CONFIG.TOTAL_DAYS - Math.min(currentDay, CHALLENGE_CONFIG.TOTAL_DAYS) + 1)}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {challengeComplete ? 'Complete!' : 'Days Remaining'}
+            </div>
           </div>
         </div>
 
         {/* Enhanced Progress Indicator */}
         <div className="mt-6 p-6 glass-strong rounded-xl border border-primary/10">
           <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-medium">Challenge Progress</span>
-            <span className="text-sm text-muted-foreground">{currentDay}/{totalDays} days</span>
+            <span className="text-sm font-medium">
+              {challengeComplete ? 'Challenge Complete!' : 'Challenge Progress'}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {getProgressDisplayDay()}/{CHALLENGE_CONFIG.TOTAL_DAYS} days
+            </span>
           </div>
           <div className="relative">
             <div className="w-full bg-muted/30 rounded-full h-3 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
-                style={{ width: `${Math.min((currentDay / totalDays) * 100, 100)}%` }}
+                className={`h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${
+                  challengeComplete 
+                    ? 'bg-gradient-to-r from-green-500 via-emerald-500 to-green-600' 
+                    : 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500'
+                }`}
+                style={{ width: `${getProgressPercentage()}%` }}
               >
                 {/* Animated shine effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
@@ -392,7 +435,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             {/* Progress percentage */}
             <div className="absolute -top-8 left-0 right-0 flex justify-center">
               <span className="text-xs font-medium text-primary bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50">
-                {((currentDay / totalDays) * 100).toFixed(1)}%
+                {getProgressPercentage().toFixed(1)}%
               </span>
             </div>
           </div>
