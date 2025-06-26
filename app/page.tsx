@@ -26,6 +26,18 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [dataSource, setDataSource] = useState<'supabase' | 'local'>('local');
   const [challengeComplete, setChallengeComplete] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Handle scroll for sticky header
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 100;
+      setIsScrolled(scrolled);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Check authentication status
   useEffect(() => {
@@ -291,29 +303,59 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-bg">
-      <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
-        {/* Top Controls Row - Right aligned */}
-        <div className="flex justify-end items-center gap-2 mb-6">
-          {user ? (
-            <>
-              <Badge variant="outline" className="glass-subtle text-xs">
-                <User className="w-3 h-3 mr-1" />
-                {getDisplayName()}
-              </Badge>
-              <Button variant="ghost" size="icon" onClick={handleSignOut} className="glass-subtle w-8 h-8">
-                <LogOut className="w-3 h-3" />
-              </Button>
-            </>
-          ) : isSupabaseConfigured() && (
-            <AuthModal onAuthSuccess={handleAuthSuccess}>
-              <Button variant="ghost" size="sm" className="glass-subtle text-xs px-2 py-1">
-                <User className="w-3 h-3 mr-1" />
-                Sign In
-              </Button>
-            </AuthModal>
-          )}
-          <ThemeToggle />
+      {/* Sticky Header */}
+      <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
+        isScrolled 
+          ? 'backdrop-blur-xl bg-background/80 border-b border-border/50 shadow-lg' 
+          : 'bg-transparent'
+      }`}>
+        <div className="container mx-auto px-4 py-3 max-w-6xl">
+          <div className="flex justify-between items-center">
+            {/* Left side - Logo/Title */}
+            <div className="flex items-center gap-3">
+              <h1 className={`font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent transition-all duration-300 ${
+                isScrolled ? 'text-lg' : 'text-xl'
+              }`}>
+                Squat Challenge
+              </h1>
+              {isScrolled && (
+                <Badge variant="outline" className="text-xs glass-subtle animate-in slide-in-from-left-2 duration-300">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  {getDisplayDayText()}
+                </Badge>
+              )}
+            </div>
+
+            {/* Right side - User controls */}
+            <div className="flex items-center gap-2">
+              {user ? (
+                <>
+                  <Badge variant="outline" className="glass-subtle text-xs">
+                    <User className="w-3 h-3 mr-1" />
+                    {getDisplayName()}
+                  </Badge>
+                  <Button variant="ghost" size="icon" onClick={handleSignOut} className="glass-subtle w-8 h-8">
+                    <LogOut className="w-3 h-3" />
+                  </Button>
+                </>
+              ) : isSupabaseConfigured() && (
+                <AuthModal onAuthSuccess={handleAuthSuccess}>
+                  <Button variant="ghost" size="sm" className="glass-subtle text-xs px-2 py-1">
+                    <User className="w-3 h-3 mr-1" />
+                    Sign In
+                  </Button>
+                </AuthModal>
+              )}
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
+        {/* Spacer for sticky header */}
+        <div className="h-16"></div>
 
         {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
