@@ -29,6 +29,14 @@ export default function Home() {
   const [dataSource, setDataSource] = useState<'supabase' | 'local'>('local');
   const [challengeComplete, setChallengeComplete] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [weightLiftingEmoji, setWeightLiftingEmoji] = useState('🏋️‍♂️');
+
+  // Set random weight lifting emoji on mount
+  useEffect(() => {
+    const emojis = ['🏋️‍♂️', '🏋️‍♀️'];
+    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+    setWeightLiftingEmoji(randomEmoji);
+  }, []);
 
   // Handle scroll for sticky header
   useEffect(() => {
@@ -408,14 +416,8 @@ export default function Home() {
               <h1 className={`font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent transition-all duration-300 ${
                 isScrolled ? 'text-lg' : 'text-xl'
               }`}>
-                Squat Challenge
+                {weightLiftingEmoji}
               </h1>
-              {isScrolled && (
-                <Badge variant="outline" className="text-xs glass-subtle animate-in slide-in-from-left-2 duration-300 border-white/20 bg-white/10 backdrop-blur-sm">
-                  <Calendar className="w-3 h-3 mr-1" />
-                  {getDisplayDayText()}
-                </Badge>
-              )}
             </div>
 
             {/* Right side - User controls */}
@@ -565,7 +567,7 @@ export default function Home() {
         )}
 
         {/* Centered Content Layout */}
-        <div className="space-y-6 md:space-y-8 max-w-5xl mx-auto">
+        <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
           {/* Only show squat dial and daily target if challenge is not complete */}
           {!challengeComplete && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">

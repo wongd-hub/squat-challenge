@@ -383,7 +383,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
         </div>
         
         {/* Enhanced Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
           <div className="text-center p-4 glass-strong rounded-xl border border-primary/20 hover:border-primary/40 transition-all duration-300">
             <div className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 dark:from-primary dark:to-blue-400 bg-clip-text text-transparent">
               {totalCompleted.toLocaleString()}
@@ -409,7 +409,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
         </div>
 
         {/* Enhanced Progress Indicator */}
-        <div className="mt-6 p-6 glass-strong rounded-xl border border-primary/10">
+        <div className="mt-4 p-4 glass-strong rounded-xl border border-primary/10">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium">
               {challengeComplete ? 'Challenge Complete!' : 'Challenge Progress'}
@@ -432,9 +432,9 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
               </div>
             </div>
-            {/* Progress percentage */}
-            <div className="absolute -top-8 left-0 right-0 flex justify-center">
-              <span className="text-xs font-medium text-primary bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50">
+            {/* Progress percentage - Fixed mobile clipping */}
+            <div className="absolute -top-6 left-0 right-0 flex justify-center">
+              <span className="text-xs font-medium text-primary bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50 whitespace-nowrap">
                 {getProgressPercentage().toFixed(1)}%
               </span>
             </div>
