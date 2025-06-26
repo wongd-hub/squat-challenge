@@ -18,7 +18,7 @@ import Link from 'next/link';
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0);
   const [progressData, setProgressData] = useState<any[]>([]);
-  const [allProgressData, setAllProgressData] = useState<any[]>([]); // Store ALL progress data
+  const [challengeProgressData, setChallengeProgressData] = useState<any[]>([]); // Store challenge-only progress data
   const [currentDay, setCurrentDay] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
   const [dailyTargets, setDailyTargets] = useState<any[]>([]);
@@ -154,18 +154,23 @@ export default function Home() {
       try {
         console.log('📡 Loading user data from Supabase...');
         
-        // Load ALL progress data (no limit)
-        const { data: allUserProgress } = await database.getUserProgress(user.id, 365); // Get up to 1 year
-        if (allUserProgress) {
-          setAllProgressData(allUserProgress);
-          console.log(`✅ Loaded ${allUserProgress.length} total progress records from Supabase`);
-          
-          // Set recent 7 days for chart
-          const recentProgress = allUserProgress.slice(0, 7);
+        // Load recent progress for chart (last 7 days)
+        const { data: recentProgress } = await database.getUserProgress(user.id, 7);
+        if (recentProgress) {
           setProgressData(recentProgress);
-          
-          const todayProgress = allUserProgress.find(p => p.date === today);
+          const todayProgress = recentProgress.find(p => p.date === today);
           setTodaySquats(todayProgress?.squats_completed || 0);
+        }
+
+        // Load ALL challenge progress for stats (challenge dates only)
+        const { data: challengeProgress } = await database.getChallengeProgress(user.id);
+        if (challengeProgress) {
+          setChallengeProgressData(challengeProgress);
+          console.log(`✅ Loaded ${challengeProgress.length} challenge progress records from Supabase`);
+          
+          // Calculate total squats from challenge data
+          const totalSquats = challengeProgress.reduce((acc, day) => acc + day.squats_completed, 0);
+          console.log(`📊 Total challenge squats: ${totalSquats}`);
         }
       } catch (error) {
         console.error('❌ Error loading Supabase data:', error);
@@ -196,10 +201,13 @@ export default function Home() {
         };
       });
       setProgressData(sampleData);
-      setAllProgressData(sampleData); // For local storage, all data is the same as recent data
+      setChallengeProgressData(sampleData); // For local storage, use same data
     } else {
-      setProgressData(savedProgress.slice(-7)); // Last 7 days
-      setAllProgressData(savedProgress); // All saved progress
+      setProgressData(savedProgress.slice(-7)); // Last 7 days for chart
+      
+      // Get challenge progress from local storage
+      const challengeProgress = storage.getChallengeProgress();
+      setChallengeProgressData(challengeProgress);
     }
     console.log('✅ Loaded data from local storage');
   };
@@ -222,6 +230,12 @@ export default function Home() {
       try {
         await database.updateUserProgress(user.id, today, newSquats, todayTarget);
         console.log('✅ Saved to Supabase');
+        
+        // Reload challenge progress to update stats
+        const { data: challengeProgress } = await database.getChallengeProgress(user.id);
+        if (challengeProgress) {
+          setChallengeProgressData(challengeProgress);
+        }
       } catch (error) {
         console.error('❌ Error saving to Supabase:', error);
         // Fallback to local storage
@@ -231,9 +245,13 @@ export default function Home() {
       // Save to local storage
       storage.updateTodayProgress(newSquats);
       console.log('✅ Saved to local storage');
+      
+      // Update challenge progress data for local storage
+      const challengeProgress = storage.getChallengeProgress();
+      setChallengeProgressData(challengeProgress);
     }
     
-    // Update progress data
+    // Update progress data for chart
     const updatedProgress = [...progressData];
     const todayIndex = updatedProgress.findIndex(p => p.date === today);
     
@@ -248,22 +266,6 @@ export default function Home() {
     }
     
     setProgressData(updatedProgress.slice(-7));
-    
-    // Also update all progress data
-    const updatedAllProgress = [...allProgressData];
-    const todayAllIndex = updatedAllProgress.findIndex(p => p.date === today);
-    
-    if (todayAllIndex >= 0) {
-      updatedAllProgress[todayAllIndex].squats_completed = newSquats;
-    } else {
-      updatedAllProgress.push({
-        date: today,
-        squats_completed: newSquats,
-        target_squats: todayTarget
-      });
-    }
-    
-    setAllProgressData(updatedAllProgress);
   };
 
   const handleSignOut = async () => {
@@ -282,13 +284,13 @@ export default function Home() {
     }
   };
 
-  // Calculate stats from ALL progress data
-  const totalSquats = allProgressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const currentStreak = calculateStreak(allProgressData);
+  // Calculate stats from CHALLENGE progress data only
+  const totalSquats = challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0);
+  const currentStreak = calculateStreak(challengeProgressData);
   
-  // Calculate weekly progress (last 7 days)
+  // Calculate weekly progress (last 7 days within challenge period)
   const weeklyGoal = 850;
-  const last7Days = allProgressData
+  const last7Days = challengeProgressData
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 7);
   const weeklyProgress = last7Days.reduce((acc, day) => acc + day.squats_completed, 0);
@@ -335,7 +337,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-bg">
-      {/* Sticky Glassmorphic Header - Reduced opacity for better blur */}
+      {/* Sticky Glassmorphic Header */}
       <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
         isScrolled 
           ? 'backdrop-blur-xl bg-background/10 border-b border-white/10 shadow-xl' 
@@ -407,6 +409,9 @@ export default function Home() {
             <Badge variant="outline" className={`text-xs ${dataSource === 'supabase' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'}`}>
               {dataSource === 'supabase' ? '📡 Online' : '💾 Offline'}
             </Badge>
+            <Badge variant="outline" className="text-xs glass-subtle">
+              📊 Challenge Total: {totalSquats.toLocaleString()}
+            </Badge>
           </div>
 
           {/* Action Buttons Row - Centered */}
@@ -452,6 +457,9 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">
                   Challenge ran from {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)}
                 </p>
+                <p className="text-lg font-bold text-primary mt-2">
+                  Your Total: {totalSquats.toLocaleString()} squats
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -488,6 +496,7 @@ export default function Home() {
               <p>🏆 <strong>{CHALLENGE_CONFIG.TOTAL_DAYS}-Day Challenge:</strong> Complete daily targets that vary each day - some days are rest days (0 squats)!</p>
               <p>📅 <strong>Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)}</p>
               <p>🔐 <strong>Easy Sign In:</strong> No passwords needed! Just enter your email and we'll send you a 6-digit code to sign in.</p>
+              <p>📊 <strong>Stats:</strong> All stats only count squats completed during the challenge period.</p>
             </CardContent>
           </Card>
         )}

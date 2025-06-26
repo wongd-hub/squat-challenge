@@ -41,6 +41,11 @@ export const isChallengeComplete = (): boolean => {
   return currentDay > CHALLENGE_CONFIG.TOTAL_DAYS
 }
 
+// Get challenge date range
+export const getChallengeEndDate = (): string => {
+  return getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
+}
+
 // Database operations
 export const database = {
   getDailyTargets: async () => {
@@ -73,7 +78,7 @@ export const database = {
     }
   },
 
-  getUserProgress: async (userId: string, days: number = 365) => { // Default to 365 days instead of 7
+  getUserProgress: async (userId: string, days: number = 365) => {
     if (!isSupabaseConfigured()) {
       return { data: [], error: null }
     }
@@ -90,6 +95,32 @@ export const database = {
       return { data, error }
     } catch (error) {
       console.error('Error fetching user progress:', error)
+      return { data: null, error }
+    }
+  },
+
+  // NEW: Get user progress within challenge date range only
+  getChallengeProgress: async (userId: string) => {
+    if (!isSupabaseConfigured()) {
+      return { data: [], error: null }
+    }
+
+    const startDate = CHALLENGE_CONFIG.START_DATE
+    const endDate = getChallengeEndDate()
+
+    try {
+      const { data, error } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false })
+      
+      console.log(`📊 Loaded ${data?.length || 0} challenge progress records from ${startDate} to ${endDate}`)
+      return { data, error }
+    } catch (error) {
+      console.error('Error fetching challenge progress:', error)
       return { data: null, error }
     }
   },
@@ -210,6 +241,20 @@ export const storage = {
     const progressKey = 'squat_progress_history'
     const existing = localStorage.getItem(progressKey)
     return existing ? JSON.parse(existing) : []
+  },
+
+  // NEW: Get challenge progress from local storage
+  getChallengeProgress: (): any[] => {
+    if (typeof window === 'undefined') return []
+    
+    const allProgress = storage.getUserProgress()
+    const startDate = CHALLENGE_CONFIG.START_DATE
+    const endDate = getChallengeEndDate()
+    
+    // Filter progress to only include challenge dates
+    return allProgress.filter(progress => {
+      return progress.date >= startDate && progress.date <= endDate
+    })
   }
 }
 
