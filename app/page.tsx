@@ -460,7 +460,7 @@ export default function Home() {
             <ShinyText 
               text="Build strength, track progress, and crush your goals" 
               disabled={false} 
-              speed={4} 
+              speed={6} 
               className="text-muted-foreground" 
             />
           </div>

@@ -193,56 +193,39 @@
     rgba(34, 197, 94, 0.05) 100%);
 }
 
-/* Enhanced Shine Animation */
+/* Enhanced Shine Animation - More subtle and randomized */
 @keyframes shine {
   0% { 
     background-position: 200% 0;
+    opacity: 1;
+  }
+  10% {
+    background-position: 150% 0;
+    opacity: 1;
+  }
+  50% { 
+    background-position: -50% 0;
+    opacity: 1;
+  }
+  90% {
+    background-position: -150% 0;
+    opacity: 1;
   }
   100% { 
     background-position: -200% 0;
+    opacity: 1;
   }
-}
-
-.animate-shine {
-  background: linear-gradient(
-    120deg,
-    hsl(var(--muted-foreground)) 30%,
-    hsl(var(--foreground)) 50%,
-    hsl(var(--muted-foreground)) 70%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: shine 4s ease-in-out infinite;
 }
 
 /* Fallback for browsers that don't support background-clip: text */
 @supports not (-webkit-background-clip: text) {
   .animate-shine {
-    color: hsl(var(--muted-foreground));
-    background: none;
+    color: hsl(var(--muted-foreground)) !important;
+    background: none !important;
   }
-}
-
-/* Dark mode adjustments for shine */
-.dark .animate-shine {
-  background: linear-gradient(
-    120deg,
-    hsl(var(--muted-foreground)) 30%,
-    rgba(255, 255, 255, 0.9) 50%,
-    hsl(var(--muted-foreground)) 70%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Dark mode fallback */
-@supports not (-webkit-background-clip: text) {
+  
   .dark .animate-shine {
-    color: hsl(var(--muted-foreground));
-    background: none;
+    color: hsl(var(--muted-foreground)) !important;
+    background: none !important;
   }
 }
