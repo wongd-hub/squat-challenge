@@ -256,11 +256,13 @@ export default function Home() {
     }
   };
 
-  // Enhanced demo values for better count-up effect
-  const totalSquats = progressData.reduce((acc, day) => acc + day.squats_completed, 0) + 2847; // Add base amount for demo
-  const currentStreak = calculateStreak(progressData) + 12; // Add to streak for demo
-  const weeklyGoal = 850; // Higher weekly goal
-  const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0) + 456; // Add base for demo
+  // Enhanced demo values for better count-up effect - ALWAYS show these enhanced values
+  const baseProgressTotal = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
+  const totalSquats = baseProgressTotal + 4847; // Add significant base amount for demo
+  const currentStreak = calculateStreak(progressData) + 18; // Add to streak for demo
+  const weeklyGoal = 1250; // Higher weekly goal
+  const baseWeeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
+  const weeklyProgress = baseWeeklyProgress + 892; // Add base for demo
 
   // Calculate display values based on challenge status
   const getDisplayDay = () => {
@@ -304,10 +306,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-bg">
-      {/* Sticky Glassmorphic Header */}
+      {/* Sticky Glassmorphic Header - Reduced opacity for better blur */}
       <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
         isScrolled 
-          ? 'backdrop-blur-xl bg-background/20 border-b border-white/10 shadow-xl' 
+          ? 'backdrop-blur-xl bg-background/10 border-b border-white/10 shadow-xl' 
           : 'bg-transparent'
       }`}>
         <div className="container mx-auto px-4 py-3 max-w-6xl">
@@ -492,7 +494,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Stats Overview - Single Row on Desktop */}
+          {/* Stats Overview - Single Row on Desktop with Enhanced Values */}
           <StatsOverview
             totalSquats={totalSquats}
             streak={currentStreak}
