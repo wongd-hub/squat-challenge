@@ -133,9 +133,16 @@ export const database = {
         .from('profiles')
         .select('id, display_name')
         .eq('email', email)
-        .single()
       
-      return { exists: !!data, profile: data, error }
+      if (error) {
+        console.error('Error checking user existence:', error)
+        return { exists: false, error }
+      }
+      
+      const exists = data && data.length > 0
+      const profile = exists ? data[0] : null
+      
+      return { exists, profile, error: null }
     } catch (error) {
       console.error('Error checking user existence:', error)
       return { exists: false, error }
