@@ -256,13 +256,15 @@ export default function Home() {
     }
   };
 
-  // Enhanced demo values for better count-up effect - ALWAYS show these enhanced values
+  // ALWAYS use enhanced demo values for better count-up effect - regardless of actual data
   const baseProgressTotal = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const totalSquats = baseProgressTotal + 4847; // Add significant base amount for demo
-  const currentStreak = calculateStreak(progressData) + 18; // Add to streak for demo
-  const weeklyGoal = 1250; // Higher weekly goal
+  const totalSquats = Math.max(baseProgressTotal + 4847, 4847); // Ensure minimum of 4847
+  const currentStreak = Math.max(calculateStreak(progressData) + 18, 18); // Ensure minimum of 18
+  const weeklyGoal = 1250; // Fixed high goal
   const baseWeeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const weeklyProgress = baseWeeklyProgress + 892; // Add base for demo
+  const weeklyProgress = Math.max(baseWeeklyProgress + 892, 892); // Ensure minimum of 892
+
+  console.log('Enhanced demo values:', { totalSquats, currentStreak, weeklyGoal, weeklyProgress });
 
   // Calculate display values based on challenge status
   const getDisplayDay = () => {
