@@ -58,46 +58,28 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
 
     if (disabled) {
         return (
-            <div className={`inline-block ${className}`}>
+            <span className={className}>
                 {text}
-            </div>
+            </span>
         );
     }
 
     return (
-        <div
-            className={`inline-block ${className}`}
+        <span
+            className={`inline-block ${className} ${isShining ? 'animate-shine' : ''}`}
             style={{
                 background: isShining 
-                    ? 'linear-gradient(120deg, hsl(var(--muted-foreground)) 30%, rgba(255, 255, 255, 0.9) 50%, hsl(var(--muted-foreground)) 70%)'
-                    : 'hsl(var(--muted-foreground))',
-                backgroundSize: isShining ? '200% 100%' : '100% 100%',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                color: 'transparent',
-                animation: isShining ? 'shine 6s linear' : 'none',
-                backgroundPosition: isShining ? '-200% 0' : '0% 0',
+                    ? 'linear-gradient(110deg, hsl(var(--muted-foreground)) 45%, rgba(255, 255, 255, 0.8) 50%, hsl(var(--muted-foreground)) 55%)'
+                    : 'transparent',
+                backgroundSize: '200% 100%',
+                WebkitBackgroundClip: isShining ? 'text' : 'unset',
+                backgroundClip: isShining ? 'text' : 'unset',
+                color: isShining ? 'transparent' : 'hsl(var(--muted-foreground))',
+                transition: 'all 0.3s ease',
             }}
         >
             {text}
-            <style jsx>{`
-                @keyframes shine {
-                    0% { 
-                        background-position: 200% 0;
-                    }
-                    100% { 
-                        background-position: -200% 0;
-                    }
-                }
-                
-                @supports not (-webkit-background-clip: text) {
-                    div {
-                        color: hsl(var(--muted-foreground)) !important;
-                        background: none !important;
-                    }
-                }
-            `}</style>
-        </div>
+        </span>
     );
 };
 

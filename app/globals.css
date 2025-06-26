@@ -193,38 +193,23 @@
     rgba(34, 197, 94, 0.05) 100%);
 }
 
-/* Enhanced Shine Animation - More subtle and randomized */
+/* Enhanced Shine Animation */
 @keyframes shine {
   0% { 
-    background-position: 200% 0;
-    opacity: 1;
-  }
-  10% {
-    background-position: 150% 0;
-    opacity: 1;
-  }
-  50% { 
-    background-position: -50% 0;
-    opacity: 1;
-  }
-  90% {
-    background-position: -150% 0;
-    opacity: 1;
+    background-position: -200% 0;
   }
   100% { 
-    background-position: -200% 0;
-    opacity: 1;
+    background-position: 200% 0;
   }
+}
+
+.animate-shine {
+  animation: shine 6s ease-in-out;
 }
 
 /* Fallback for browsers that don't support background-clip: text */
 @supports not (-webkit-background-clip: text) {
   .animate-shine {
-    color: hsl(var(--muted-foreground)) !important;
-    background: none !important;
-  }
-  
-  .dark .animate-shine {
     color: hsl(var(--muted-foreground)) !important;
     background: none !important;
   }

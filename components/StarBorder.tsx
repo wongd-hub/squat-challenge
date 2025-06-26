@@ -21,6 +21,9 @@ const StarBorder = <T extends React.ElementType = "button">({
 }: StarBorderProps<T>) => {
   const Component = as || "button";
 
+  // Use purple for light mode, cyan for dark mode
+  const effectiveColor = color === "cyan" ? "rgb(147, 51, 234)" : color; // purple-600
+
   return (
     <Component 
       className={`relative inline-block overflow-hidden rounded-[20px] ${className}`} 
@@ -33,14 +36,14 @@ const StarBorder = <T extends React.ElementType = "button">({
       <div
         className="absolute w-[300%] h-[50%] opacity-70 bottom-[-11px] right-[-250%] rounded-full animate-star-movement-bottom z-0"
         style={{
-          background: `radial-gradient(circle, ${color}, transparent 10%)`,
+          background: `radial-gradient(circle, ${effectiveColor}, transparent 10%)`,
           animationDuration: speed,
         }}
       ></div>
       <div
         className="absolute w-[300%] h-[50%] opacity-70 top-[-10px] left-[-250%] rounded-full animate-star-movement-top z-0"
         style={{
-          background: `radial-gradient(circle, ${color}, transparent 10%)`,
+          background: `radial-gradient(circle, ${effectiveColor}, transparent 10%)`,
           animationDuration: speed,
         }}
       ></div>
