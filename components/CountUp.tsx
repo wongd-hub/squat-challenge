@@ -10,7 +10,7 @@ interface CountUpProps {
   startOnView?: boolean;
 }
 
-export function CountUp({ 
+export default function CountUp({ 
   value, 
   duration = 2000, 
   className = '', 

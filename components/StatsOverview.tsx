@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Flame, TrendingUp, Award } from 'lucide-react';
-import { CountUp } from './CountUp';
+import CountUp from './CountUp';
 
 interface StatsOverviewProps {
   totalSquats: number;
