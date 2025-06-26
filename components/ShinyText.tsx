@@ -22,26 +22,33 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             if (intervalRef.current) clearTimeout(intervalRef.current);
 
-            // Random delay between 0-8 seconds for initial start
-            const randomDelay = Math.random() * 8000;
+            // Random delay between 8-20 seconds for next shine
+            const randomDelay = (8 + Math.random() * 12) * 1000;
             
             timeoutRef.current = setTimeout(() => {
                 // Start shining
                 setIsShining(true);
                 
-                // Stop shining after the animation duration (speed controls the duration)
+                // Stop shining after the animation duration (fixed 6 seconds)
                 setTimeout(() => {
                     setIsShining(false);
-                }, speed * 1000);
+                    // Schedule next shine immediately after this one ends
+                    scheduleShine();
+                }, 6000); // Fixed 6-second animation duration
                 
-                // Schedule next shine (8-20 seconds)
-                const nextInterval = (8 + Math.random() * 12) * 1000;
-                intervalRef.current = setTimeout(scheduleShine, nextInterval);
             }, randomDelay);
         };
 
-        // Start the scheduling
-        scheduleShine();
+        // Start the first shine after initial random delay (0-8 seconds)
+        const initialDelay = Math.random() * 8000;
+        timeoutRef.current = setTimeout(() => {
+            setIsShining(true);
+            setTimeout(() => {
+                setIsShining(false);
+                // Start the regular scheduling
+                scheduleShine();
+            }, 6000);
+        }, initialDelay);
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -66,8 +73,8 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 color: 'transparent',
-                animation: isShining ? `shine ${speed}s linear` : 'none',
-                // Fallback for browsers that don't support background-clip: text
+                animation: isShining ? 'shine 6s linear' : 'none', // Fixed 6-second duration
+                backgroundPosition: isShining ? '-200% 0' : '200% 0',
             }}
         >
             {text}

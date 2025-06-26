@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
+import StarBorder from './StarBorder';
 
 interface SquatDialProps {
   onSquatsChange: (squats: number) => void;
@@ -60,10 +60,25 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     
     setDialRotation(totalRotation.current);
     const squats = calculateSquats(totalRotation.current);
-    setTempSquats(squats);
+    
+    // Apply limits: can't go below 0 total squats, can't exceed target
+    const newTotal = currentSquats + squats;
+    const maxSquats = targetSquats - currentSquats; // Maximum squats we can add
+    const minSquats = -currentSquats; // Maximum squats we can remove (to reach 0)
+    
+    // Clamp tempSquats to valid range
+    const clampedSquats = Math.max(minSquats, Math.min(maxSquats, squats));
+    setTempSquats(clampedSquats);
+    
+    // If we hit a limit, adjust the rotation to match
+    if (clampedSquats !== squats) {
+      const clampedRotation = clampedSquats * 36;
+      totalRotation.current = clampedRotation;
+      setDialRotation(clampedRotation);
+    }
     
     lastAngle.current = currentAngle;
-  }, [getAngleFromPoint, calculateSquats]);
+  }, [getAngleFromPoint, calculateSquats, currentSquats, targetSquats]);
 
   const handleEnd = useCallback(() => {
     isDragging.current = false;
@@ -129,13 +144,17 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
 
   const bankSquats = () => {
     if (tempSquats !== 0) {
-      const newTotal = Math.max(0, currentSquats + tempSquats); // Prevent negative totals
+      const newTotal = currentSquats + tempSquats;
       onSquatsChange(newTotal);
       setTempSquats(0);
       setDialRotation(0);
       totalRotation.current = 0;
     }
   };
+
+  // Check if target is reached
+  const isTargetReached = currentSquats >= targetSquats;
+  const canBankSquats = tempSquats !== 0 && !isTargetReached;
 
   const progressPercentage = Math.abs(tempSquats / 10) * 100; // Progress for current 10-squat cycle
   const dialSize = compact ? 'w-48 h-48' : 'w-80 h-80';
@@ -231,18 +250,26 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
             {isNegative ? `Removing ${Math.abs(tempSquats)} squats` : `Adding ${tempSquats} squats`}
           </p>
         )}
+        {isTargetReached && (
+          <p className={`${compact ? 'text-sm' : 'text-base'} text-green-600 dark:text-green-400 mt-2 font-semibold`}>
+            🎉 Target reached! Great job!
+          </p>
+        )}
       </div>
 
-      {/* Bank Button */}
-      <Button
+      {/* Bank Button with StarBorder */}
+      <StarBorder
+        as="button"
+        className={`${compact ? 'w-48 h-12' : 'w-64 h-14'} ${!canBankSquats ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        color="cyan"
+        speed="5s"
         onClick={bankSquats}
-        disabled={tempSquats === 0}
-        className={`${compact ? 'w-48 h-12' : 'w-64 h-14'} glass-strong text-foreground rounded-full ${compact ? 'text-base' : 'text-lg'} font-medium shadow-lg hover:glass disabled:opacity-50 disabled:cursor-not-allowed ${
-          isNegative ? 'border-destructive/50 hover:border-destructive' : ''
-        }`}
+        disabled={!canBankSquats}
       >
-        {isNegative ? 'Remove Squats' : 'Bank Squats'}
-      </Button>
+        <span className={`${compact ? 'text-base' : 'text-lg'} font-medium`}>
+          {isTargetReached ? 'Target Reached!' : isNegative ? 'Remove Squats' : 'Bank Squats'}
+        </span>
+      </StarBorder>
     </div>
   );
 }
