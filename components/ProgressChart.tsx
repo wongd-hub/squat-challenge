@@ -101,37 +101,65 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="glass-strong p-4 rounded-lg shadow-xl border border-border/50 min-w-48">
-          <p className="font-semibold text-foreground mb-2">{data.dayLabel}</p>
-          <div className="space-y-1">
+        <div className="glass-strong p-4 rounded-xl shadow-2xl border border-border/50 min-w-48 backdrop-blur-xl">
+          <p className="font-semibold text-foreground mb-3 text-center">{data.dayLabel}</p>
+          <div className="space-y-2">
             {data.isRestDay ? (
-              <p className="text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                🛌 Rest Day
-              </p>
+              <div className="text-center">
+                <div className="text-3xl mb-2">🛌</div>
+                <p className="text-blue-600 dark:text-blue-400 font-medium">Rest Day</p>
+                <p className="text-xs text-muted-foreground">Recovery & relaxation</p>
+              </div>
             ) : (
               <>
-                <p className="text-green-600 dark:text-green-400 flex items-center gap-2">
-                  <CheckCircle className="w-3 h-3" />
-                  Completed: <span className="font-bold">{data.squats_completed}</span>
-                </p>
-                <p className="text-primary flex items-center gap-2">
-                  <Target className="w-3 h-3" />
-                  Target: <span className="font-bold">{data.target_squats}</span>
-                </p>
-                <p className={`${data.completionRate >= 100 ? 'text-green-600 dark:text-green-400' : 'text-orange-500'}`}>
-                  Progress: <span className="font-bold">{data.completionRate.toFixed(1)}%</span>
-                </p>
+                <div className="flex items-center justify-between p-2 glass-subtle rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    <span className="text-sm">Completed</span>
+                  </div>
+                  <span className="font-bold text-green-600 dark:text-green-400">{data.squats_completed}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-2 glass-subtle rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-3 h-3 text-primary" />
+                    <span className="text-sm">Target</span>
+                  </div>
+                  <span className="font-bold text-primary">{data.target_squats}</span>
+                </div>
+                
+                <div className="p-2 glass-subtle rounded-lg">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-muted-foreground">Progress</span>
+                    <span className={`text-xs font-bold ${data.completionRate >= 100 ? 'text-green-600 dark:text-green-400' : 'text-orange-500'}`}>
+                      {data.completionRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-muted/30 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        data.completionRate >= 100 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                          : 'bg-gradient-to-r from-orange-500 to-amber-500'
+                      }`}
+                      style={{ width: `${Math.min(data.completionRate, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                
                 {data.remaining_target > 0 && (
-                  <p className="text-muted-foreground">
-                    Remaining: <span className="font-bold">{data.remaining_target}</span>
-                  </p>
+                  <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <span className="text-sm text-orange-700 dark:text-orange-300">
+                      <span className="font-bold">{data.remaining_target}</span> squats remaining
+                    </span>
+                  </div>
                 )}
               </>
             )}
           </div>
           {data.isToday && (
-            <Badge className="mt-2 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-              Today
+            <Badge className="mt-3 w-full justify-center bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0">
+              📅 Today
             </Badge>
           )}
         </div>
@@ -147,7 +175,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   const totalDays = challengeData.length;
 
   return (
-    <Card className="glass">
+    <Card className="glass overflow-hidden">
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -162,26 +190,26 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             </div>
           </div>
           
-          {/* Legend */}
+          {/* Enhanced Legend */}
           <div className="flex flex-wrap gap-3 text-xs">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-green-500"></div>
+            <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
+              <div className="w-3 h-3 rounded bg-gradient-to-r from-green-500 to-emerald-500 shadow-sm"></div>
               <span className="text-muted-foreground">Completed</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-orange-500"></div>
-              <span className="text-muted-foreground">Partial Progress</span>
+            <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
+              <div className="w-3 h-3 rounded bg-gradient-to-r from-orange-500 to-amber-500 shadow-sm"></div>
+              <span className="text-muted-foreground">Partial</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-muted/50 border border-muted"></div>
-              <span className="text-muted-foreground">Remaining Target</span>
+            <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
+              <div className="w-3 h-3 rounded bg-muted/50 border border-muted shadow-sm"></div>
+              <span className="text-muted-foreground">Remaining</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-blue-500"></div>
+            <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
+              <div className="w-3 h-3 rounded bg-gradient-to-r from-blue-500 to-cyan-500 shadow-sm"></div>
               <span className="text-muted-foreground">Rest Day</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded border-2 border-blue-500 bg-transparent"></div>
+            <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
+              <div className="w-3 h-3 rounded border-2 border-blue-500 bg-transparent shadow-sm"></div>
               <span className="text-muted-foreground">Today</span>
             </div>
           </div>
@@ -190,9 +218,30 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
       <CardContent>
         <div 
           ref={scrollRef}
-          className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
-          style={{ scrollbarWidth: 'thin' }}
+          className="overflow-x-auto pb-4"
+          style={{ 
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'hsl(var(--muted)) transparent'
+          }}
         >
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              height: 8px;
+            }
+            div::-webkit-scrollbar-track {
+              background: hsl(var(--muted) / 0.1);
+              border-radius: 4px;
+            }
+            div::-webkit-scrollbar-thumb {
+              background: linear-gradient(90deg, hsl(var(--primary) / 0.5), hsl(var(--primary) / 0.8));
+              border-radius: 4px;
+              border: 1px solid hsl(var(--border));
+            }
+            div::-webkit-scrollbar-thumb:hover {
+              background: linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--primary)));
+            }
+          `}</style>
+          
           <div className="min-w-[1200px] h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
@@ -200,7 +249,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 margin={{ top: 20, right: 30, left: 20, bottom: 40 }}
                 barCategoryGap="15%"
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  stroke="hsl(var(--border))" 
+                  opacity={0.2}
+                  vertical={false}
+                />
                 <XAxis 
                   dataKey="dayLabel" 
                   tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
@@ -208,10 +262,14 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                   angle={-45}
                   textAnchor="end"
                   height={60}
+                  axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
+                  tickLine={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                 />
                 <YAxis 
                   tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                   stroke="hsl(var(--muted-foreground))"
+                  axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
+                  tickLine={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 
@@ -219,19 +277,19 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 <Bar 
                   dataKey="squats_completed" 
                   stackId="progress"
-                  radius={[0, 0, 0, 0]}
+                  radius={[0, 0, 4, 4]}
                   name="Completed"
                 >
                   {challengeData.map((entry, index) => {
                     let fillColor = 'hsl(var(--muted))'; // Default for no progress
                     
                     if (entry.isRestDay) {
-                      fillColor = 'hsl(var(--chart-1))'; // Blue for rest days
+                      fillColor = 'url(#restDayGradient)'; // Blue gradient for rest days
                     } else if (entry.squats_completed > 0) {
                       if (entry.squats_completed >= entry.target_squats) {
-                        fillColor = 'hsl(var(--chart-2))'; // Green for goal met
+                        fillColor = 'url(#completedGradient)'; // Green gradient for goal met
                       } else {
-                        fillColor = 'hsl(var(--chart-4))'; // Orange for partial
+                        fillColor = 'url(#partialGradient)'; // Orange gradient for partial
                       }
                     }
                     
@@ -239,8 +297,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                       <Cell 
                         key={`completed-${index}`} 
                         fill={fillColor}
-                        stroke={entry.isToday ? 'hsl(var(--chart-1))' : 'transparent'}
-                        strokeWidth={entry.isToday ? 2 : 0}
+                        stroke={entry.isToday ? 'hsl(var(--primary))' : 'transparent'}
+                        strokeWidth={entry.isToday ? 3 : 0}
+                        style={{
+                          filter: entry.isToday ? 'drop-shadow(0 0 8px hsl(var(--primary) / 0.5))' : 'none',
+                          transition: 'all 0.3s ease'
+                        }}
                       />
                     );
                   })}
@@ -256,50 +318,83 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                   {challengeData.map((entry, index) => (
                     <Cell 
                       key={`remaining-${index}`} 
-                      fill={entry.isRestDay ? 'transparent' : 'hsl(var(--muted))'}
-                      fillOpacity={entry.isRestDay ? 0 : 0.3}
-                      stroke={entry.isToday ? 'hsl(var(--chart-1))' : 'hsl(var(--border))'}
-                      strokeWidth={entry.isToday ? 2 : 1}
+                      fill={entry.isRestDay ? 'transparent' : 'hsl(var(--muted) / 0.3)'}
+                      fillOpacity={entry.isRestDay ? 0 : 0.6}
+                      stroke={entry.isToday ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
+                      strokeWidth={entry.isToday ? 3 : 1}
                       strokeDasharray={entry.isToday ? "0" : "2,2"}
+                      style={{
+                        filter: entry.isToday ? 'drop-shadow(0 0 8px hsl(var(--primary) / 0.3))' : 'none',
+                        transition: 'all 0.3s ease'
+                      }}
                     />
                   ))}
                 </Bar>
+                
+                {/* Gradient Definitions */}
+                <defs>
+                  <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
+                    <stop offset="100%" stopColor="hsl(142 76% 36%)" stopOpacity={1} />
+                  </linearGradient>
+                  <linearGradient id="partialGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--chart-4))" stopOpacity={1} />
+                    <stop offset="100%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
+                  </linearGradient>
+                  <linearGradient id="restDayGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={1} />
+                    <stop offset="100%" stopColor="hsl(200 100% 50%)" stopOpacity={1} />
+                  </linearGradient>
+                </defs>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
         
-        {/* Summary Stats */}
+        {/* Enhanced Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="text-center p-4 glass-subtle rounded-xl">
-            <div className="text-2xl font-bold text-primary">{totalCompleted.toLocaleString()}</div>
+          <div className="text-center p-4 glass-strong rounded-xl border border-primary/20 hover:border-primary/40 transition-all duration-300">
+            <div className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 dark:from-primary dark:to-blue-400 bg-clip-text text-transparent">
+              {totalCompleted.toLocaleString()}
+            </div>
             <div className="text-sm text-muted-foreground">Total Squats</div>
           </div>
-          <div className="text-center p-4 glass-subtle rounded-xl">
+          <div className="text-center p-4 glass-strong rounded-xl border border-green-500/20 hover:border-green-500/40 transition-all duration-300">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">{completedDays}</div>
             <div className="text-sm text-muted-foreground">Days Completed</div>
           </div>
-          <div className="text-center p-4 glass-subtle rounded-xl">
+          <div className="text-center p-4 glass-strong rounded-xl border border-orange-500/20 hover:border-orange-500/40 transition-all duration-300">
             <div className="text-2xl font-bold text-orange-500">{overallCompletion.toFixed(1)}%</div>
             <div className="text-sm text-muted-foreground">Overall Progress</div>
           </div>
-          <div className="text-center p-4 glass-subtle rounded-xl">
+          <div className="text-center p-4 glass-strong rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{Math.max(0, totalDays - currentDay + 1)}</div>
             <div className="text-sm text-muted-foreground">Days Remaining</div>
           </div>
         </div>
 
-        {/* Progress Indicator */}
-        <div className="mt-6 p-4 glass-subtle rounded-xl">
-          <div className="flex justify-between items-center mb-2">
+        {/* Enhanced Progress Indicator */}
+        <div className="mt-6 p-6 glass-strong rounded-xl border border-primary/10">
+          <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium">Challenge Progress</span>
             <span className="text-sm text-muted-foreground">{currentDay}/{totalDays} days</span>
           </div>
-          <div className="w-full bg-muted/30 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${Math.min((currentDay / totalDays) * 100, 100)}%` }}
-            ></div>
+          <div className="relative">
+            <div className="w-full bg-muted/30 rounded-full h-3 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+                style={{ width: `${Math.min((currentDay / totalDays) * 100, 100)}%` }}
+              >
+                {/* Animated shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+              </div>
+            </div>
+            {/* Progress percentage */}
+            <div className="absolute -top-8 left-0 right-0 flex justify-center">
+              <span className="text-xs font-medium text-primary bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50">
+                {((currentDay / totalDays) * 100).toFixed(1)}%
+              </span>
+            </div>
           </div>
         </div>
       </CardContent>
