@@ -196,26 +196,8 @@ export const storage = {
   }
 }
 
-// Generate a 6-digit code
-const generateSixDigitCode = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString()
-}
-
-// Store code temporarily (in production, this would be in your database)
-const tempCodeStorage = new Map<string, { code: string; expires: number; isNewUser: boolean }>()
-
-// Clean up expired codes
-const cleanupExpiredCodes = () => {
-  const now = Date.now()
-  for (const [email, data] of tempCodeStorage.entries()) {
-    if (data.expires < now) {
-      tempCodeStorage.delete(email)
-    }
-  }
-}
-
-// Custom authentication functions using 6-digit codes
-export const sendLoginCode = async (email: string) => {
+// Simplified authentication using Supabase's built-in OTP system
+export const sendLoginCode = async (email: string, displayName?: string) => {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase is not configured. Please check your environment variables.')
   }
@@ -227,69 +209,13 @@ export const sendLoginCode = async (email: string) => {
     const { exists } = await database.checkUserExists(email)
     const isNewUser = !exists
     
-    // Generate 6-digit code
-    const code = generateSixDigitCode()
-    const expires = Date.now() + (10 * 60 * 1000) // 10 minutes
-    
-    // Store code temporarily
-    tempCodeStorage.set(email, { code, expires, isNewUser })
-    
-    // Clean up expired codes
-    cleanupExpiredCodes()
-    
-    // In a real implementation, you would send this code via email
-    // For now, we'll log it to console for testing
-    console.log(`🔐 Login code for ${email}: ${code} (expires in 10 minutes)`)
     console.log(`👤 Is new user: ${isNewUser}`)
     
-    // Simulate email sending delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    console.log('✅ Login code sent successfully')
-    return { success: true, isNewUser }
-    
-  } catch (error) {
-    console.error('❌ Error in sendLoginCode:', error)
-    throw error
-  }
-}
-
-export const verifyLoginCode = async (email: string, code: string, displayName?: string) => {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured. Please check your environment variables.')
-  }
-
-  try {
-    console.log('🔐 Verifying login code for:', email)
-    
-    // Clean up expired codes first
-    cleanupExpiredCodes()
-    
-    // Check if code exists and is valid
-    const storedData = tempCodeStorage.get(email)
-    if (!storedData) {
-      throw new Error('No verification code found. Please request a new code.')
-    }
-    
-    if (storedData.expires < Date.now()) {
-      tempCodeStorage.delete(email)
-      throw new Error('Verification code has expired. Please request a new code.')
-    }
-    
-    if (storedData.code !== code) {
-      throw new Error('Invalid verification code. Please try again.')
-    }
-    
-    // Code is valid, now create/sign in user
-    if (storedData.isNewUser) {
-      if (!displayName) {
-        throw new Error('Display name is required for new users.')
-      }
-      
-      // Create new user with email/password auth (using code as temporary password)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+    if (isNewUser && displayName) {
+      // For new users, we'll use signUp with email confirmation
+      const { data, error } = await supabase.auth.signUp({
         email,
-        password: `temp_${code}_${Date.now()}`, // Temporary password
+        password: 'temp-password-' + Math.random(), // Temporary password, user will use OTP
         options: {
           data: {
             display_name: displayName
@@ -297,44 +223,69 @@ export const verifyLoginCode = async (email: string, code: string, displayName?:
         }
       })
       
-      if (authError) {
-        console.error('❌ Error creating user:', authError)
-        throw authError
+      if (error) {
+        console.error('❌ Error creating user:', error)
+        throw error
       }
       
-      if (authData.user) {
-        // Create profile
-        await database.createUserProfile(authData.user.id, email, displayName)
-        
-        // Clean up the code
-        tempCodeStorage.delete(email)
-        
-        console.log('✅ New user created and signed in')
-        return { success: true, data: authData }
-      }
+      console.log('✅ New user created, confirmation email sent')
+      return { success: true, isNewUser: true }
     } else {
-      // Existing user - sign them in using OTP
-      const { data: authData, error: authError } = await supabase.auth.signInWithOtp({
+      // For existing users or new users without display name, use OTP
+      const { data, error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          shouldCreateUser: false
+          shouldCreateUser: !isNewUser, // Only create if new user
+          data: displayName ? { display_name: displayName } : undefined
         }
       })
       
-      if (authError) {
-        console.error('❌ Error signing in user:', authError)
-        throw authError
+      if (error) {
+        console.error('❌ Error sending OTP:', error)
+        throw error
       }
       
-      // For existing users, we need to get their session
-      const { data: sessionData } = await supabase.auth.getSession()
-      
-      // Clean up the code
-      tempCodeStorage.delete(email)
-      
-      console.log('✅ Existing user signed in')
-      return { success: true, data: { user: sessionData.session?.user, session: sessionData.session } }
+      console.log('✅ OTP sent successfully')
+      return { success: true, isNewUser }
     }
+    
+  } catch (error) {
+    console.error('❌ Error in sendLoginCode:', error)
+    throw error
+  }
+}
+
+export const verifyLoginCode = async (email: string, token: string, displayName?: string) => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured. Please check your environment variables.')
+  }
+
+  try {
+    console.log('🔐 Verifying login code for:', email)
+    
+    // Verify the OTP token
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email'
+    })
+    
+    if (error) {
+      console.error('❌ Error verifying OTP:', error)
+      throw error
+    }
+    
+    if (data.user) {
+      // Create or update profile if needed
+      if (displayName) {
+        await database.createUserProfile(data.user.id, email, displayName)
+      }
+      
+      console.log('✅ User verified and signed in')
+      return { success: true, data }
+    }
+    
+    throw new Error('Verification failed')
     
   } catch (error) {
     console.error('❌ Error verifying login code:', error)

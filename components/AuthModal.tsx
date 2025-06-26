@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, sendLoginCode, verifyLoginCode } from '@/lib/supabase';
 import { Mail, Shield, AlertCircle, CheckCircle, User } from 'lucide-react';
 
 interface AuthModalProps {
@@ -38,21 +38,8 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
       return;
     }
 
-    // Check if user exists first
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id, display_name')
-      .eq('email', email.trim())
-      .single();
-
-    const userExists = !!existingProfile;
-
-    if (!userExists && !displayName.trim()) {
-      setError('Please enter your display name for account creation');
-      return;
-    }
-
-    if (!userExists && displayName.trim().length < 2) {
+    // For new users, require display name
+    if (displayName.trim() && displayName.trim().length < 2) {
       setError('Display name must be at least 2 characters long');
       return;
     }
@@ -62,28 +49,13 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
     setSuccess('');
 
     try {
-      // Call the edge function to send login code
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-login-code`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          displayName: userExists ? undefined : displayName.trim()
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to send verification code');
+      const result = await sendLoginCode(email.trim(), displayName.trim() || undefined);
+      
+      if (result.success) {
+        setIsNewUser(result.isNewUser);
+        setStep('code');
+        setSuccess('Check your email for a verification link or 6-digit code');
       }
-
-      setIsNewUser(result.isNewUser);
-      setStep('code');
-      setSuccess('Check your email for a 6-digit verification code');
     } catch (error: any) {
       console.error('❌ Error sending code:', error);
       setError(error.message || 'Failed to send verification code. Please try again.');
@@ -109,36 +81,15 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
     setError('');
 
     try {
-      // Call the edge function to verify code
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/verify-login-code`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          code: code.trim(),
-          displayName: isNewUser ? displayName.trim() : undefined
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Invalid verification code');
-      }
-
-      if (result.success) {
+      const result = await verifyLoginCode(
+        email.trim(), 
+        code.trim(), 
+        isNewUser ? displayName.trim() : undefined
+      );
+      
+      if (result.success && result.data.user) {
         setSuccess('Successfully signed in!');
-        
-        // The edge function should have created the session
-        // Refresh the auth state
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          onAuthSuccess?.(session.user);
-        }
+        onAuthSuccess?.(result.data.user);
         
         // Close modal after a brief delay
         setTimeout(() => {
@@ -199,7 +150,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           <DialogDescription>
             {step === 'form' 
               ? 'Enter your email and name (for new accounts) to get started'
-              : 'Enter the 6-digit code sent to your email'
+              : 'Enter the 6-digit code from your email'
             }
           </DialogDescription>
         </DialogHeader>
@@ -237,11 +188,11 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
+                <Label htmlFor="displayName">Display Name (Optional)</Label>
                 <Input
                   id="displayName"
                   type="text"
-                  placeholder="Your Name (required for new accounts)"
+                  placeholder="Your Name (for new accounts)"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={isLoading}
@@ -324,7 +275,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
 
           <div className="text-center">
             <p className="text-xs text-muted-foreground">
-              No password required! We'll send you a secure 6-digit code to sign in.
+              No password required! We'll send you a secure verification code to sign in.
             </p>
           </div>
         </div>
