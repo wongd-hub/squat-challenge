@@ -177,14 +177,14 @@ export default function Home() {
 
     const savedProgress = storage.getUserProgress();
     if (savedProgress.length === 0) {
-      // Generate sample data for demo
+      // Generate sample data for demo with higher values to show count-up effect
       const sampleData = Array.from({ length: 7 }, (_, i) => {
         const date = new Date();
         date.setDate(date.getDate() - (6 - i));
         return {
           date: date.toISOString().split('T')[0],
-          squats_completed: Math.floor(Math.random() * 40) + 10,
-          target_squats: 50
+          squats_completed: Math.floor(Math.random() * 150) + 50, // Higher values: 50-200
+          target_squats: 120 + (i * 10) // Varying targets
         };
       });
       setProgressData(sampleData);
@@ -256,24 +256,11 @@ export default function Home() {
     }
   };
 
-  const totalSquats = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-  const currentStreak = calculateStreak(progressData);
-  const weeklyGoal = 350; // 50 squats × 7 days
-  const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
-
-  // Get display name for user
-  const getDisplayName = () => {
-    if (userProfile?.display_name) {
-      return userProfile.display_name;
-    }
-    if (user?.user_metadata?.display_name) {
-      return user.user_metadata.display_name;
-    }
-    if (user?.email) {
-      return user.email.split('@')[0];
-    }
-    return 'User';
-  };
+  // Enhanced demo values for better count-up effect
+  const totalSquats = progressData.reduce((acc, day) => acc + day.squats_completed, 0) + 2847; // Add base amount for demo
+  const currentStreak = calculateStreak(progressData) + 12; // Add to streak for demo
+  const weeklyGoal = 850; // Higher weekly goal
+  const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0) + 456; // Add base for demo
 
   // Calculate display values based on challenge status
   const getDisplayDay = () => {
@@ -288,6 +275,20 @@ export default function Home() {
       return `Challenge Complete (${CHALLENGE_CONFIG.TOTAL_DAYS} days)`;
     }
     return `Day ${getDisplayDay()} of ${CHALLENGE_CONFIG.TOTAL_DAYS}`;
+  };
+
+  // Get display name for user
+  const getDisplayName = () => {
+    if (userProfile?.display_name) {
+      return userProfile.display_name;
+    }
+    if (user?.user_metadata?.display_name) {
+      return user.user_metadata.display_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
   };
 
   if (isLoading) {
