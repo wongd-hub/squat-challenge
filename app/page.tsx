@@ -264,44 +264,37 @@ export default function Home() {
   return (
     <div className="min-h-screen gradient-bg">
       <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
+        {/* Top Controls Row - Right aligned */}
+        <div className="flex justify-end items-center gap-2 mb-4">
+          {user ? (
+            <>
+              <Badge variant="outline" className="glass-subtle text-xs">
+                <User className="w-3 h-3 mr-1" />
+                {getDisplayName()}
+              </Badge>
+              <Button variant="ghost" size="icon" onClick={handleSignOut} className="glass-subtle w-8 h-8">
+                <LogOut className="w-3 h-3" />
+              </Button>
+            </>
+          ) : isSupabaseConfigured() && (
+            <AuthModal onAuthSuccess={handleAuthSuccess}>
+              <Button variant="ghost" size="sm" className="glass-subtle text-xs px-2 py-1">
+                <User className="w-3 h-3 mr-1" />
+                Sign In
+              </Button>
+            </AuthModal>
+          )}
+          <ThemeToggle />
+        </div>
+
         {/* Centered Header */}
-        <div className="mb-6 md:mb-8">
-          {/* Top Row - Title and Controls */}
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1 text-center">
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                Squat Challenge
-              </h1>
-              <p className="text-sm md:text-lg text-muted-foreground mt-1">
-                Build strength, track progress, and crush your goals
-              </p>
-            </div>
-            
-            {/* Controls - Right aligned */}
-            <div className="flex flex-col items-end gap-2 ml-4">
-              <div className="flex items-center gap-2">
-                {user ? (
-                  <>
-                    <Badge variant="outline" className="glass-subtle text-xs">
-                      <User className="w-3 h-3 mr-1" />
-                      {getDisplayName()}
-                    </Badge>
-                    <Button variant="ghost" size="icon" onClick={handleSignOut} className="glass-subtle w-8 h-8">
-                      <LogOut className="w-3 h-3" />
-                    </Button>
-                  </>
-                ) : isSupabaseConfigured() && (
-                  <AuthModal onAuthSuccess={handleAuthSuccess}>
-                    <Button variant="ghost" size="sm" className="glass-subtle text-xs px-2 py-1">
-                      <User className="w-3 h-3 mr-1" />
-                      Sign In
-                    </Button>
-                  </AuthModal>
-                )}
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
+        <div className="text-center mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2">
+            Squat Challenge
+          </h1>
+          <p className="text-sm md:text-lg text-muted-foreground mb-4">
+            Build strength, track progress, and crush your goals
+          </p>
 
           {/* Status Badges Row - Centered */}
           <div className="flex flex-wrap justify-center gap-2 mb-4">
