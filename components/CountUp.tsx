@@ -1,116 +1,84 @@
 'use client';
 
-import { useEffect, useRef } from "react";
-import { useInView, useMotionValue, useSpring } from "framer-motion";
+import { useEffect, useRef, useState } from 'react';
 
 interface CountUpProps {
-  to: number;
-  from?: number;
-  direction?: "up" | "down";
-  delay?: number;
+  value: number;
   duration?: number;
   className?: string;
-  startWhen?: boolean;
-  separator?: string;
-  onStart?: () => void;
-  onEnd?: () => void;
+  formatter?: (value: number) => string;
+  startOnView?: boolean;
 }
 
-export default function CountUp({
-  to,
-  from = 0,
-  direction = "up",
-  delay = 0,
-  duration = 1,
-  className = "",
-  startWhen = true,
-  separator = "",
-  onStart,
-  onEnd,
+export function CountUp({ 
+  value, 
+  duration = 2000, 
+  className = '', 
+  formatter = (val) => val.toString(),
+  startOnView = true 
 }: CountUpProps) {
-  const ref = useRef<HTMLSpanElement>(null);
-  
-  // Initialize motion value based on direction
-  const initialValue = direction === "up" ? from : to;
-  const targetValue = direction === "up" ? to : from;
-  
-  const motionValue = useMotionValue(initialValue);
+  const [displayValue, setDisplayValue] = useState(0);
+  const [hasStarted, setHasStarted] = useState(false);
+  const elementRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<number>();
 
-  const damping = 20 + 40 * (1 / duration);
-  const stiffness = 100 * (1 / duration);
-
-  const springValue = useSpring(motionValue, {
-    damping,
-    stiffness,
-  });
-
-  const isInView = useInView(ref, { once: true, margin: "0px" });
-
-  // Set initial display value
   useEffect(() => {
-    if (ref.current) {
-      ref.current.textContent = String(initialValue);
+    if (!startOnView) {
+      startAnimation();
+      return;
     }
-  }, [initialValue]);
 
-  // Trigger animation when in view
-  useEffect(() => {
-    if (isInView && startWhen) {
-      if (typeof onStart === "function") {
-        onStart();
-      }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasStarted) {
+          startAnimation();
+          setHasStarted(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
 
-      const timeoutId = setTimeout(() => {
-        motionValue.set(targetValue);
-      }, delay * 1000);
-
-      const durationTimeoutId = setTimeout(
-        () => {
-          if (typeof onEnd === "function") {
-            onEnd();
-          }
-        },
-        delay * 1000 + duration * 1000
-      );
-
-      return () => {
-        clearTimeout(timeoutId);
-        clearTimeout(durationTimeoutId);
-      };
+    if (elementRef.current) {
+      observer.observe(elementRef.current);
     }
-  }, [
-    isInView,
-    startWhen,
-    motionValue,
-    targetValue,
-    delay,
-    onStart,
-    onEnd,
-    duration,
-  ]);
 
-  // Update display as animation progresses
-  useEffect(() => {
-    const unsubscribe = springValue.on("change", (latest) => {
-      if (ref.current) {
-        const options = {
-          useGrouping: !!separator,
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        };
-
-        const formattedNumber = Intl.NumberFormat("en-US", options).format(
-          Number(latest.toFixed(0))
-        );
-
-        ref.current.textContent = separator
-          ? formattedNumber.replace(/,/g, separator)
-          : formattedNumber;
+    return () => {
+      observer.disconnect();
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
       }
-    });
+    };
+  }, [value, hasStarted, startOnView]);
 
-    return () => unsubscribe();
-  }, [springValue, separator]);
+  const startAnimation = () => {
+    const startTime = Date.now();
+    const startValue = 0;
+    const endValue = value;
 
-  return <span className={className} ref={ref} />;
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutQuart);
+
+      setDisplayValue(currentValue);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(endValue);
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+  };
+
+  return (
+    <div ref={elementRef} className={className}>
+      {formatter(displayValue)}
+    </div>
+  );
 }

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Flame, TrendingUp, Award } from 'lucide-react';
-import CountUp from './CountUp';
+import { CountUp } from './CountUp';
 
 interface StatsOverviewProps {
   totalSquats: number;
@@ -24,12 +24,10 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
         </CardHeader>
         <CardContent>
           <CountUp
-            from={0}
-            to={totalSquats}
-            separator=","
-            direction="up"
-            duration={1.2} // Reduced from 2.5 to 1.2
+            value={totalSquats}
+            duration={2000}
             className="text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"
+            formatter={(val) => val.toLocaleString()}
           />
           <p className="text-xs text-muted-foreground">All time record</p>
         </CardContent>
@@ -44,11 +42,9 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
           <div className="text-lg md:text-2xl font-bold text-orange-500 flex items-center gap-1">
             {streak > 0 && <span>🔥</span>}
             <CountUp
-              from={0}
-              to={streak}
-              direction="up"
-              duration={1} // Reduced from 2 to 1
-              className=""
+              value={streak}
+              duration={1500}
+              formatter={(val) => val.toString()}
             />
           </div>
           <p className="text-xs text-muted-foreground">
@@ -64,24 +60,20 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
         </CardHeader>
         <CardContent>
           <CountUp
-            from={0}
-            to={weeklyProgress}
-            separator=","
-            direction="up"
-            duration={1.1} // Reduced from 2.2 to 1.1
+            value={weeklyProgress}
+            duration={1800}
             className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400"
+            formatter={(val) => val.toLocaleString()}
           />
           <p className="text-xs text-muted-foreground mb-2">
             of {weeklyGoal.toLocaleString()} weekly goal
           </p>
           <Badge variant={weeklyPercentage >= 100 ? "default" : "secondary"} className="glass-subtle text-xs">
             <CountUp
-              from={0}
-              to={weeklyPercentage}
-              direction="up"
-              duration={1.2} // Reduced from 2.5 to 1.2
-              className=""
-            />% complete
+              value={weeklyPercentage}
+              duration={2200}
+              formatter={(val) => `${val.toFixed(0)}% complete`}
+            />
           </Badge>
         </CardContent>
       </Card>
@@ -92,7 +84,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
           <Award className="h-3 w-3 md:h-4 md:w-4 text-purple-600 dark:text-purple-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl md:text-3xl font-bold mb-1">
+          <div className="text-2xl md:text-3xl font-bold">
             {totalSquats >= 1000 ? '🏆' : totalSquats >= 500 ? '🥇' : totalSquats >= 100 ? '🥈' : '🥉'}
           </div>
           <p className="text-xs text-muted-foreground">
