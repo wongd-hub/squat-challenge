@@ -303,10 +303,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen gradient-bg">
-      {/* Sticky Header */}
+      {/* Sticky Glassmorphic Header */}
       <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
         isScrolled 
-          ? 'backdrop-blur-xl bg-background/80 border-b border-border/50 shadow-lg' 
+          ? 'backdrop-blur-xl bg-background/20 border-b border-white/10 shadow-xl' 
           : 'bg-transparent'
       }`}>
         <div className="container mx-auto px-4 py-3 max-w-6xl">
@@ -319,7 +319,7 @@ export default function Home() {
                 Squat Challenge
               </h1>
               {isScrolled && (
-                <Badge variant="outline" className="text-xs glass-subtle animate-in slide-in-from-left-2 duration-300">
+                <Badge variant="outline" className="text-xs glass-subtle animate-in slide-in-from-left-2 duration-300 border-white/20 bg-white/10 backdrop-blur-sm">
                   <Calendar className="w-3 h-3 mr-1" />
                   {getDisplayDayText()}
                 </Badge>
@@ -330,17 +330,17 @@ export default function Home() {
             <div className="flex items-center gap-2">
               {user ? (
                 <>
-                  <Badge variant="outline" className="glass-subtle text-xs">
+                  <Badge variant="outline" className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm">
                     <User className="w-3 h-3 mr-1" />
                     {getDisplayName()}
                   </Badge>
-                  <Button variant="ghost" size="icon" onClick={handleSignOut} className="glass-subtle w-8 h-8">
+                  <Button variant="ghost" size="icon" onClick={handleSignOut} className="glass-subtle w-8 h-8 hover:bg-white/10 border-white/20">
                     <LogOut className="w-3 h-3" />
                   </Button>
                 </>
               ) : isSupabaseConfigured() && (
                 <AuthModal onAuthSuccess={handleAuthSuccess}>
-                  <Button variant="ghost" size="sm" className="glass-subtle text-xs px-2 py-1">
+                  <Button variant="ghost" size="sm" className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20">
                     <User className="w-3 h-3 mr-1" />
                     Sign In
                   </Button>
