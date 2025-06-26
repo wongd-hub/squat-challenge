@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Flame, TrendingUp, Award } from 'lucide-react';
+import { CountUp } from './CountUp';
 
 interface StatsOverviewProps {
   totalSquats: number;
@@ -22,9 +23,12 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
           <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-primary" />
         </CardHeader>
         <CardContent>
-          <div className="text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-            {totalSquats.toLocaleString()}
-          </div>
+          <CountUp
+            value={totalSquats}
+            duration={2000}
+            className="text-lg md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent"
+            formatter={(val) => val.toLocaleString()}
+          />
           <p className="text-xs text-muted-foreground">All time record</p>
         </CardContent>
       </Card>
@@ -37,7 +41,11 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
         <CardContent>
           <div className="text-lg md:text-2xl font-bold text-orange-500 flex items-center gap-1">
             {streak > 0 && <span>🔥</span>}
-            {streak}
+            <CountUp
+              value={streak}
+              duration={1500}
+              formatter={(val) => val.toString()}
+            />
           </div>
           <p className="text-xs text-muted-foreground">
             {streak === 1 ? 'day' : 'days'} in a row
@@ -51,12 +59,20 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
           <Calendar className="h-3 w-3 md:h-4 md:w-4 text-green-600 dark:text-green-400" />
         </CardHeader>
         <CardContent>
-          <div className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400">{weeklyProgress}</div>
+          <CountUp
+            value={weeklyProgress}
+            duration={1800}
+            className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400"
+          />
           <p className="text-xs text-muted-foreground mb-2">
             of {weeklyGoal} weekly goal
           </p>
           <Badge variant={weeklyPercentage >= 100 ? "default" : "secondary"} className="glass-subtle text-xs">
-            {weeklyPercentage.toFixed(0)}% complete
+            <CountUp
+              value={weeklyPercentage}
+              duration={2200}
+              formatter={(val) => `${val.toFixed(0)}% complete`}
+            />
           </Badge>
         </CardContent>
       </Card>

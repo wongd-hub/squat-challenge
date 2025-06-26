@@ -230,7 +230,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
               <span className="text-muted-foreground">Partial</span>
             </div>
             <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
-              <div className="w-3 h-3 rounded bg-muted/50 border border-muted shadow-sm"></div>
+              <div className="w-3 h-3 rounded bg-gray-300 dark:bg-muted/50 border border-gray-400 dark:border-muted shadow-sm"></div>
               <span className="text-muted-foreground">Remaining</span>
             </div>
             <div className="flex items-center gap-2 p-2 glass-subtle rounded-lg">
@@ -349,8 +349,8 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                   {challengeData.map((entry, index) => (
                     <Cell 
                       key={`remaining-${index}`} 
-                      fill={entry.isRestDay ? 'transparent' : 'hsl(var(--muted) / 0.3)'}
-                      fillOpacity={entry.isRestDay ? 0 : 0.6}
+                      fill={entry.isRestDay ? 'transparent' : 'hsl(var(--muted) / 0.6)'}
+                      fillOpacity={entry.isRestDay ? 0 : 0.8}
                       stroke={entry.isToday && !challengeComplete ? 'hsl(var(--primary))' : 'hsl(var(--border))'}
                       strokeWidth={entry.isToday && !challengeComplete ? 3 : 1}
                       strokeDasharray={entry.isToday && !challengeComplete ? "0" : "2,2"}
