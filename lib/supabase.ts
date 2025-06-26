@@ -25,13 +25,20 @@ export const getChallengeDay = (dateString: string): number => {
   const currentDate = new Date(dateString)
   const diffTime = currentDate.getTime() - startDate.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return Math.max(1, Math.min(diffDays, CHALLENGE_CONFIG.TOTAL_DAYS))
+  return Math.max(1, diffDays)
 }
 
 export const getDateFromChallengeDay = (day: number): string => {
   const startDate = new Date(CHALLENGE_CONFIG.START_DATE)
   startDate.setDate(startDate.getDate() + day - 1)
   return startDate.toISOString().split('T')[0]
+}
+
+// Check if challenge is complete
+export const isChallengeComplete = (): boolean => {
+  const today = new Date().toISOString().split('T')[0]
+  const currentDay = getChallengeDay(today)
+  return currentDay > CHALLENGE_CONFIG.TOTAL_DAYS
 }
 
 // Database operations

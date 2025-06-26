@@ -11,7 +11,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { storage, database, auth, isSupabaseConfigured, getChallengeDay, getDateFromChallengeDay, CHALLENGE_CONFIG } from '@/lib/supabase';
+import { storage, database, auth, isSupabaseConfigured, getChallengeDay, getDateFromChallengeDay, CHALLENGE_CONFIG, isChallengeComplete } from '@/lib/supabase';
 import { Calendar, Info, Users, LogOut, User, Trophy, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,6 +25,7 @@ export default function Home() {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dataSource, setDataSource] = useState<'supabase' | 'local'>('local');
+  const [challengeComplete, setChallengeComplete] = useState(false);
 
   // Check authentication status
   useEffect(() => {
@@ -93,6 +94,21 @@ export default function Home() {
 
       return () => subscription?.unsubscribe();
     }
+  }, []);
+
+  // Check if challenge is complete
+  useEffect(() => {
+    const checkChallengeStatus = () => {
+      const isComplete = isChallengeComplete();
+      setChallengeComplete(isComplete);
+      console.log('🏁 Challenge complete status:', isComplete);
+      
+      if (isComplete) {
+        console.log('🎉 Challenge has ended! Showing completion screen.');
+      }
+    };
+
+    checkChallengeStatus();
   }, []);
 
   // Load daily targets from database or fallback
@@ -233,9 +249,6 @@ export default function Home() {
   const weeklyGoal = 350; // 50 squats × 7 days
   const weeklyProgress = progressData.reduce((acc, day) => acc + day.squats_completed, 0);
 
-  // Check if challenge has ended
-  const isChallengeComplete = currentDay > CHALLENGE_CONFIG.TOTAL_DAYS;
-
   // Get display name for user
   const getDisplayName = () => {
     if (userProfile?.display_name) {
@@ -265,7 +278,7 @@ export default function Home() {
     <div className="min-h-screen gradient-bg">
       <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
         {/* Top Controls Row - Right aligned */}
-        <div className="flex justify-end items-center gap-2 mb-4">
+        <div className="flex justify-end items-center gap-2 mb-6">
           {user ? (
             <>
               <Badge variant="outline" className="glass-subtle text-xs">
@@ -328,7 +341,7 @@ export default function Home() {
         </div>
 
         {/* Challenge Complete Message */}
-        {isChallengeComplete && (
+        {challengeComplete && (
           <Card className="mb-6 md:mb-8 glass-strong border-green-500/20 max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-center justify-center">
@@ -388,7 +401,7 @@ export default function Home() {
         {/* Centered Content Layout */}
         <div className="space-y-6 md:space-y-8 max-w-5xl mx-auto">
           {/* Only show squat dial and daily target if challenge is not complete */}
-          {!isChallengeComplete && (
+          {!challengeComplete && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
               {/* Squat Dial */}
               <Card className="glass-strong">
