@@ -170,8 +170,8 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
       <div className="relative mb-8">
         {/* Outer Ring */}
         <div className={`${dialSize} rounded-full glass-strong shadow-2xl flex items-center justify-center relative`}>
-          {/* Progress Ring */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+          {/* Progress Ring - Fixed for proper direction */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
             {/* Background circle */}
             <circle
               cx="50"
@@ -182,23 +182,22 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               strokeWidth="2"
               opacity="0.3"
             />
-            {/* Progress circle - Fixed for both positive and negative */}
-            <circle
-              cx="50"
-              cy="50"
-              r="45"
-              fill="none"
-              stroke={progressColor}
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray="282.7"
-              strokeDashoffset={isNegative 
-                ? `${282.7 - (progressPercentage * 2.827)}` // For negative: fill counter-clockwise
-                : `${282.7 - (progressPercentage * 2.827)}`  // For positive: fill clockwise
-              }
-              transform={isNegative ? "rotate(180 50 50)" : ""}
-              className="transition-all duration-300 ease-out"
-            />
+            {/* Progress circle - Fixed direction */}
+            {tempSquats !== 0 && (
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke={progressColor}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray="282.7"
+                strokeDashoffset={282.7 - (progressPercentage * 2.827)}
+                transform={isNegative ? "rotate(-90 50 50) scale(-1 1) translate(-100 0)" : "rotate(-90 50 50)"}
+                className="transition-all duration-300 ease-out"
+              />
+            )}
           </svg>
 
           {/* Inner Dial */}
@@ -223,7 +222,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               {tempSquats > 0 ? `+${tempSquats}` : tempSquats}
             </div>
 
-            {/* New Dial Indicator - Diamond shape */}
+            {/* New Circular Indicator */}
             <div 
               className={`absolute ${compact ? 'w-6 h-6' : 'w-8 h-8'} flex items-center justify-center`}
               style={{
@@ -232,13 +231,18 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
                 transform: 'translateX(-50%)',
               }}
             >
-              {/* Diamond indicator */}
+              {/* Outer circle with border */}
               <div 
-                className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} rotate-45 shadow-lg border-2 border-white`}
+                className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} rounded-full border-2 border-white shadow-lg flex items-center justify-center`}
                 style={{ 
                   background: progressColor,
                 }}
-              />
+              >
+                {/* Inner dot */}
+                <div 
+                  className={`${compact ? 'w-2 h-2' : 'w-3 h-3'} rounded-full bg-white shadow-sm`}
+                />
+              </div>
             </div>
           </div>
         </div>
