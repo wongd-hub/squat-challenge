@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { storage, database, auth, isSupabaseConfigured, getChallengeDay, getDateFromChallengeDay, CHALLENGE_CONFIG, isChallengeComplete } from '@/lib/supabase';
-import { Calendar, Info, Users, LogOut, User, Trophy, CheckCircle, Sparkles } from 'lucide-react';
+import { Calendar, Info, Users, LogOut, User, Trophy, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -411,28 +411,13 @@ export default function Home() {
       }`}>
         <div className="container mx-auto px-4 py-3 max-w-6xl">
           <div className="flex justify-between items-center">
-            {/* Left side - Modern Logo/Title */}
+            {/* Left side - Logo/Title */}
             <div className="flex items-center gap-3">
-              <div className={`relative transition-all duration-300 ${
-                isScrolled ? 'text-2xl' : 'text-3xl'
+              <h1 className={`font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent transition-all duration-300 ${
+                isScrolled ? 'text-lg' : 'text-xl'
               }`}>
-                <div className="relative">
-                  {weightLiftingEmoji}
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <h1 className={`font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent transition-all duration-300 ${
-                  isScrolled ? 'text-lg' : 'text-xl'
-                }`}>
-                  Squat Challenge
-                </h1>
-                {isScrolled && (
-                  <div className="text-xs text-muted-foreground animate-in slide-in-from-left-2 duration-300">
-                    Day {getDisplayDay()}/{CHALLENGE_CONFIG.TOTAL_DAYS}
-                  </div>
-                )}
-              </div>
+                {weightLiftingEmoji}
+              </h1>
             </div>
 
             {/* Right side - User controls */}
@@ -466,58 +451,48 @@ export default function Home() {
         {/* Spacer for sticky header */}
         <div className="h-16"></div>
 
-        {/* Modern Centered Header */}
+        {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
-          {/* Main Title with Enhanced Design */}
-          <div className="relative mb-4">
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2 relative">
-              Squat Challenge
-              <div className="absolute -top-2 -right-2 text-2xl animate-bounce">
-                <Sparkles className="w-6 h-6 text-yellow-500" />
-              </div>
-            </h1>
-            {/* Decorative underline */}
-            <div className="w-32 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 mx-auto rounded-full opacity-60"></div>
-          </div>
-
-          {/* Enhanced Subtitle with Shiny Effect */}
-          <div className="text-base md:text-xl mb-6 max-w-2xl mx-auto">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2">
+            Squat Challenge
+          </h1>
+          <div className="text-sm md:text-lg mb-4">
             <ShinyText 
               text="Build strength, track progress, and crush your goals" 
               disabled={false} 
-              speed={2} 
-              className="text-muted-foreground font-medium" 
+              speed={4} 
+              className="text-muted-foreground" 
             />
           </div>
 
-          {/* Status Badges Row - Enhanced Design */}
-          <div className="flex flex-wrap justify-center gap-3 mb-6">
-            <Badge variant="outline" className="text-sm glass-strong px-4 py-2 border-blue-500/30 bg-blue-500/10">
-              <Calendar className="w-4 h-4 mr-2" />
+          {/* Status Badges Row - Centered */}
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <Badge variant="outline" className="text-xs glass-subtle">
+              <Calendar className="w-3 h-3 mr-1" />
               {getDisplayDayText()}
             </Badge>
-            <Badge variant="outline" className={`text-sm px-4 py-2 ${dataSource === 'supabase' ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300' : 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-300'}`}>
+            <Badge variant="outline" className={`text-xs ${dataSource === 'supabase' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'}`}>
               {dataSource === 'supabase' ? '📡 Online' : '💾 Offline'}
             </Badge>
-            <Badge variant="outline" className="text-sm glass-strong px-4 py-2 border-purple-500/30 bg-purple-500/10">
-              📊 Total: {totalSquats.toLocaleString()}
+            <Badge variant="outline" className="text-xs glass-subtle">
+              📊 Challenge Total: {totalSquats.toLocaleString()}
             </Badge>
           </div>
 
-          {/* Action Buttons Row - Enhanced Design */}
-          <div className="flex flex-wrap justify-center gap-3">
+          {/* Action Buttons Row - Centered */}
+          <div className="flex flex-wrap justify-center gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowInfo(!showInfo)}
-              className="glass-strong text-sm px-4 py-2 hover:bg-white/10 border border-white/20"
+              className="glass-subtle text-xs"
             >
-              <Info className="w-4 h-4 mr-2" />
+              <Info className="w-3 h-3 mr-1" />
               How it works
             </Button>
             <Link href="/leaderboard">
-              <Button variant="ghost" size="sm" className="glass-strong text-sm px-4 py-2 hover:bg-white/10 border border-white/20">
-                <Users className="w-4 h-4 mr-2" />
+              <Button variant="ghost" size="sm" className="glass-subtle text-xs">
+                <Users className="w-3 h-3 mr-1" />
                 Leaderboard
               </Button>
             </Link>
