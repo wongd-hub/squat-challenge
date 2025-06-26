@@ -196,58 +196,31 @@ export const storage = {
   }
 }
 
-// Simplified authentication using Supabase's built-in OTP system
+// Simplified authentication using ONLY 6-digit OTP codes
 export const sendLoginCode = async (email: string, displayName?: string) => {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase is not configured. Please check your environment variables.')
   }
 
   try {
-    console.log('📧 Sending login code to:', email)
+    console.log('📧 Sending 6-digit OTP code to:', email)
     
-    // Check if user exists
-    const { exists } = await database.checkUserExists(email)
-    const isNewUser = !exists
-    
-    console.log(`👤 Is new user: ${isNewUser}`)
-    
-    if (isNewUser && displayName) {
-      // For new users, we'll use signUp with email confirmation
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: 'temp-password-' + Math.random(), // Temporary password, user will use OTP
-        options: {
-          data: {
-            display_name: displayName
-          }
-        }
-      })
-      
-      if (error) {
-        console.error('❌ Error creating user:', error)
-        throw error
+    // ALWAYS use signInWithOtp - this sends a 6-digit code
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true, // Allow new user creation
+        data: displayName ? { display_name: displayName } : undefined
       }
-      
-      console.log('✅ New user created, confirmation email sent')
-      return { success: true, isNewUser: true }
-    } else {
-      // For existing users or new users without display name, use OTP
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: !isNewUser, // Only create if new user
-          data: displayName ? { display_name: displayName } : undefined
-        }
-      })
-      
-      if (error) {
-        console.error('❌ Error sending OTP:', error)
-        throw error
-      }
-      
-      console.log('✅ OTP sent successfully')
-      return { success: true, isNewUser }
+    })
+    
+    if (error) {
+      console.error('❌ Error sending OTP:', error)
+      throw error
     }
+    
+    console.log('✅ 6-digit OTP sent successfully')
+    return { success: true }
     
   } catch (error) {
     console.error('❌ Error in sendLoginCode:', error)
@@ -261,13 +234,13 @@ export const verifyLoginCode = async (email: string, token: string, displayName?
   }
 
   try {
-    console.log('🔐 Verifying login code for:', email)
+    console.log('🔐 Verifying 6-digit OTP code for:', email)
     
     // Verify the OTP token
     const { data, error } = await supabase.auth.verifyOtp({
       email,
       token,
-      type: 'email'
+      type: 'email' // This verifies the 6-digit code
     })
     
     if (error) {
@@ -281,7 +254,7 @@ export const verifyLoginCode = async (email: string, token: string, displayName?
         await database.createUserProfile(data.user.id, email, displayName)
       }
       
-      console.log('✅ User verified and signed in')
+      console.log('✅ User verified and signed in with 6-digit code')
       return { success: true, data }
     }
     

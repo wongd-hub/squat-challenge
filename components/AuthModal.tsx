@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { isSupabaseConfigured, sendLoginCode, verifyLoginCode } from '@/lib/supabase';
-import { Mail, Shield, AlertCircle, CheckCircle, User } from 'lucide-react';
+import { Mail, Shield, AlertCircle, CheckCircle, Hash } from 'lucide-react';
 
 interface AuthModalProps {
   children: React.ReactNode;
@@ -23,7 +23,6 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [isNewUser, setIsNewUser] = useState(false);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +37,14 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
       return;
     }
 
-    // For new users, require display name
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // For display name, require at least 2 characters if provided
     if (displayName.trim() && displayName.trim().length < 2) {
       setError('Display name must be at least 2 characters long');
       return;
@@ -52,9 +58,8 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
       const result = await sendLoginCode(email.trim(), displayName.trim() || undefined);
       
       if (result.success) {
-        setIsNewUser(result.isNewUser);
         setStep('code');
-        setSuccess('Check your email for a verification link or 6-digit code');
+        setSuccess('📧 Check your email for a 6-digit verification code');
       }
     } catch (error: any) {
       console.error('❌ Error sending code:', error);
@@ -68,7 +73,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
     e.preventDefault();
     
     if (!code.trim()) {
-      setError('Please enter the verification code');
+      setError('Please enter the 6-digit verification code');
       return;
     }
 
@@ -84,11 +89,11 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
       const result = await verifyLoginCode(
         email.trim(), 
         code.trim(), 
-        isNewUser ? displayName.trim() : undefined
+        displayName.trim() || undefined
       );
       
       if (result.success && result.data.user) {
-        setSuccess('Successfully signed in!');
+        setSuccess('✅ Successfully signed in!');
         onAuthSuccess?.(result.data.user);
         
         // Close modal after a brief delay
@@ -113,7 +118,6 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
     setError('');
     setSuccess('');
     setIsLoading(false);
-    setIsNewUser(false);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -126,6 +130,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   const goBack = () => {
     setStep('form');
     setError('');
+    setSuccess('');
   };
 
   if (!isSupabaseConfigured()) {
@@ -145,12 +150,12 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            {step === 'form' ? 'Sign In to Squat Challenge' : 'Verify Your Email'}
+            {step === 'form' ? 'Sign In to Squat Challenge' : 'Enter Verification Code'}
           </DialogTitle>
           <DialogDescription>
             {step === 'form' 
-              ? 'Enter your email and name (for new accounts) to get started'
-              : 'Enter the 6-digit code from your email'
+              ? 'Enter your email and name to receive a 6-digit verification code'
+              : 'Enter the 6-digit code we sent to your email'
             }
           </DialogDescription>
         </DialogHeader>
@@ -184,6 +189,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isLoading}
                   className="glass-subtle"
+                  autoComplete="email"
                 />
               </div>
               
@@ -192,15 +198,16 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                 <Input
                   id="displayName"
                   type="text"
-                  placeholder="Your Name (for new accounts)"
+                  placeholder="Your Name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   disabled={isLoading}
                   maxLength={50}
                   className="glass-subtle"
+                  autoComplete="name"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Only required for new accounts. This name will appear on the leaderboard.
+                  This name will appear on the leaderboard. Leave blank to use your email.
                 </p>
               </div>
               
@@ -217,7 +224,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                 ) : (
                   <>
                     <Mail className="w-4 h-4 mr-2" />
-                    Send Verification Code
+                    Send 6-Digit Code
                   </>
                 )}
               </Button>
@@ -225,7 +232,10 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           ) : (
             <form onSubmit={handleVerifyCode} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="code">Verification Code</Label>
+                <Label htmlFor="code" className="flex items-center gap-2">
+                  <Hash className="w-4 h-4" />
+                  6-Digit Verification Code
+                </Label>
                 <Input
                   id="code"
                   type="text"
@@ -234,17 +244,18 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   disabled={isLoading}
                   maxLength={6}
-                  className="glass-subtle text-center text-lg tracking-widest font-mono"
+                  className="glass-subtle text-center text-2xl tracking-[0.5em] font-mono"
+                  autoComplete="one-time-code"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Code sent to {email}
-                  {isNewUser && displayName && (
-                    <span className="block mt-1">
-                      Display name: <strong>{displayName}</strong>
-                    </span>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>📧 Code sent to: <strong>{email}</strong></p>
+                  {displayName && (
+                    <p>👤 Display name: <strong>{displayName}</strong></p>
                   )}
-                </p>
+                  <p>⏰ Code expires in 10 minutes</p>
+                </div>
               </div>
+              
               <div className="flex gap-2">
                 <Button 
                   type="button" 
@@ -258,7 +269,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                 <Button 
                   type="submit" 
                   className="flex-1" 
-                  disabled={isLoading}
+                  disabled={isLoading || code.length !== 6}
                 >
                   {isLoading ? (
                     <>
@@ -266,7 +277,10 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                       Verifying...
                     </>
                   ) : (
-                    'Verify & Sign In'
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Verify & Sign In
+                    </>
                   )}
                 </Button>
               </div>
@@ -275,7 +289,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
 
           <div className="text-center">
             <p className="text-xs text-muted-foreground">
-              No password required! We'll send you a secure verification code to sign in.
+              🔒 No password required! We'll send you a secure 6-digit code to sign in.
             </p>
           </div>
         </div>
