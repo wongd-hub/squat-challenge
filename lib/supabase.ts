@@ -131,19 +131,32 @@ export const database = {
     }
 
     try {
-      // Only store squats_completed, not target_squats (since we have daily_targets table)
+      console.log(`💾 Updating progress for user ${userId} on ${date}: ${squatsCompleted} squats`)
+      
+      // Use upsert with onConflict to handle duplicate key constraint
       const { data, error } = await supabase
         .from('user_progress')
         .upsert({
           user_id: userId,
           date,
-          squats_completed: squatsCompleted
-          // Removed target_squats since we get it from daily_targets table
+          squats_completed: squatsCompleted,
+          target_squats: targetSquats, // Keep this for now to maintain compatibility
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,date', // Specify the unique constraint columns
+          ignoreDuplicates: false // Update existing records instead of ignoring
         })
         .select()
-      return { data, error }
+      
+      if (error) {
+        console.error('❌ Supabase update error:', error)
+        return { data: null, error }
+      }
+      
+      console.log('✅ Successfully updated user progress in Supabase')
+      return { data, error: null }
     } catch (error) {
-      console.error('Error updating user progress:', error)
+      console.error('❌ Error updating user progress:', error)
       return { data: null, error }
     }
   },

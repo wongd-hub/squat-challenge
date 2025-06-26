@@ -183,7 +183,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               strokeWidth="2"
               opacity="0.3"
             />
-            {/* Progress circle - direction changes based on positive/negative */}
+            {/* Progress circle - Fixed direction for negative values */}
             <circle
               cx="50"
               cy="50"
@@ -193,8 +193,9 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               strokeWidth="3"
               strokeLinecap="round"
               strokeDasharray={`${progressPercentage * 2.827} 282.7`}
-              // For negative values, rotate 180 degrees to start from opposite direction
-              transform={isNegative ? "rotate(180 50 50)" : ""}
+              // For negative values, start from opposite direction (bottom) and fill counter-clockwise
+              strokeDashoffset={isNegative ? `${282.7 / 2}` : "0"}
+              transform={isNegative ? "rotate(180 50 50) scale(-1 1)" : ""}
               className="transition-all duration-300 ease-out"
             />
           </svg>
