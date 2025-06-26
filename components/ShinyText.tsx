@@ -12,7 +12,7 @@ interface ShinyTextProps {
 const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6, className = '' }) => {
     const [isShining, setIsShining] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout>();
-    const intervalRef = useRef<NodeJS.Timeout>();
+    const animationTimeoutRef = useRef<NodeJS.Timeout>();
 
     useEffect(() => {
         if (disabled) return;
@@ -20,7 +20,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
         const scheduleShine = () => {
             // Clear any existing timeouts
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            if (intervalRef.current) clearTimeout(intervalRef.current);
+            if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
 
             // Random delay between 8-20 seconds for next shine
             const randomDelay = (8 + Math.random() * 12) * 1000;
@@ -30,7 +30,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
                 setIsShining(true);
                 
                 // Stop shining after the animation duration (fixed 6 seconds)
-                setTimeout(() => {
+                animationTimeoutRef.current = setTimeout(() => {
                     setIsShining(false);
                     // Schedule next shine immediately after this one ends
                     scheduleShine();
@@ -43,7 +43,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
         const initialDelay = Math.random() * 8000;
         timeoutRef.current = setTimeout(() => {
             setIsShining(true);
-            setTimeout(() => {
+            animationTimeoutRef.current = setTimeout(() => {
                 setIsShining(false);
                 // Start the regular scheduling
                 scheduleShine();
@@ -52,9 +52,9 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            if (intervalRef.current) clearTimeout(intervalRef.current);
+            if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
         };
-    }, [disabled, speed]);
+    }, [disabled]);
 
     if (disabled) {
         return (
@@ -68,13 +68,15 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
         <div
             className={`inline-block ${className}`}
             style={{
-                background: 'linear-gradient(120deg, hsl(var(--muted-foreground)) 30%, rgba(255, 255, 255, 0.9) 50%, hsl(var(--muted-foreground)) 70%)',
-                backgroundSize: '200% 100%',
+                background: isShining 
+                    ? 'linear-gradient(120deg, hsl(var(--muted-foreground)) 30%, rgba(255, 255, 255, 0.9) 50%, hsl(var(--muted-foreground)) 70%)'
+                    : 'hsl(var(--muted-foreground))',
+                backgroundSize: isShining ? '200% 100%' : '100% 100%',
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 color: 'transparent',
-                animation: isShining ? 'shine 6s linear' : 'none', // Fixed 6-second duration
-                backgroundPosition: isShining ? '-200% 0' : '200% 0',
+                animation: isShining ? 'shine 6s linear' : 'none',
+                backgroundPosition: isShining ? '-200% 0' : '0% 0',
             }}
         >
             {text}

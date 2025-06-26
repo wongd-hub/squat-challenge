@@ -214,7 +214,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             </CardTitle>
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
               <span>Total: {totalCompleted.toLocaleString()} / {totalTarget.toLocaleString()} squats</span>
-              <span>Overall: {overallCompletion.toFixed(1)}%</span>
+              <span>Overall: {Math.round(overallCompletion)}%</span>
               <span>Days completed: {completedDays}/{totalDays}</span>
             </div>
           </div>
@@ -395,7 +395,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             <div className="text-sm text-muted-foreground">Days Completed</div>
           </div>
           <div className="text-center p-4 glass-strong rounded-xl border border-orange-500/20 hover:border-orange-500/40 transition-all duration-300">
-            <div className="text-2xl font-bold text-orange-500">{overallCompletion.toFixed(1)}%</div>
+            <div className="text-2xl font-bold text-orange-500">{Math.round(overallCompletion)}%</div>
             <div className="text-sm text-muted-foreground">Overall Progress</div>
           </div>
           <div className="text-center p-4 glass-strong rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300">
@@ -408,7 +408,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
           </div>
         </div>
 
-        {/* Enhanced Progress Indicator - Fixed mobile clipping and better positioning */}
+        {/* Enhanced Progress Indicator - Fixed alignment and positioning */}
         <div className="mt-2 p-4 glass-strong rounded-xl border border-primary/10">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium">
@@ -432,10 +432,10 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
               </div>
             </div>
-            {/* Progress percentage - Fixed positioning to prevent clipping */}
-            <div className="absolute top-0 left-1/2 transform -translate-x-1/2">
+            {/* Progress percentage - Fixed positioning and alignment */}
+            <div className="absolute top-0 left-0 right-0 flex justify-center">
               <span className="text-xs font-medium text-primary bg-background/90 backdrop-blur-sm px-3 py-1 rounded-full border border-border/50 whitespace-nowrap shadow-sm">
-                {getProgressPercentage().toFixed(1)}%
+                {Math.round(getProgressPercentage())}%
               </span>
             </div>
           </div>
