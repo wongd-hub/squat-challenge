@@ -34,7 +34,7 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
                     setIsShining(false);
                     // Schedule next shine
                     scheduleShine();
-                }, 6000);
+                }, speed * 1000);
                 
             }, randomDelay);
         };
@@ -46,14 +46,14 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 6
             animationTimeoutRef.current = setTimeout(() => {
                 setIsShining(false);
                 scheduleShine();
-            }, 6000);
+            }, speed * 1000);
         }, initialDelay);
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
             if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
         };
-    }, [disabled]);
+    }, [disabled, speed]);
 
     if (disabled) {
         return (
