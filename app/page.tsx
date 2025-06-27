@@ -7,7 +7,6 @@ import { ProgressChart } from '@/components/ProgressChart';
 import { StatsOverview } from '@/components/StatsOverview';
 import { LeaderboardPreview } from '@/components/LeaderboardPreview';
 import AuthModal from '@/components/AuthModal';
-import ShinyText from '@/components/ShinyText';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -467,14 +466,9 @@ export default function Home() {
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2">
             Squat Challenge
           </h1>
-          <div className="text-sm md:text-lg mb-4">
-            <ShinyText 
-              text="Build strength, track progress, and crush your goals" 
-              disabled={false} 
-              speed={6} 
-              className="text-muted-foreground" 
-            />
-          </div>
+          <p className="text-sm md:text-lg text-muted-foreground mb-4">
+            Build strength, track progress, and crush your goals
+          </p>
 
           {/* Status Badges Row - Centered */}
           <div className="flex flex-wrap justify-center gap-2 mb-4">
