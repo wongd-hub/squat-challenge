@@ -307,10 +307,15 @@ export default function Home() {
         await database.updateUserProgress(user.id, today, newSquats, todayTarget)
         console.log("✅ Saved to Supabase")
 
-        // Reload challenge progress to update stats
-        const { data: challengeProgress } = await database.getChallengeProgress(user.id)
-        if (challengeProgress) {
-          const challengeProgressWithTargets = challengeProgress.map((progress) => {
+        // Reload both challenge progress AND recent progress to update all displays
+        const [challengeResult, recentResult] = await Promise.all([
+          database.getChallengeProgress(user.id),
+          database.getUserProgress(user.id, 7)
+        ])
+
+        // Update challenge progress data for stats
+        if (challengeResult.data) {
+          const challengeProgressWithTargets = challengeResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
             const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
             return {
@@ -319,6 +324,21 @@ export default function Home() {
             }
           })
           setChallengeProgressData(challengeProgressWithTargets)
+          console.log("✅ Reloaded challenge progress data")
+        }
+
+        // Update recent progress data for chart
+        if (recentResult.data) {
+          const progressWithTargets = recentResult.data.map((progress) => {
+            const progressDay = getChallengeDay(progress.date)
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            return {
+              ...progress,
+              target_squats: target,
+            }
+          })
+          setProgressData(progressWithTargets)
+          console.log("✅ Reloaded recent progress data for chart")
         }
       } catch (error) {
         console.error("❌ Error saving to Supabase:", error)
@@ -341,23 +361,23 @@ export default function Home() {
         }
       })
       setChallengeProgressData(challengeProgressWithTargets)
+
+      // Update progress data for chart (local storage)
+      const updatedProgress = [...progressData]
+      const todayIndex = updatedProgress.findIndex((p) => p.date === today)
+
+      if (todayIndex >= 0) {
+        updatedProgress[todayIndex].squats_completed = newSquats
+      } else {
+        updatedProgress.push({
+          date: today,
+          squats_completed: newSquats,
+          target_squats: todayTarget,
+        })
+      }
+
+      setProgressData(updatedProgress.slice(-7))
     }
-
-    // Update progress data for chart
-    const updatedProgress = [...progressData]
-    const todayIndex = updatedProgress.findIndex((p) => p.date === today)
-
-    if (todayIndex >= 0) {
-      updatedProgress[todayIndex].squats_completed = newSquats
-    } else {
-      updatedProgress.push({
-        date: today,
-        squats_completed: newSquats,
-        target_squats: todayTarget,
-      })
-    }
-
-    setProgressData(updatedProgress.slice(-7))
   }
 
   const handleSignOut = async () => {
@@ -387,6 +407,13 @@ export default function Home() {
       block: "start",
     })
   }
+
+  // Debug logging before render
+  console.log("📊 Main page passing to ProgressChart:")
+  console.log("📊 challengeProgressData:", challengeProgressData.length, "entries")
+  console.log("📊 dailyTargets:", dailyTargets.length, "entries")
+  console.log("📊 Sample challengeProgressData:", challengeProgressData.slice(0, 5))
+  console.log("📊 Rest day targets in dailyTargets:", dailyTargets.filter(t => t.target_squats === 0))
 
   // Calculate stats from CHALLENGE progress data only
   const totalSquats = challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
@@ -694,7 +721,7 @@ export default function Home() {
           />
 
           {/* Progress Chart */}
-          <ProgressChart data={progressData} dailyTargets={dailyTargets} />
+          <ProgressChart data={challengeProgressData} dailyTargets={dailyTargets} />
 
           {/* Leaderboard Preview */}
           <div ref={leaderboardRef}>

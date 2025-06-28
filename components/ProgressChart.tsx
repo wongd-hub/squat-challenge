@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, TooltipProps } from "recharts"
 import { CHALLENGE_CONFIG, getChallengeDay } from "@/lib/supabase"
 
 interface ProgressChartProps {
@@ -10,6 +10,11 @@ interface ProgressChartProps {
 }
 
 export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
+  // Debug logging
+  console.log("📊 ProgressChart received data:", data.length, "entries")
+  console.log("📊 ProgressChart received dailyTargets:", dailyTargets.length, "entries")
+  console.log("📊 Sample dailyTargets:", dailyTargets.slice(0, 10))
+
   // Generate all challenge days with their data
   const generateChallengeDays = () => {
     const today = new Date().toISOString().split("T")[0]
@@ -18,8 +23,8 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
     return Array.from({ length: CHALLENGE_CONFIG.TOTAL_DAYS }, (_, index) => {
       const day = index + 1
       const target =
-        dailyTargets.find((t) => t.day === day)?.target_squats ||
-        CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === day)?.target_squats ||
+        dailyTargets.find((t) => t.day === day)?.target_squats ??
+        CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === day)?.target_squats ??
         50
 
       // Find actual progress for this day
@@ -34,6 +39,11 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
       const isToday = day === currentDay
       const isCompleted = !isRestDay && completed >= target
       const isPartial = !isRestDay && completed > 0 && completed < target
+
+      // Debug rest days
+      if (isRestDay) {
+        console.log(`🔵 Rest day detected: Day ${day}, target: ${target}`)
+      }
 
       return {
         day: `Day ${day}`,
@@ -95,6 +105,51 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
     )
   }
 
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+    if (active && payload && payload.length > 0) {
+      const data = payload[0].payload
+      
+      return (
+        <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-lg">
+          <p className="font-semibold text-foreground">{label}</p>
+          <div className="space-y-1 mt-2">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">Progress:</span>
+              <span className="font-medium text-foreground">
+                {data.completed} / {data.target} squats
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">Completion:</span>
+              <span className="font-medium text-foreground">
+                {data.isRestDay ? "Rest Day" : `${Math.round(data.percentage)}%`}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">Status:</span>
+              <span className={`font-medium ${
+                data.isRestDay ? "text-blue-500" :
+                data.isCompleted ? "text-green-500" :
+                data.isPartial ? "text-orange-500" : "text-gray-500"
+              }`}>
+                {data.isRestDay ? "Rest Day" :
+                 data.isCompleted ? "Completed" :
+                 data.isPartial ? "Partial" : "Not Started"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">Date:</span>
+              <span className="font-medium text-foreground">
+                {new Date(data.date).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
     <Card className="glass-strong">
       <CardHeader>
@@ -139,6 +194,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
             <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
               <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }} />
               <Bar dataKey="target" shape={<CustomBar />} />
             </BarChart>
           </ResponsiveContainer>

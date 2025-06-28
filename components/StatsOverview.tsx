@@ -61,8 +61,10 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
             <div className="flex items-center justify-center mb-2">
               <Calendar className="w-5 h-5 text-purple-500" />
             </div>
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">🎯</div>
-            <p className="text-sm text-muted-foreground">Completed!</p>
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              <CountUp end={weeklyProgress} duration={1800} />
+            </div>
+            <p className="text-sm text-muted-foreground">Weekly Squats</p>
           </CardContent>
         </Card>
       </div>
@@ -71,18 +73,22 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
       <Card className="glass-strong shadow-sm mt-6 mb-6">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-foreground">Challenge Complete!</h3>
+            <h3 className="text-lg font-semibold text-foreground">Weekly Progress</h3>
             <Badge variant="outline" className="text-xs">
-              23/23 days
+              Last 7 Days
             </Badge>
           </div>
 
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Progress</span>
-              <span className="text-sm font-medium">100%</span>
+              <span className="text-sm font-medium">{Math.round(weeklyPercentage)}%</span>
             </div>
-            <Progress value={100} className="h-3" />
+            <Progress value={weeklyPercentage} className="h-3" />
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <span>{weeklyProgress.toLocaleString()} squats</span>
+              <span>Goal: {weeklyGoal.toLocaleString()}</span>
+            </div>
           </div>
         </CardContent>
       </Card>

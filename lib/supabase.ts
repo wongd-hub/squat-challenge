@@ -46,7 +46,7 @@ if (typeof window !== 'undefined') {
 
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
-  START_DATE: "2025-07-15",
+  START_DATE: "2025-06-15",
   TOTAL_DAYS: 23,
   DAILY_TARGETS: [
     { day: 1, target_squats: 50 },
@@ -158,19 +158,97 @@ export const database = {
   async updateUserProgress(userId: string, date: string, squats: number, target: number) {
     if (!supabase) return { error: "Supabase not configured" }
 
+    console.log("💾 updateUserProgress called with:", {
+      userId: userId?.substring(0, 8) + "...",
+      date,
+      squats,
+      target
+    })
+
     try {
-      const { error } = await supabase.from("user_progress").upsert({
+      const upsertData = {
         user_id: userId,
         date,
         squats_completed: squats,
         target_squats: target,
         updated_at: new Date().toISOString(),
+      }
+
+      console.log("📤 Upserting data:", upsertData)
+
+      // Try update first, then insert if no record exists
+      const { data: existingData, error: selectError } = await supabase
+        .from("user_progress")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", date)
+        .single()
+
+      console.log("🔍 Existing record check:", { 
+        hasExisting: !!existingData, 
+        hasSelectError: !!selectError,
+        selectErrorCode: selectError?.code 
       })
 
-      if (error) throw error
+      let data, error
+
+      if (existingData) {
+        // Record exists, update it
+        console.log("🔄 Updating existing record...")
+        const result = await supabase
+          .from("user_progress")
+          .update({
+            squats_completed: squats,
+            target_squats: target,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId)
+          .eq("date", date)
+          .select()
+        
+        data = result.data
+        error = result.error
+      } else {
+        // No record exists, insert new one
+        console.log("➕ Inserting new record...")
+        const result = await supabase
+          .from("user_progress")
+          .insert(upsertData)
+          .select()
+        
+        data = result.data
+        error = result.error
+      }
+
+      console.log("📡 Upsert response:", { 
+        hasData: !!data, 
+        hasError: !!error,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        dataLength: data?.length
+      })
+
+      if (error) {
+        console.error("❌ Supabase error in updateUserProgress:", {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          fullError: error
+        })
+        throw error
+      }
+
+      console.log("✅ Successfully updated user progress")
       return { error: null }
-    } catch (error) {
-      console.error("Database error:", error)
+    } catch (error: unknown) {
+      console.error("❌ Exception in updateUserProgress:", {
+        error,
+        errorType: typeof error,
+        errorConstructor: error && typeof error === 'object' && 'constructor' in error ? error.constructor?.name : undefined,
+        errorString: String(error),
+        errorJSON: JSON.stringify(error, null, 2)
+      })
       return { error }
     }
   },
