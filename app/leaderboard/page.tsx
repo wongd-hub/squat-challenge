@@ -203,7 +203,7 @@ export default function LeaderboardPage() {
                 return (
                   <div
                     key={entry.id}
-                    className={`p-4 border-b border-border/30 last:border-b-0 transition-all duration-200 hover:bg-muted/20 ${
+                    className={`p-4 border-b border-border/30 last:border-b-0 transition-all duration-200 hover:bg-muted/20 cursor-pointer ${
                       isTopThree ? 'glass-subtle' : ''
                     }`}
                   >

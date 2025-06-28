@@ -1,299 +1,265 @@
-'use client';
+"use client"
 
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { isSupabaseConfigured, sendLoginCode, verifyLoginCode } from '@/lib/supabase';
-import { Mail, Shield, AlertCircle, CheckCircle, Hash } from 'lucide-react';
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, Mail, User, CheckCircle, AlertCircle } from "lucide-react"
+import { sendLoginCode, verifyLoginCode, checkUserExists } from "@/lib/supabase"
 
 interface AuthModalProps {
-  children: React.ReactNode;
-  onAuthSuccess?: (user: any) => void;
+  children: React.ReactNode
+  onAuthSuccess?: (user: any) => void
 }
 
 export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [step, setStep] = useState<'form' | 'code'>('form');
-  const [email, setEmail] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [code, setCode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [isOpen, setIsOpen] = useState(false)
+  const [step, setStep] = useState<"email" | "code">("email")
+  const [email, setEmail] = useState("")
+  const [displayName, setDisplayName] = useState("")
+  const [code, setCode] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [isCheckingUser, setIsCheckingUser] = useState(false)
+  const [userExists, setUserExists] = useState(false)
+  const [existingProfile, setExistingProfile] = useState<any>(null)
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isSupabaseConfigured()) {
-      setError('Authentication is not available in offline mode. Please configure Supabase to use this feature.');
-      return;
+  // Check if user exists when email changes
+  useEffect(() => {
+    const checkUser = async () => {
+      if (email && email.includes("@")) {
+        setIsCheckingUser(true)
+        try {
+          const result = await checkUserExists(email)
+          setUserExists(result.exists)
+          setExistingProfile(result.profile)
+          if (result.exists && result.profile?.display_name) {
+            setDisplayName(result.profile.display_name)
+          }
+        } catch (error) {
+          console.error("Error checking user:", error)
+        } finally {
+          setIsCheckingUser(false)
+        }
+      } else {
+        setUserExists(false)
+        setExistingProfile(null)
+      }
     }
 
-    if (!email.trim()) {
-      setError('Please enter your email address');
-      return;
+    const timeoutId = setTimeout(checkUser, 500) // Debounce
+    return () => clearTimeout(timeoutId)
+  }, [email])
+
+  const handleSendCode = async () => {
+    if (!email) {
+      setError("Please enter your email address")
+      return
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError('Please enter a valid email address');
-      return;
+    if (!userExists && !displayName.trim()) {
+      setError("Please enter your display name")
+      return
     }
 
-    // For display name, require at least 2 characters if provided
-    if (displayName.trim() && displayName.trim().length < 2) {
-      setError('Display name must be at least 2 characters long');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setSuccess('');
+    setIsLoading(true)
+    setError("")
 
     try {
-      const result = await sendLoginCode(email.trim(), displayName.trim() || undefined);
-      
+      await sendLoginCode(email, userExists ? undefined : displayName)
+      setStep("code")
+    } catch (error: any) {
+      setError(error.message || "Failed to send verification code")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleVerifyCode = async () => {
+    if (code.length !== 6) {
+      setError("Please enter the complete 6-digit code")
+      return
+    }
+
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const result = await verifyLoginCode(email, code, userExists ? undefined : displayName)
       if (result.success) {
-        setStep('code');
-        setSuccess('📧 Check your email for a 6-digit verification code');
+        onAuthSuccess?.(result.data?.user)
+        setIsOpen(false)
+        resetForm()
       }
     } catch (error: any) {
-      console.error('❌ Error sending code:', error);
-      setError(error.message || 'Failed to send verification code. Please try again.');
+      setError(error.message || "Invalid verification code")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!code.trim()) {
-      setError('Please enter the 6-digit verification code');
-      return;
-    }
-
-    if (code.trim().length !== 6) {
-      setError('Please enter the complete 6-digit code');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-
-    try {
-      const result = await verifyLoginCode(
-        email.trim(), 
-        code.trim(), 
-        displayName.trim() || undefined
-      );
-      
-      if (result.success && result.data.user) {
-        setSuccess('✅ Successfully signed in!');
-        onAuthSuccess?.(result.data.user);
-        
-        // Close modal after a brief delay
-        setTimeout(() => {
-          setIsOpen(false);
-          resetForm();
-        }, 1000);
-      }
-    } catch (error: any) {
-      console.error('❌ Error verifying code:', error);
-      setError(error.message || 'Invalid verification code. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }
 
   const resetForm = () => {
-    setStep('form');
-    setEmail('');
-    setDisplayName('');
-    setCode('');
-    setError('');
-    setSuccess('');
-    setIsLoading(false);
-  };
+    setStep("email")
+    setEmail("")
+    setDisplayName("")
+    setCode("")
+    setError("")
+    setUserExists(false)
+    setExistingProfile(null)
+  }
 
   const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
+    console.log("🔍 Dialog open state changed:", open)
+    setIsOpen(open)
     if (!open) {
-      resetForm();
+      resetForm()
     }
-  };
+  }
 
-  const goBack = () => {
-    setStep('form');
-    setError('');
-    setSuccess('');
-  };
-
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="opacity-50 cursor-not-allowed">
-        {children}
-      </div>
-    );
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    console.log("🔍 Auth trigger clicked - opening modal")
+    setIsOpen(true)
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        {children}
+        <div onClick={handleTriggerClick} style={{ cursor: "pointer" }}>
+          {children}
+        </div>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            {step === 'form' ? 'Sign In to Squat Challenge' : 'Enter Verification Code'}
+          <DialogTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            {step === "email" ? "Sign In" : "Enter Verification Code"}
           </DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-gray-300">
-            {step === 'form' 
-              ? 'Enter your email and name to receive a 6-digit verification code'
-              : 'Enter the 6-digit code we sent to your email'
-            }
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {error && (
-            <Alert variant="destructive" className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
-              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-              <AlertDescription className="text-red-800 dark:text-red-200">{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {success && (
-            <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                {success}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {step === 'form' ? (
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+          {step === "email" && (
+            <>
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-900 dark:text-white">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
-                  autoComplete="email"
-                />
+                <Label htmlFor="email">Email Address</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                  />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  {isCheckingUser && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 animate-spin" />
+                  )}
+                </div>
+                {email && !isCheckingUser && (
+                  <div className="flex items-center gap-2 text-sm">
+                    {userExists ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-green-600 dark:text-green-400">Welcome back!</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-blue-500" />
+                        <span className="text-blue-600 dark:text-blue-400">New user</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
-              
+
               <div className="space-y-2">
-                <Label htmlFor="displayName" className="text-gray-900 dark:text-white">Display Name (Optional)</Label>
+                <Label htmlFor="displayName">Display Name</Label>
                 <Input
                   id="displayName"
                   type="text"
-                  placeholder="Your Name"
+                  placeholder="How should we call you?"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  disabled={isLoading}
-                  maxLength={50}
-                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400"
-                  autoComplete="name"
+                  disabled={userExists || isCheckingUser}
+                  className={userExists ? "bg-muted" : ""}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  This name will appear on the leaderboard. Leave blank to use your email.
-                </p>
+                {userExists && (
+                  <p className="text-xs text-muted-foreground">
+                    Using existing display name: {existingProfile?.display_name}
+                  </p>
+                )}
               </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white" 
-                disabled={isLoading}
-              >
+
+              <Button onClick={handleSendCode} disabled={isLoading || isCheckingUser} className="w-full">
                 {isLoading ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Sending Code...
                   </>
                 ) : (
-                  <>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send 6-Digit Code
-                  </>
+                  "Send Verification Code"
                 )}
               </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyCode} className="space-y-4">
+            </>
+          )}
+
+          {step === "code" && (
+            <>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  We've sent a 6-digit code to <strong>{email}</strong>
+                </p>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="code" className="flex items-center gap-2 text-gray-900 dark:text-white">
-                  <Hash className="w-4 h-4" />
-                  6-Digit Verification Code
-                </Label>
-                <Input
-                  id="code"
-                  type="text"
-                  placeholder="123456"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  disabled={isLoading}
-                  maxLength={6}
-                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 text-center text-2xl tracking-[0.5em] font-mono"
-                  autoComplete="one-time-code"
-                />
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                  <p>📧 Code sent to: <strong className="text-gray-900 dark:text-white">{email}</strong></p>
-                  {displayName && (
-                    <p>👤 Display name: <strong className="text-gray-900 dark:text-white">{displayName}</strong></p>
-                  )}
-                  <p>⏰ Code expires in 10 minutes</p>
+                <Label>Verification Code</Label>
+                <div className="flex justify-center">
+                  <InputOTP value={code} onChange={setCode} maxLength={6}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
                 </div>
               </div>
-              
+
               <div className="flex gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={goBack}
-                  disabled={isLoading}
-                  className="flex-1 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
+                <Button variant="outline" onClick={() => setStep("email")} className="flex-1">
                   Back
                 </Button>
-                <Button 
-                  type="submit" 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white" 
-                  disabled={isLoading || code.length !== 6}
-                >
+                <Button onClick={handleVerifyCode} disabled={isLoading || code.length !== 6} className="flex-1">
                   {isLoading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Verifying...
                     </>
                   ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Verify & Sign In
-                    </>
+                    "Verify & Sign In"
                   )}
                 </Button>
               </div>
-            </form>
+            </>
           )}
 
-          <div className="text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-              🔒 No password required! We'll send you a secure 6-digit code to sign in.
-            </p>
-          </div>
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         </div>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

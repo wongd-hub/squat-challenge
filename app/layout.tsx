@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Squat Challenge - Track Your Progress',
   description: 'The ultimate squat challenge app. Track your daily squats with an intuitive dial interface and compete with friends.',
+    generator: 'v0.dev'
 };
 
 export default function RootLayout({

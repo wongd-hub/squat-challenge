@@ -81,6 +81,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Ensure interactive elements show pointer cursor */
+  [role="button"]:not(:disabled),
+  button:not(:disabled),
+  .cursor-pointer {
+    cursor: pointer;
+  }
 }
 
 /* Enhanced Glassmorphism effects */

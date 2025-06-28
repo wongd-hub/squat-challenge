@@ -168,7 +168,7 @@ export function LeaderboardPreview() {
             return (
               <div
                 key={entry.id}
-                className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-muted/20 ${
+                className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-muted/20 cursor-pointer ${
                   isTopThree ? 'glass-subtle' : 'bg-muted/10'
                 }`}
               >

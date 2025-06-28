@@ -1,378 +1,401 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Environment variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Configuration check
+export function isSupabaseConfigured(): boolean {
+  const hasUrl = !!supabaseUrl
+  const hasKey = !!supabaseAnonKey
+  const urlValid = supabaseUrl ? supabaseUrl.startsWith("https://") && supabaseUrl.includes(".supabase.co") : false
+  const keyValid = supabaseAnonKey ? supabaseAnonKey.length > 100 : false
 
-// Export auth object
-export const auth = supabase.auth
+  console.log("🔧 Supabase configuration check:", {
+    hasUrl,
+    hasKey,
+    urlValid,
+    keyValid,
+    url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : "undefined",
+    keyLength: supabaseAnonKey?.length || 0,
+  })
+
+  const configured = hasUrl && hasKey && urlValid && keyValid
+  console.log("🔧 Supabase configured:", configured)
+
+  return configured
+}
+
+// Create Supabase client
+export const supabase = isSupabaseConfigured() ? createClient(supabaseUrl!, supabaseAnonKey!) : null
+
+// Auth client
+export const auth = supabase?.auth
+
+// Additional debugging for client creation
+if (typeof window !== 'undefined') {
+  console.log("🔧 Supabase client creation:", {
+    hasSupabase: !!supabase,
+    hasAuth: !!auth,
+    url: supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : 'undefined',
+    fullUrl: supabaseUrl, // Show the full URL for debugging
+    keyLength: supabaseAnonKey?.length || 0,
+    keyStart: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined'
+  })
+}
 
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
-  START_DATE: '2025-06-10', // Updated to 2025
-  TOTAL_DAYS: 23 // Updated to match the database
+  START_DATE: "2025-07-15",
+  TOTAL_DAYS: 23,
+  DAILY_TARGETS: [
+    { day: 1, target_squats: 50 },
+    { day: 2, target_squats: 55 },
+    { day: 3, target_squats: 60 },
+    { day: 4, target_squats: 65 },
+    { day: 5, target_squats: 70 },
+    { day: 6, target_squats: 75 },
+    { day: 7, target_squats: 0 }, // Rest day
+    { day: 8, target_squats: 80 },
+    { day: 9, target_squats: 85 },
+    { day: 10, target_squats: 90 },
+    { day: 11, target_squats: 95 },
+    { day: 12, target_squats: 100 },
+    { day: 13, target_squats: 105 },
+    { day: 14, target_squats: 0 }, // Rest day
+    { day: 15, target_squats: 110 },
+    { day: 16, target_squats: 115 },
+    { day: 17, target_squats: 120 },
+    { day: 18, target_squats: 125 },
+    { day: 19, target_squats: 130 },
+    { day: 20, target_squats: 135 },
+    { day: 21, target_squats: 0 }, // Rest day
+    { day: 22, target_squats: 140 },
+    { day: 23, target_squats: 150 },
+  ],
 }
 
-// Utility function to check if Supabase is configured
-export const isSupabaseConfigured = () => {
-  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== 'your-supabase-url' && supabaseAnonKey !== 'your-supabase-anon-key')
-}
-
-// Challenge day utilities
-export const getChallengeDay = (dateString: string): number => {
+// Helper functions
+export function getChallengeDay(date: string): number {
   const startDate = new Date(CHALLENGE_CONFIG.START_DATE)
-  const currentDate = new Date(dateString)
+  const currentDate = new Date(date)
   const diffTime = currentDate.getTime() - startDate.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return Math.max(1, diffDays)
+  return Math.max(1, Math.min(diffDays + 1, CHALLENGE_CONFIG.TOTAL_DAYS))
 }
 
-export const getDateFromChallengeDay = (day: number): string => {
+export function getDateFromChallengeDay(day: number): string {
   const startDate = new Date(CHALLENGE_CONFIG.START_DATE)
-  startDate.setDate(startDate.getDate() + day - 1)
-  return startDate.toISOString().split('T')[0]
+  const targetDate = new Date(startDate)
+  targetDate.setDate(startDate.getDate() + day - 1)
+  return targetDate.toISOString().split("T")[0]
 }
 
-// Check if challenge is complete
-export const isChallengeComplete = (): boolean => {
-  const today = new Date().toISOString().split('T')[0]
-  const currentDay = getChallengeDay(today)
-  return currentDay > CHALLENGE_CONFIG.TOTAL_DAYS
+export function isChallengeComplete(): boolean {
+  const today = new Date().toISOString().split("T")[0]
+  const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
+  return today > endDate
 }
 
-// Get challenge date range
-export const getChallengeEndDate = (): string => {
-  return getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
-}
-
-// Database operations
+// Database functions
 export const database = {
-  getDailyTargets: async () => {
-    if (!isSupabaseConfigured()) {
-      // Return the correct targets for offline mode (matching database)
-      const defaultTargets = [
-        { day: 1, target_squats: 120 }, { day: 2, target_squats: 75 }, { day: 3, target_squats: 140 },
-        { day: 4, target_squats: 143 }, { day: 5, target_squats: 0 }, { day: 6, target_squats: 128 },
-        { day: 7, target_squats: 103 }, { day: 8, target_squats: 170 }, { day: 9, target_squats: 167 },
-        { day: 10, target_squats: 130 }, { day: 11, target_squats: 200 }, { day: 12, target_squats: 0 },
-        { day: 13, target_squats: 163 }, { day: 14, target_squats: 174 }, { day: 15, target_squats: 160 },
-        { day: 16, target_squats: 170 }, { day: 17, target_squats: 210 }, { day: 18, target_squats: 191 },
-        { day: 19, target_squats: 0 }, { day: 20, target_squats: 220 }, { day: 21, target_squats: 170 },
-        { day: 22, target_squats: 230 }, { day: 23, target_squats: 150 }
-      ]
-      return { data: defaultTargets, error: null }
+  async getDailyTargets() {
+    if (!supabase) {
+      return { data: CHALLENGE_CONFIG.DAILY_TARGETS, error: null }
     }
 
     try {
-      const { data, error } = await supabase
-        .from('daily_targets')
-        .select('*')
-        .order('day')
-      
-      console.log('📊 Loaded daily targets from Supabase:', data?.length || 0, 'targets')
-      return { data, error }
+      const { data, error } = await supabase.from("daily_targets").select("*").order("day")
+
+      if (error) throw error
+      return { data: data || CHALLENGE_CONFIG.DAILY_TARGETS, error: null }
     } catch (error) {
-      console.error('Error fetching daily targets:', error)
-      return { data: null, error }
+      console.error("Database error:", error)
+      return { data: CHALLENGE_CONFIG.DAILY_TARGETS, error }
     }
   },
 
-  getUserProgress: async (userId: string, days: number = 365) => {
-    if (!isSupabaseConfigured()) {
-      return { data: [], error: null }
-    }
+  async getUserProgress(userId: string, limit?: number) {
+    if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('date, squats_completed') // Removed target_squats since we get it from daily_targets
-        .eq('user_id', userId)
-        .order('date', { ascending: false })
-        .limit(days)
-      
-      console.log(`📊 Loaded ${data?.length || 0} progress records from Supabase (limit: ${days})`)
-      return { data, error }
+      let query = supabase.from("user_progress").select("*").eq("user_id", userId).order("date", { ascending: false })
+
+      if (limit) query = query.limit(limit)
+
+      const { data, error } = await query
+      if (error) throw error
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Error fetching user progress:', error)
-      return { data: null, error }
+      console.error("Database error:", error)
+      return { data: [], error }
     }
   },
 
-  // NEW: Get user progress within challenge date range only
-  getChallengeProgress: async (userId: string) => {
-    if (!isSupabaseConfigured()) {
-      return { data: [], error: null }
-    }
-
-    const startDate = CHALLENGE_CONFIG.START_DATE
-    const endDate = getChallengeEndDate()
+  async getChallengeProgress(userId: string) {
+    if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
+      const startDate = CHALLENGE_CONFIG.START_DATE
+      const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
+
       const { data, error } = await supabase
-        .from('user_progress')
-        .select('date, squats_completed') // Removed target_squats since we get it from daily_targets
-        .eq('user_id', userId)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false })
-      
-      console.log(`📊 Loaded ${data?.length || 0} challenge progress records from ${startDate} to ${endDate}`)
-      return { data, error }
+        .from("user_progress")
+        .select("*")
+        .eq("user_id", userId)
+        .gte("date", startDate)
+        .lte("date", endDate)
+        .order("date")
+
+      if (error) throw error
+      return { data: data || [], error: null }
     } catch (error) {
-      console.error('Error fetching challenge progress:', error)
-      return { data: null, error }
+      console.error("Database error:", error)
+      return { data: [], error }
     }
   },
 
-  updateUserProgress: async (userId: string, date: string, squatsCompleted: number, targetSquats: number) => {
-    if (!isSupabaseConfigured()) {
-      return { data: null, error: new Error('Supabase not configured') }
-    }
+  async updateUserProgress(userId: string, date: string, squats: number, target: number) {
+    if (!supabase) return { error: "Supabase not configured" }
 
     try {
-      console.log(`💾 Updating progress for user ${userId} on ${date}: ${squatsCompleted} squats`)
-      
-      // Use upsert with onConflict to handle duplicate key constraint
-      const { data, error } = await supabase
-        .from('user_progress')
-        .upsert({
-          user_id: userId,
-          date,
-          squats_completed: squatsCompleted,
-          target_squats: targetSquats, // Keep this for now to maintain compatibility
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,date', // Specify the unique constraint columns
-          ignoreDuplicates: false // Update existing records instead of ignoring
-        })
-        .select()
-      
-      if (error) {
-        console.error('❌ Supabase update error:', error)
-        return { data: null, error }
-      }
-      
-      console.log('✅ Successfully updated user progress in Supabase')
-      return { data, error: null }
+      const { error } = await supabase.from("user_progress").upsert({
+        user_id: userId,
+        date,
+        squats_completed: squats,
+        target_squats: target,
+        updated_at: new Date().toISOString(),
+      })
+
+      if (error) throw error
+      return { error: null }
     } catch (error) {
-      console.error('❌ Error updating user progress:', error)
-      return { data: null, error }
+      console.error("Database error:", error)
+      return { error }
     }
   },
-
-  // Create or update user profile
-  createUserProfile: async (userId: string, email: string, displayName: string) => {
-    if (!isSupabaseConfigured()) {
-      return { data: null, error: new Error('Supabase not configured') }
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          email,
-          display_name: displayName,
-          updated_at: new Date().toISOString()
-        })
-        .select()
-      return { data, error }
-    } catch (error) {
-      console.error('Error creating user profile:', error)
-      return { data: null, error }
-    }
-  },
-
-  // Check if user exists
-  checkUserExists: async (email: string) => {
-    if (!isSupabaseConfigured()) {
-      return { exists: false, error: null }
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .eq('email', email)
-      
-      if (error) {
-        console.error('Error checking user existence:', error)
-        return { exists: false, error }
-      }
-      
-      const exists = data && data.length > 0
-      const profile = exists ? data[0] : null
-      
-      return { exists, profile, error: null }
-    } catch (error) {
-      console.error('Error checking user existence:', error)
-      return { exists: false, error }
-    }
-  }
 }
 
-// Local storage operations
+// Storage functions
 export const storage = {
-  getTodayProgress: (): number => {
-    if (typeof window === 'undefined') return 0
-    const today = new Date().toISOString().split('T')[0]
+  getTodayProgress(): number {
+    if (typeof window === "undefined") return 0
+    const today = new Date().toISOString().split("T")[0]
     const saved = localStorage.getItem(`squats_${today}`)
-    return saved ? parseInt(saved, 10) : 0
+    return saved ? Number.parseInt(saved, 10) : 0
   },
 
-  updateTodayProgress: (squats: number): void => {
-    if (typeof window === 'undefined') return
-    const today = new Date().toISOString().split('T')[0]
+  updateTodayProgress(squats: number): void {
+    if (typeof window === "undefined") return
+    const today = new Date().toISOString().split("T")[0]
     localStorage.setItem(`squats_${today}`, squats.toString())
-    
+
     // Also update the progress history
-    const progressKey = 'squat_progress_history'
-    const existing = localStorage.getItem(progressKey)
-    let history = existing ? JSON.parse(existing) : []
-    
-    // Update or add today's entry (without target_squats since we get it from daily_targets)
-    const todayIndex = history.findIndex((entry: any) => entry.date === today)
-    const todayEntry = {
+    const history = this.getUserProgress()
+    const existingIndex = history.findIndex((p) => p.date === today)
+    const challengeDay = getChallengeDay(today)
+    const target = CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === challengeDay)?.target_squats || 50
+
+    const progressEntry = {
       date: today,
-      squats_completed: squats
-      // Removed target_squats since we get it from daily_targets table
+      squats_completed: squats,
+      target_squats: target,
     }
-    
-    if (todayIndex >= 0) {
-      history[todayIndex] = todayEntry
+
+    if (existingIndex >= 0) {
+      history[existingIndex] = progressEntry
     } else {
-      history.push(todayEntry)
+      history.push(progressEntry)
     }
-    
-    // Keep only last 30 days
-    history = history.slice(-30)
-    localStorage.setItem(progressKey, JSON.stringify(history))
+
+    localStorage.setItem("squat_progress", JSON.stringify(history))
   },
 
-  getUserProgress: (): any[] => {
-    if (typeof window === 'undefined') return []
-    const progressKey = 'squat_progress_history'
-    const existing = localStorage.getItem(progressKey)
-    return existing ? JSON.parse(existing) : []
+  getUserProgress(): any[] {
+    if (typeof window === "undefined") return []
+    const saved = localStorage.getItem("squat_progress")
+    return saved ? JSON.parse(saved) : []
   },
 
-  // NEW: Get challenge progress from local storage
-  getChallengeProgress: (): any[] => {
-    if (typeof window === 'undefined') return []
-    
-    const allProgress = storage.getUserProgress()
+  getChallengeProgress(): any[] {
+    const allProgress = this.getUserProgress()
     const startDate = CHALLENGE_CONFIG.START_DATE
-    const endDate = getChallengeEndDate()
-    
-    // Filter progress to only include challenge dates
-    return allProgress.filter(progress => {
-      return progress.date >= startDate && progress.date <= endDate
-    })
-  }
+    const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
+
+    return allProgress.filter((p) => p.date >= startDate && p.date <= endDate)
+  },
 }
 
-// Simplified authentication using ONLY 6-digit OTP codes
-export const sendLoginCode = async (email: string, displayName?: string) => {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured. Please check your environment variables.')
-  }
+// Auth functions
+export async function sendLoginCode(email: string, displayName?: string) {
+  if (!supabase) throw new Error("Supabase not configured")
 
   try {
-    console.log('📧 Sending 6-digit OTP code to:', email)
-    
-    // ALWAYS use signInWithOtp - this sends a 6-digit code
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        shouldCreateUser: true, // Allow new user creation
-        data: displayName ? { display_name: displayName } : undefined
-      }
+      options: displayName ? {
+        data: {
+          display_name: displayName,
+        },
+      } : undefined,
     })
-    
-    if (error) {
-      console.error('❌ Error sending OTP:', error)
-      throw error
-    }
-    
-    console.log('✅ 6-digit OTP sent successfully')
+
+    if (error) throw error
     return { success: true }
-    
   } catch (error) {
-    console.error('❌ Error in sendLoginCode:', error)
+    console.error("Send login code error:", error)
     throw error
   }
 }
 
-export const verifyLoginCode = async (email: string, token: string, displayName?: string) => {
-  if (!isSupabaseConfigured()) {
-    throw new Error('Supabase is not configured. Please check your environment variables.')
-  }
+export async function verifyLoginCode(email: string, token: string, displayName?: string) {
+  if (!supabase) throw new Error("Supabase not configured")
 
   try {
-    console.log('🔐 Verifying 6-digit OTP code for:', email)
-    
-    // Verify the OTP token
+    // For verification, we don't typically pass user data during OTP verification
+    // The user data should be set after successful verification
     const { data, error } = await supabase.auth.verifyOtp({
       email,
       token,
-      type: 'email' // This verifies the 6-digit code
+      type: "email",
     })
+
+    if (error) throw error
+
+    // If this is a new user with a display name, update their profile
+    if (data.user && displayName) {
+      await updateUserProfile(data.user.id, { display_name: displayName, email })
+    }
+
+    return { success: true, data }
+  } catch (error) {
+    console.error("Verify login code error:", error)
+    throw error
+  }
+}
+
+export async function updateUserProfile(userId: string, profileData: { display_name: string; email: string }) {
+  if (!supabase) throw new Error("Supabase not configured")
+
+  try {
+    const { error } = await supabase.from("profiles").upsert({
+      id: userId,
+      email: profileData.email,
+      display_name: profileData.display_name,
+      updated_at: new Date().toISOString(),
+    })
+
+    if (error) throw error
+    return { success: true }
+  } catch (error) {
+    console.error("Update user profile error:", error)
+    throw error
+  }
+}
+
+// Test function to verify Supabase connection
+export async function testSupabaseConnection() {
+  if (!supabase) {
+    console.log("❌ Supabase client not available for connection test")
+    return false
+  }
+
+  try {
+    console.log("🧪 Testing Supabase connection with simple query...")
+    
+    // First try a very basic query
+    const { data, error } = await supabase.from("profiles").select("count", { count: "exact", head: true })
+    
+    console.log("🔍 Connection test raw response:", { data, error, hasError: !!error })
     
     if (error) {
-      console.error('❌ Error verifying OTP:', error)
-      throw error
+      console.error("❌ Supabase connection test failed:", {
+        error,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        errorDetails: error?.details,
+        errorHint: error?.hint,
+        fullError: JSON.stringify(error, null, 2)
+      })
+      return false
     }
     
-    if (data.user) {
-      // Create or update profile if needed
-      if (displayName) {
-        await database.createUserProfile(data.user.id, email, displayName)
+    console.log("✅ Supabase connection test successful")
+    return true
+  } catch (error: unknown) {
+    console.error("❌ Supabase connection test exception:", {
+      error,
+      errorType: typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      fullError: JSON.stringify(error, null, 2)
+    })
+    return false
+  }
+}
+
+export async function checkUserExists(email: string) {
+  console.log("🔍 checkUserExists called with email:", email)
+  
+  if (!supabase) {
+    console.log("❌ Supabase client not available")
+    return { exists: false, profile: null }
+  }
+
+  console.log("✅ Supabase client available, making query...")
+  
+  // Test connection first
+  const connectionOk = await testSupabaseConnection()
+  if (!connectionOk) {
+    console.log("🔄 Connection test failed, returning false")
+    return { exists: false, profile: null }
+  }
+
+  try {
+    const { data, error } = await supabase.from("profiles").select("*").eq("email", email).single()
+
+    console.log("📡 Supabase query response:", { 
+      hasData: !!data, 
+      hasError: !!error,
+      errorCode: error?.code,
+      errorMessage: error?.message
+    })
+
+    // PGRST116 is "not found" error, which is expected when user doesn't exist
+    if (error) {
+      if (error.code === "PGRST116") {
+        // User doesn't exist, this is normal
+        console.log("👤 User not found (PGRST116) - this is normal for new users")
+        return { exists: false, profile: null }
       }
       
-      console.log('✅ User verified and signed in with 6-digit code')
-      return { success: true, data }
+      // Log the actual error for debugging
+      console.error("❌ Supabase error in checkUserExists:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        fullError: error
+      })
+      
+      // Don't throw the error, just return false to allow the flow to continue
+      console.log("🔄 Returning false due to Supabase error to allow auth flow to continue")
+      return { exists: false, profile: null }
     }
+
+    console.log("✅ User exists, returning profile data")
+    return { exists: !!data, profile: data }
+  } catch (error: unknown) {
+    console.error("❌ Exception in checkUserExists:", {
+      error,
+      errorType: typeof error,
+      errorConstructor: error && typeof error === 'object' && 'constructor' in error ? error.constructor?.name : undefined,
+      errorString: String(error),
+      errorJSON: JSON.stringify(error, null, 2)
+    })
     
-    throw new Error('Verification failed')
-    
-  } catch (error) {
-    console.error('❌ Error verifying login code:', error)
-    throw error
-  }
-}
-
-export const getCurrentUser = async () => {
-  if (!isSupabaseConfigured()) {
-    return null
-  }
-
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error) {
-      console.error('Error getting user:', error)
-      return null
-    }
-    return user
-  } catch (error) {
-    console.error('Error getting user:', error)
-    return null
-  }
-}
-
-export const signOut = async () => {
-  if (!isSupabaseConfigured()) {
-    return
-  }
-
-  try {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Error signing out:', error)
-      throw error
-    }
-  } catch (error) {
-    console.error('Error signing out:', error)
-    throw error
+    // Return false to allow the flow to continue even if there's an error
+    console.log("🔄 Returning false due to exception to allow auth flow to continue")
+    return { exists: false, profile: null }
   }
 }
