@@ -8,6 +8,7 @@ import { StatsOverview } from "@/components/StatsOverview"
 import { LeaderboardPreview } from "@/components/LeaderboardPreview"
 import AuthModal from "@/components/AuthModal"
 import { ThemeToggle } from "@/components/theme-toggle"
+import ShinyText from "@/components/ShinyText"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -503,7 +504,7 @@ export default function Home() {
             {/* Left side - Logo/Title */}
             <div className="flex items-center gap-3">
               <h1
-                className={`font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent transition-all duration-300 ${
+                className={`font-bold transition-all duration-300 ${
                   isScrolled ? "text-lg" : "text-xl"
                 }`}
               >
@@ -562,12 +563,16 @@ export default function Home() {
 
         {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
             Squat Challenge
           </h1>
-          <p className="text-sm md:text-lg text-muted-foreground mb-4">
-            Build strength, track progress, and crush your goals
-          </p>
+          <div className="text-sm md:text-lg mb-4">
+            <ShinyText 
+              text="Build strength, track progress, and stand up for better" 
+              disabled={false}
+              className="" 
+            />
+          </div>
 
           {/* Status Badges Row - Centered */}
           <div className="flex flex-wrap justify-center gap-2 mb-4">
