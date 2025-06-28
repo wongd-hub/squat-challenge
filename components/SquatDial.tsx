@@ -154,7 +154,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
 
   // Check if target is reached
   const isTargetReached = currentSquats >= targetSquats;
-  const canBankSquats = tempSquats !== 0 && !isTargetReached;
+  const canBankSquats = tempSquats !== 0 && (!isTargetReached || tempSquats < 0);
 
   const progressPercentage = Math.abs(tempSquats / 10) * 100; // Progress for current 10-squat cycle
   const dialSize = compact ? 'w-48 h-48' : 'w-80 h-80';
@@ -278,7 +278,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         disabled={!canBankSquats}
       >
         <span className={`${compact ? 'text-base' : 'text-lg'} font-medium`}>
-          {isTargetReached ? 'Target Reached!' : isNegative ? 'Remove Squats' : 'Bank Squats'}
+          {isNegative ? 'Remove Squats' : isTargetReached ? 'Target Reached!' : 'Bank Squats'}
         </span>
       </StarBorder>
     </div>
