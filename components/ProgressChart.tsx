@@ -105,7 +105,7 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
     )
   }
 
-  const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
+  const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length > 0) {
       const data = payload[0].payload
       
