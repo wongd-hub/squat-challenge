@@ -14,7 +14,8 @@ const nextConfig = {
     if (!dev && !isServer) {
       config.optimization = {
         ...config.optimization,
-        minimize: false, // Disable minification temporarily to speed up build
+        // Re-enabled minification for production optimization
+        minimize: true,
       };
     }
     
