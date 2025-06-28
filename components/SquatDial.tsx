@@ -18,6 +18,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   const isDragging = useRef(false);
   const lastAngle = useRef(0);
   const totalRotation = useRef(0);
+  const cachedRect = useRef<DOMRect | null>(null);
 
   const calculateSquats = useCallback((rotation: number) => {
     return Math.floor(rotation / 36); // 360 degrees / 10 squats = 36 degrees per squat
@@ -34,7 +35,9 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   const handleStart = useCallback((clientX: number, clientY: number) => {
     if (!dialRef.current) return;
     
+    // Cache the rect to avoid repeated calculations
     const rect = dialRef.current.getBoundingClientRect();
+    cachedRect.current = rect;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     
@@ -43,9 +46,10 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   }, [getAngleFromPoint]);
 
   const handleMove = useCallback((clientX: number, clientY: number) => {
-    if (!isDragging.current || !dialRef.current) return;
+    if (!isDragging.current || !cachedRect.current) return;
     
-    const rect = dialRef.current.getBoundingClientRect();
+    // Use cached rect instead of calling getBoundingClientRect again
+    const rect = cachedRect.current;
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     
@@ -82,65 +86,40 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
 
   const handleEnd = useCallback(() => {
     isDragging.current = false;
+    cachedRect.current = null; // Clear cached rect
   }, []);
 
-  // Mouse events
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  // Unified pointer events instead of separate mouse/touch
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     handleStart(e.clientX, e.clientY);
   }, [handleStart]);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    handleMove(e.clientX, e.clientY);
-  }, [handleMove]);
-
-  const handleMouseUp = useCallback(() => {
-    handleEnd();
-  }, [handleEnd]);
-
-  // Touch events
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    if (e.touches.length === 1) {
-      handleStart(e.touches[0].clientX, e.touches[0].clientY);
-    }
-  }, [handleStart]);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    if (e.touches.length === 1) {
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
+  const handlePointerMove = useCallback((e: PointerEvent) => {
+    if (isDragging.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      handleMove(e.clientX, e.clientY);
     }
   }, [handleMove]);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    handleEnd();
+  const handlePointerUp = useCallback(() => {
+    if (isDragging.current) {
+      handleEnd();
+    }
   }, [handleEnd]);
 
-  // Global event listeners
+  // Global event listeners for pointer events
   useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (isDragging.current) {
-        handleMouseMove(e);
-      }
-    };
-
-    const handleGlobalMouseUp = () => {
-      if (isDragging.current) {
-        handleMouseUp();
-      }
-    };
-
-    document.addEventListener('mousemove', handleGlobalMouseMove, { passive: false });
-    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
     
     return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, [handlePointerMove, handlePointerUp]);
 
   const bankSquats = () => {
     if (tempSquats !== 0) {
@@ -157,21 +136,29 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   const canBankSquats = tempSquats !== 0 && (!isTargetReached || tempSquats < 0);
 
   const progressPercentage = Math.abs(tempSquats / 10) * 100; // Progress for current 10-squat cycle
-  const dialSize = compact ? 'w-48 h-48' : 'w-80 h-80';
-  const innerDialSize = compact ? 'w-40 h-40' : 'w-64 h-64';
+  const dialSize = compact ? 'w-48 h-48' : 'w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80';
+  const innerDialSize = compact ? 'w-40 h-40' : 'w-52 h-52 sm:w-60 sm:h-60 md:w-64 md:h-64';
 
   // Determine colors based on positive/negative
   const isNegative = tempSquats < 0;
   const progressColor = isNegative ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))';
 
+  // Calculate stroke-dashoffset for proper direction
+  const strokeDashoffset = isNegative 
+    ? 282.7 + (progressPercentage * 2.827) // For negative, increase offset to go counterclockwise
+    : 282.7 - (progressPercentage * 2.827); // For positive, decrease offset to go clockwise
+
   return (
-    <div className="flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center px-4" style={{ contain: 'layout style paint' }}>
       {/* Dial Container */}
-      <div className="relative mb-8">
+      <div className="relative mb-8" style={{ contain: 'layout' }}>
         {/* Outer Ring */}
-        <div className={`${dialSize} rounded-full glass-strong shadow-2xl flex items-center justify-center relative`}>
-          {/* Progress Ring - Fixed for proper direction */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+        <div 
+          className={`${dialSize} rounded-full glass-strong shadow-2xl flex items-center justify-center relative`}
+          style={{ contain: 'strict', willChange: 'auto' }}
+        >
+          {/* Progress Ring */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" style={{ pointerEvents: 'none' }}>
             {/* Background circle */}
             <circle
               cx="50"
@@ -182,7 +169,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               strokeWidth="2"
               opacity="0.3"
             />
-            {/* Progress circle - Fixed direction */}
+            {/* Progress circle */}
             {tempSquats !== 0 && (
               <circle
                 cx="50"
@@ -193,8 +180,8 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeDasharray="282.7"
-                strokeDashoffset={282.7 - (progressPercentage * 2.827)}
-                transform={isNegative ? "rotate(-90 50 50) scale(-1 1) translate(-100 0)" : "rotate(-90 50 50)"}
+                strokeDashoffset={strokeDashoffset}
+                transform="rotate(-90 50 50)"
                 className="transition-all duration-300 ease-out"
               />
             )}
@@ -203,18 +190,21 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
           {/* Inner Dial */}
           <div
             ref={dialRef}
-            className={`${innerDialSize} rounded-full glass cursor-grab active:cursor-grabbing select-none touch-none flex items-center justify-center relative`}
+            className={`${innerDialSize} rounded-full glass cursor-grab active:cursor-grabbing select-none flex items-center justify-center relative`}
             style={{
-              transform: `rotate(${dialRotation}deg)`,
+              transform: `translate3d(0, 0, 0) rotate(${dialRotation}deg)`,
+              contain: 'layout style paint',
+              willChange: 'transform',
+              touchAction: 'none',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              msUserSelect: 'none',
             }}
-            onMouseDown={handleMouseDown}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            onPointerDown={handlePointerDown}
           >
             {/* Center Number - Fixed position to prevent rotation */}
             <div 
-              className={`absolute inset-0 flex items-center justify-center ${compact ? 'text-4xl' : 'text-6xl'} font-bold ${isNegative ? 'text-destructive' : 'text-foreground'}`}
+              className={`absolute inset-0 flex items-center justify-center ${compact ? 'text-4xl' : 'text-4xl sm:text-5xl md:text-6xl'} font-bold ${isNegative ? 'text-destructive' : 'text-foreground'}`}
               style={{
                 transform: `rotate(${-dialRotation}deg)`, // Counter-rotate to keep number upright
               }}
@@ -224,23 +214,23 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
 
             {/* New Circular Indicator */}
             <div 
-              className={`absolute ${compact ? 'w-6 h-6' : 'w-8 h-8'} flex items-center justify-center`}
+              className={`absolute ${compact ? 'w-6 h-6' : 'w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8'} flex items-center justify-center`}
               style={{
-                top: compact ? '4px' : '6px',
+                top: compact ? '4px' : '4px',
                 left: '50%',
                 transform: 'translateX(-50%)',
               }}
             >
               {/* Outer circle with border */}
               <div 
-                className={`${compact ? 'w-5 h-5' : 'w-7 h-7'} rounded-full border-2 border-white shadow-lg flex items-center justify-center`}
+                className={`${compact ? 'w-5 h-5' : 'w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7'} rounded-full border-2 border-white shadow-lg flex items-center justify-center`}
                 style={{ 
                   background: progressColor,
                 }}
               >
                 {/* Inner dot */}
                 <div 
-                  className={`${compact ? 'w-2 h-2' : 'w-3 h-3'} rounded-full bg-white shadow-sm`}
+                  className={`${compact ? 'w-2 h-2' : 'w-2 h-2 sm:w-2.5 sm:h-2.5 md:w-3 md:h-3'} rounded-full bg-white shadow-sm`}
                 />
               </div>
             </div>
@@ -271,13 +261,13 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
       {/* Bank Button with StarBorder */}
       <StarBorder
         as="button"
-        className={`${compact ? 'w-48 h-12' : 'w-64 h-14'} ${!canBankSquats ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        className={`${compact ? 'w-48 h-12' : 'w-52 h-12 sm:w-56 sm:h-12 md:w-64 md:h-14'} ${!canBankSquats ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         color="cyan"
         speed="5s"
         onClick={bankSquats}
         disabled={!canBankSquats}
       >
-        <span className={`${compact ? 'text-base' : 'text-lg'} font-medium`}>
+        <span className={`${compact ? 'text-base' : 'text-base sm:text-lg md:text-lg'} font-medium`}>
           {isNegative ? 'Remove Squats' : isTargetReached ? 'Target Reached!' : 'Bank Squats'}
         </span>
       </StarBorder>
