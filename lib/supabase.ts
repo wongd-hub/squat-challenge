@@ -252,6 +252,141 @@ export const database = {
       return { error }
     }
   },
+
+  // Leaderboard functions
+  async getTotalLeaderboard() {
+    if (!supabase) return { data: [], error: "Supabase not configured" }
+
+    try {
+      console.log("🏆 Fetching total leaderboard...")
+      
+      // Calculate challenge date range
+      const startDate = CHALLENGE_CONFIG.START_DATE
+      const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
+      
+      console.log(`🗓️ Filtering leaderboard data from ${startDate} to ${endDate}`)
+      
+      const { data, error } = await supabase.rpc('get_total_leaderboard', {
+        start_date: startDate,
+        end_date: endDate
+      })
+      
+      if (error) throw error
+
+      // Get streaks for each user
+      const leaderboardWithStreaks = await Promise.all(
+        (data || []).map(async (entry: any) => {
+          const { data: streakData } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
+          return {
+            id: entry.user_id,
+            name: entry.display_name,
+            email: entry.email,
+            totalSquats: Number(entry.total_squats),
+            daysActive: Number(entry.days_active),
+            streak: streakData || 0,
+          }
+        })
+      )
+
+      console.log(`✅ Loaded ${leaderboardWithStreaks.length} total leaderboard entries (challenge period only)`)
+      return { data: leaderboardWithStreaks, error: null }
+    } catch (error) {
+      console.error("❌ Database error:", error)
+      return { data: [], error }
+    }
+  },
+
+  async getDailyLeaderboard(date?: string) {
+    if (!supabase) return { data: [], error: "Supabase not configured" }
+
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0]
+      console.log("📅 Fetching daily leaderboard for:", targetDate)
+
+      const { data, error } = await supabase
+        .from('user_progress')
+        .select(`
+          user_id,
+          squats_completed,
+          profiles!inner(display_name, email)
+        `)
+        .eq('date', targetDate)
+        .order('squats_completed', { ascending: false })
+
+      if (error) throw error
+
+      // Get streaks for each user and format data
+      const dailyLeaderboard = await Promise.all(
+        (data || []).map(async (entry: any) => {
+          const { data: streakData } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
+          return {
+            id: entry.user_id,
+            name: entry.profiles.display_name,
+            email: entry.profiles.email,
+            todaySquats: entry.squats_completed,
+            streak: streakData || 0,
+          }
+        })
+      )
+
+      console.log(`✅ Loaded ${dailyLeaderboard.length} daily leaderboard entries`)
+      return { data: dailyLeaderboard, error: null }
+    } catch (error) {
+      console.error("❌ Database error:", error)
+      return { data: [], error }
+    }
+  },
+
+  async getFullLeaderboard(date?: string) {
+    if (!supabase) return { data: [], error: "Supabase not configured" }
+
+    try {
+      console.log("🏆 Fetching full leaderboard...")
+      
+      // Get total leaderboard data
+      const { data: totalData, error: totalError } = await this.getTotalLeaderboard()
+      if (totalError) throw totalError
+
+      // Get daily leaderboard data
+      const { data: dailyData, error: dailyError } = await this.getDailyLeaderboard(date)
+      if (dailyError) throw dailyError
+
+      // Merge the data
+      const fullLeaderboard = totalData.map(totalEntry => {
+        const dailyEntry = dailyData.find(d => d.id === totalEntry.id)
+        return {
+          id: totalEntry.id,
+          name: totalEntry.name,
+          email: totalEntry.email,
+          todaySquats: dailyEntry?.todaySquats || 0,
+          totalSquats: totalEntry.totalSquats,
+          streak: totalEntry.streak,
+          daysActive: totalEntry.daysActive,
+        }
+      })
+
+      // Add users who have daily data but not total data (new users)
+      dailyData.forEach(dailyEntry => {
+        if (!fullLeaderboard.find(f => f.id === dailyEntry.id)) {
+          fullLeaderboard.push({
+            id: dailyEntry.id,
+            name: dailyEntry.name,
+            email: dailyEntry.email,
+            todaySquats: dailyEntry.todaySquats,
+            totalSquats: dailyEntry.todaySquats, // Same as today if no history
+            streak: dailyEntry.streak,
+            daysActive: 1,
+          })
+        }
+      })
+
+      console.log(`✅ Loaded full leaderboard with ${fullLeaderboard.length} entries`)
+      return { data: fullLeaderboard, error: null }
+    } catch (error) {
+      console.error("❌ Database error:", error)
+      return { data: [], error }
+    }
+  },
 }
 
 // Storage functions

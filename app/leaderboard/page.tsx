@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ArrowLeft, Trophy, Medal, Award, Users, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { database, isSupabaseConfigured } from '@/lib/supabase';
 
 interface LeaderboardEntry {
   id: string;
@@ -17,38 +18,68 @@ interface LeaderboardEntry {
   rank: number;
 }
 
-// Function to scramble names (except for "Darren Wong")
-const scrambleName = (name: string): string => {
-  if (name === "Darren Wong" || name === "Darren W") {
-    return name; // Don't scramble your name
-  }
-  
-  // List of scrambled names to use
-  const scrambledNames = [
-    "Alex K", "Jordan M", "Casey R", "Taylor B", "Morgan L",
-    "Riley P", "Avery S", "Quinn T", "Blake W", "Sage N",
-    "River C", "Phoenix D", "Rowan F", "Skylar H", "Emery J",
-    "Cameron G", "Drew H", "Finley K", "Hayden L", "Kendall M"
-  ];
-  
-  // Use a simple hash of the original name to consistently map to the same scrambled name
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    const char = name.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  
-  const index = Math.abs(hash) % scrambledNames.length;
-  return scrambledNames[index];
-};
+// Function to scramble names for privacy (only when using mock data)
+function scrambleName(name: string): string {
+  const scrambled = name.split(' ').map(part => {
+    if (part.length <= 2) return part;
+    const firstChar = part[0];
+    const lastChar = part[part.length - 1];
+    const middle = part.slice(1, -1).split('').sort(() => Math.random() - 0.5).join('');
+    return `${firstChar}${middle}${lastChar}`;
+  }).join(' ');
+  return scrambled;
+}
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUsingSupabase, setIsUsingSupabase] = useState(false);
 
   useEffect(() => {
-    // Mock leaderboard data with scrambled names
+    loadLeaderboardData();
+  }, []);
+
+  const loadLeaderboardData = async () => {
+    setIsLoading(true);
+    
+    if (isSupabaseConfigured()) {
+      try {
+        console.log('📊 Loading leaderboard from Supabase...');
+        const { data, error } = await database.getFullLeaderboard();
+        
+        if (error) {
+          console.error('❌ Error loading leaderboard:', error);
+          loadMockData();
+        } else {
+          // Map the data to match our interface
+          const formattedData: LeaderboardEntry[] = data.map((entry, index) => ({
+            id: entry.id,
+            name: entry.name,
+            todaySquats: entry.todaySquats,
+            totalSquats: entry.totalSquats,
+            streak: entry.streak,
+            rank: index + 1,
+          }));
+          
+          setLeaderboardData(formattedData);
+          setIsUsingSupabase(true);
+          console.log(`✅ Loaded ${formattedData.length} leaderboard entries from Supabase`);
+        }
+      } catch (error) {
+        console.error('❌ Exception loading leaderboard:', error);
+        loadMockData();
+      }
+    } else {
+      console.log('📊 Supabase not configured, using mock data');
+      loadMockData();
+    }
+    
+    setIsLoading(false);
+  };
+
+  const loadMockData = () => {
+    // Fallback mock leaderboard data with scrambled names
     const mockData: LeaderboardEntry[] = [
       { id: '1', name: scrambleName('Darren W'), todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
       { id: '2', name: scrambleName('Grissel A'), todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
@@ -65,7 +96,8 @@ export default function LeaderboardPage() {
     ];
 
     setLeaderboardData(mockData);
-  }, []);
+    setIsUsingSupabase(false);
+  };
 
   const sortedData = [...leaderboardData].sort((a, b) => {
     if (activeTab === 'today') {
@@ -144,6 +176,11 @@ export default function LeaderboardPage() {
               <div>
                 <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
                   Leaderboard
+                  {!isUsingSupabase && (
+                    <Badge variant="outline" className="text-xs ml-2 text-muted-foreground">
+                      Demo Data
+                    </Badge>
+                  )}
                 </h1>
                 <p className="text-xs md:text-sm text-muted-foreground">See how you stack up against others</p>
               </div>
@@ -152,29 +189,41 @@ export default function LeaderboardPage() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <Card className="glass-strong mb-6">
-          <CardContent className="p-4">
-            <div className="flex space-x-2">
-              <Button
-                variant={activeTab === 'today' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('today')}
-                className="flex-1 text-sm"
-              >
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Today's Squats
-              </Button>
-              <Button
-                variant={activeTab === 'total' ? 'default' : 'ghost'}
-                onClick={() => setActiveTab('total')}
-                className="flex-1 text-sm"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                Total Squats
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Loading State for Tab Navigation */}
+        {isLoading ? (
+          <Card className="glass-strong mb-6">
+            <CardContent className="p-4">
+              <div className="flex space-x-2">
+                <div className="flex-1 h-8 bg-muted/50 rounded animate-pulse"></div>
+                <div className="flex-1 h-8 bg-muted/50 rounded animate-pulse"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Tab Navigation */
+          <Card className="glass-strong mb-6">
+            <CardContent className="p-4">
+              <div className="flex space-x-2">
+                <Button
+                  variant={activeTab === 'today' ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab('today')}
+                  className="flex-1 text-sm"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Today's Squats
+                </Button>
+                <Button
+                  variant={activeTab === 'total' ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab('total')}
+                  className="flex-1 text-sm"
+                >
+                  <Trophy className="w-4 h-4 mr-2" />
+                  Total Squats
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Leaderboard */}
         <Card className="glass">
@@ -185,33 +234,103 @@ export default function LeaderboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="space-y-0">
-              {/* Header Row - Hidden on mobile */}
-              <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-border/50 text-sm font-medium text-muted-foreground">
-                <div className="col-span-1">Rank</div>
-                <div className="col-span-5">Name</div>
-                <div className="col-span-3 text-center">{activeTab === 'today' ? 'Today' : 'Total'}</div>
-                <div className="col-span-3 text-center">Streak</div>
-              </div>
-
-              {/* Leaderboard Entries */}
-              {sortedData.map((entry, index) => {
-                const displayRank = index + 1;
-                const isTopThree = displayRank <= 3 && activeTab === 'total';
-                const badgeText = getBadgeText(displayRank);
+            {/* Loading State */}
+            {isLoading ? (
+              <div className="space-y-0">
+                {/* Header Row Skeleton */}
+                <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-border/50">
+                  <div className="col-span-1 h-4 bg-muted/50 rounded animate-pulse"></div>
+                  <div className="col-span-5 h-4 bg-muted/50 rounded animate-pulse"></div>
+                  <div className="col-span-3 h-4 bg-muted/50 rounded animate-pulse"></div>
+                  <div className="col-span-3 h-4 bg-muted/50 rounded animate-pulse"></div>
+                </div>
                 
-                return (
-                  <div
-                    key={entry.id}
-                    className={`p-4 border-b border-border/30 last:border-b-0 transition-all duration-200 hover:bg-muted/20 cursor-pointer ${
-                      isTopThree ? 'glass-subtle' : ''
-                    }`}
-                  >
-                    {/* Mobile Layout */}
+                {/* Skeleton Entries */}
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="p-4 border-b border-border/30 last:border-b-0">
+                    {/* Mobile Layout Skeleton */}
                     <div className="md:hidden">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 bg-muted/50 rounded-full animate-pulse"></div>
+                          <div className="w-24 h-4 bg-muted/50 rounded animate-pulse"></div>
+                        </div>
+                        <div className="w-16 h-6 bg-muted/50 rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                    
+                    {/* Desktop Layout Skeleton */}
+                    <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                      <div className="col-span-1 w-5 h-5 bg-muted/50 rounded-full animate-pulse"></div>
+                      <div className="col-span-5 w-32 h-4 bg-muted/50 rounded animate-pulse"></div>
+                      <div className="col-span-3 w-16 h-6 bg-muted/50 rounded animate-pulse"></div>
+                      <div className="col-span-3 w-12 h-4 bg-muted/50 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {/* Header Row - Hidden on mobile */}
+                <div className="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-border/50 text-sm font-medium text-muted-foreground">
+                  <div className="col-span-1">Rank</div>
+                  <div className="col-span-5">Name</div>
+                  <div className="col-span-3 text-center">{activeTab === 'today' ? 'Today' : 'Total'}</div>
+                  <div className="col-span-3 text-center">Streak</div>
+                </div>
+
+                {/* Leaderboard Entries */}
+                {sortedData.map((entry, index) => {
+                  const displayRank = index + 1;
+                  const isTopThree = displayRank <= 3 && activeTab === 'total';
+                  const badgeText = getBadgeText(displayRank);
+                  
+                  return (
+                    <div
+                      key={entry.id}
+                      className={`p-4 border-b border-border/30 last:border-b-0 transition-all duration-200 hover:bg-muted/20 cursor-pointer ${
+                        isTopThree ? 'glass-subtle' : ''
+                      }`}
+                    >
+                      {/* Mobile Layout */}
+                      <div className="md:hidden">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            {getRankIcon(displayRank)}
+                            <div>
+                              <div className="font-semibold text-foreground">{entry.name}</div>
+                              {badgeText && (
+                                <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
+                                  {badgeText}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-primary">
+                              {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">squats</div>
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <div className="flex items-center gap-1">
+                            {entry.streak > 0 && <span className="text-orange-500">🔥</span>}
+                            <span className="font-semibold text-orange-500">{entry.streak}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {entry.streak === 1 ? 'day' : 'days'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Desktop Layout */}
+                      <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                        <div className="col-span-1 flex items-center">
                           {getRankIcon(displayRank)}
+                        </div>
+                        
+                        <div className="col-span-5 flex items-center">
                           <div>
                             <div className="font-semibold text-foreground">{entry.name}</div>
                             {badgeText && (
@@ -221,96 +340,76 @@ export default function LeaderboardPage() {
                             )}
                           </div>
                         </div>
-                        <div className="text-right">
+                        
+                        <div className="col-span-3 text-center">
                           <div className="text-lg font-bold text-primary">
                             {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
                           </div>
                           <div className="text-xs text-muted-foreground">squats</div>
                         </div>
-                      </div>
-                      <div className="flex justify-end">
-                        <div className="flex items-center gap-1">
-                          {entry.streak > 0 && <span className="text-orange-500">🔥</span>}
-                          <span className="font-semibold text-orange-500">{entry.streak}</span>
-                          <span className="text-xs text-muted-foreground">
+                        
+                        <div className="col-span-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {entry.streak > 0 && <span className="text-orange-500">🔥</span>}
+                            <span className="font-semibold text-orange-500">{entry.streak}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
                             {entry.streak === 1 ? 'day' : 'days'}
-                          </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    {/* Desktop Layout */}
-                    <div className="hidden md:grid grid-cols-12 gap-4 items-center">
-                      <div className="col-span-1 flex items-center">
-                        {getRankIcon(displayRank)}
-                      </div>
-                      
-                      <div className="col-span-5 flex items-center">
-                        <div>
-                          <div className="font-semibold text-foreground">{entry.name}</div>
-                          {badgeText && (
-                            <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                              {badgeText}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="col-span-3 text-center">
-                        <div className="text-lg font-bold text-primary">
-                          {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
-                        </div>
-                        <div className="text-xs text-muted-foreground">squats</div>
-                      </div>
-                      
-                      <div className="col-span-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {entry.streak > 0 && <span className="text-orange-500">🔥</span>}
-                          <span className="font-semibold text-orange-500">{entry.streak}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {entry.streak === 1 ? 'day' : 'days'}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <Card className="glass-subtle">
-            <CardContent className="p-4 text-center">
-              <div className="text-xl md:text-2xl font-bold text-primary">
-                {sortedData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0).toLocaleString()}
-              </div>
-              <div className="text-xs md:text-sm text-muted-foreground">
-                {activeTab === 'today' ? "Today's Total" : 'Community Total'}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="glass-subtle">
-            <CardContent className="p-4 text-center">
-              <div className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
-                {sortedData.filter(entry => entry.streak > 0).length}
-              </div>
-              <div className="text-xs md:text-sm text-muted-foreground">Active Streaks</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="glass-subtle">
-            <CardContent className="p-4 text-center">
-              <div className="text-xl md:text-2xl font-bold text-orange-500">
-                {Math.max(...sortedData.map(entry => entry.streak))}
-              </div>
-              <div className="text-xs md:text-sm text-muted-foreground">Longest Streak</div>
-            </CardContent>
-          </Card>
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="glass-subtle">
+                <CardContent className="p-4 text-center">
+                  <div className="w-16 h-8 bg-muted/50 rounded animate-pulse mx-auto mb-2"></div>
+                  <div className="w-20 h-4 bg-muted/50 rounded animate-pulse mx-auto"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+            <Card className="glass-subtle">
+              <CardContent className="p-4 text-center">
+                <div className="text-xl md:text-2xl font-bold text-primary">
+                  {sortedData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0).toLocaleString()}
+                </div>
+                <div className="text-xs md:text-sm text-muted-foreground">
+                  {activeTab === 'today' ? "Today's Total" : 'Community Total'}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="glass-subtle">
+              <CardContent className="p-4 text-center">
+                <div className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">
+                  {sortedData.filter(entry => entry.streak > 0).length}
+                </div>
+                <div className="text-xs md:text-sm text-muted-foreground">Active Streaks</div>
+              </CardContent>
+            </Card>
+            
+            <Card className="glass-subtle">
+              <CardContent className="p-4 text-center">
+                <div className="text-xl md:text-2xl font-bold text-orange-500">
+                  {sortedData.length > 0 ? Math.max(...sortedData.map(entry => entry.streak)) : 0}
+                </div>
+                <div className="text-xs md:text-sm text-muted-foreground">Longest Streak</div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
