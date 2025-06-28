@@ -183,7 +183,7 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Gradient backgrounds */
+/* Gradient backgrounds with film grain effect */
 .gradient-bg {
   background: linear-gradient(135deg, 
     rgba(99, 102, 241, 0.1) 0%, 
@@ -191,6 +191,25 @@
     rgba(236, 72, 153, 0.1) 50%, 
     rgba(251, 146, 60, 0.1) 75%, 
     rgba(34, 197, 94, 0.1) 100%);
+  position: relative;
+}
+
+.gradient-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(255, 255, 255, 0.03) 50.5%, transparent 51%),
+    radial-gradient(circle at 25% 25%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.01) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 70%, transparent 40%, rgba(0, 0, 0, 0.015) 40.5%, transparent 41%);
+  background-size: 2px 2px, 3px 3px, 1px 1px, 4px 4px;
+  opacity: 0.8;
+  mix-blend-mode: multiply;
+  pointer-events: none;
 }
 
 .dark .gradient-bg {
@@ -200,6 +219,17 @@
     rgba(236, 72, 153, 0.05) 50%, 
     rgba(251, 146, 60, 0.05) 75%, 
     rgba(34, 197, 94, 0.05) 100%);
+}
+
+.dark .gradient-bg::before {
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 50%, rgba(255, 255, 255, 0.02) 50.5%, transparent 51%),
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.01) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(0, 0, 0, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 70%, transparent 40%, rgba(255, 255, 255, 0.008) 40.5%, transparent 41%);
+  background-size: 1px 1px, 2px 2px, 3px 3px, 1.5px 1.5px;
+  opacity: 0.6;
+  mix-blend-mode: screen;
 }
 
 /* Shine Animation - Fixed */
