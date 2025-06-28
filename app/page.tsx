@@ -23,6 +23,7 @@ import {
   isChallengeComplete,
 } from "@/lib/supabase"
 import { Calendar, Info, Users, LogOut, User, Trophy } from "lucide-react"
+import FooterFloat from "@/components/FooterFloat"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -733,6 +734,9 @@ export default function Home() {
             <LeaderboardPreview />
           </div>
         </div>
+
+        {/* Footer */}
+        <FooterFloat />
       </div>
     </div>
   )
