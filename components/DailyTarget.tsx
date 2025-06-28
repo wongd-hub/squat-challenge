@@ -18,23 +18,21 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
 
   return (
     <Card className="glass-strong">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {isRestDay ? (
-              <Coffee className="w-5 h-5 text-blue-500" />
-            ) : (
-              <Target className="w-5 h-5 text-primary" />
-            )}
-            Day {day} {isRestDay ? 'Rest Day' : 'Challenge'}
-          </div>
+      <CardHeader className="pb-3 text-center">
+        <CardTitle className="flex items-center justify-center gap-2">
+          {isRestDay ? (
+            <Coffee className="w-5 h-5 text-blue-500" />
+          ) : (
+            <Target className="w-5 h-5 text-primary" />
+          )}
+          Day {day} {isRestDay ? 'Rest Day' : 'Challenge'}
           {isCompleted && (
             <Trophy className="w-6 h-6 text-yellow-500 dark:text-yellow-400 animate-pulse" />
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="text-center">
+      <CardContent className="space-y-6 pt-6 flex flex-col items-center justify-center">
+        <div className="text-center w-full">
           {isRestDay ? (
             <>
               <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent mb-2">
@@ -54,7 +52,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
 
         {!isRestDay && (
           <>
-            <div className="space-y-2">
+            <div className="space-y-2 w-full">
               <Progress 
                 value={completionPercentage} 
                 className="h-4 glass-subtle"
@@ -70,7 +68,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
             </div>
 
             {!isCompleted && (
-              <div className="text-center p-4 glass-subtle rounded-xl">
+              <div className="text-center p-4 glass-subtle rounded-xl w-full">
                 <div className="text-2xl font-bold text-primary mb-1">{remaining}</div>
                 <div className="text-sm text-muted-foreground">squats remaining</div>
               </div>
@@ -79,7 +77,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
         )}
 
         {isCompleted && (
-          <div className="text-center p-4 glass-subtle rounded-xl border border-green-500/20">
+          <div className="text-center p-4 glass-subtle rounded-xl border border-green-500/20 w-full">
             <div className="text-xl font-bold text-green-600 dark:text-green-400 mb-1">
               {isRestDay ? '🌟 Rest Day Complete!' : '🎉 Goal Achieved!'}
             </div>
