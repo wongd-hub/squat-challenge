@@ -141,7 +141,6 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
 
   // Determine colors based on positive/negative
   const isNegative = tempSquats < 0;
-  const progressColor = isNegative ? 'hsl(var(--destructive))' : 'hsl(var(--chart-4))';
 
   // Calculate stroke-dashoffset for proper direction
   const strokeDashoffset = isNegative 
@@ -159,6 +158,21 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         >
           {/* Progress Ring */}
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" style={{ pointerEvents: 'none' }}>
+            <defs>
+              {/* Purple gradient for positive progress */}
+              <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f9a8d4" /> {/* from-pink-300 */}
+                <stop offset="50%" stopColor="#c4b5fd" /> {/* via-purple-300 */}
+                <stop offset="100%" stopColor="#818cf8" /> {/* to-indigo-400 */}
+              </linearGradient>
+              {/* Alternative gradient for better circular effect */}
+              <linearGradient id="purpleGradientCircular" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f9a8d4" />
+                <stop offset="33%" stopColor="#c4b5fd" />
+                <stop offset="66%" stopColor="#a78bfa" />
+                <stop offset="100%" stopColor="#818cf8" />
+              </linearGradient>
+            </defs>
             {/* Background circle */}
             <circle
               cx="50"
@@ -176,7 +190,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
                 cy="50"
                 r="45"
                 fill="none"
-                stroke={progressColor}
+                stroke={isNegative ? 'hsl(var(--destructive))' : 'url(#purpleGradientCircular)'}
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeDasharray="282.7"
@@ -225,7 +239,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               <div 
                 className={`${compact ? 'w-5 h-5' : 'w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7'} rounded-full border-2 border-white shadow-lg flex items-center justify-center`}
                 style={{ 
-                  background: progressColor,
+                  background: isNegative ? 'hsl(var(--destructive))' : 'linear-gradient(135deg, #f9a8d4 0%, #c4b5fd 50%, #818cf8 100%)',
                 }}
               >
                 {/* Inner dot */}
