@@ -149,7 +149,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     : 282.7 - (progressPercentage * 2.827); // For positive, decrease offset to go clockwise
 
   return (
-    <div className="flex flex-col items-center justify-center px-4" style={{ contain: 'layout style paint' }}>
+    <div className="flex flex-col items-center justify-center px-4 pt-8 pb-4" style={{ contain: 'layout style paint' }}>
       {/* Dial Container */}
       <div className="relative mb-8" style={{ contain: 'layout' }}>
         {/* Outer Ring */}
