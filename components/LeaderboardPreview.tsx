@@ -17,6 +17,10 @@ interface LeaderboardEntry {
   rank: number;
 }
 
+interface LeaderboardPreviewProps {
+  refreshTrigger?: number; // Add this prop to trigger refreshes
+}
+
 // Function to scramble names for privacy (only when using mock data)
 function scrambleName(name: string): string {
   const scrambled = name.split(' ').map(part => {
@@ -29,7 +33,7 @@ function scrambleName(name: string): string {
   return scrambled;
 }
 
-export function LeaderboardPreview() {
+export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +42,14 @@ export function LeaderboardPreview() {
   useEffect(() => {
     loadLeaderboardData();
   }, []);
+
+  // Refresh leaderboard when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger !== undefined) {
+      console.log('🔄 Refreshing leaderboard data due to trigger change');
+      loadLeaderboardData();
+    }
+  }, [refreshTrigger]);
 
   const loadLeaderboardData = async () => {
     setIsLoading(true);

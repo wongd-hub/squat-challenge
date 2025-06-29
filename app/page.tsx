@@ -39,6 +39,7 @@ export default function Home() {
   const [dataSource, setDataSource] = useState<"supabase" | "local">("local")
   const [challengeComplete, setChallengeComplete] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [leaderboardRefreshTrigger, setLeaderboardRefreshTrigger] = useState(0)
 
   // Ref for leaderboard section
   const leaderboardRef = useRef<HTMLDivElement>(null)
@@ -335,6 +336,10 @@ export default function Home() {
           setProgressData(progressWithTargets)
           console.log("✅ Reloaded recent progress data for chart")
         }
+
+        // Trigger leaderboard refresh after successful Supabase update
+        setLeaderboardRefreshTrigger(prev => prev + 1)
+        console.log("🔄 Triggered leaderboard refresh")
       } catch (error) {
         console.error("❌ Error saving to Supabase:", error)
         // Fallback to local storage
@@ -721,7 +726,7 @@ export default function Home() {
 
           {/* Leaderboard Preview */}
           <div ref={leaderboardRef}>
-            <LeaderboardPreview />
+            <LeaderboardPreview refreshTrigger={leaderboardRefreshTrigger} />
           </div>
         </div>
 
