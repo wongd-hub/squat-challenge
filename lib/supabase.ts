@@ -46,8 +46,8 @@ if (typeof window !== 'undefined') {
 
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
-  START_DATE: "2025-06-15",
-  TOTAL_DAYS: 23,
+  START_DATE: process.env.NEXT_PUBLIC_CHALLENGE_START_DATE || "2025-06-15",
+  TOTAL_DAYS: parseInt(process.env.NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS || "23"),
   DAILY_TARGETS: [
     { day: 1, target_squats: 50 },
     { day: 2, target_squats: 55 },
