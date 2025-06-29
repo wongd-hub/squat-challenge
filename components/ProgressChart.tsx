@@ -68,6 +68,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
   const daysCompleted = chartData.filter((day) => !day.isRestDay && day.completed >= day.target).length
   const overallPercentage = Math.round((totalCompleted / totalTarget) * 100)
 
+  // Calculate Y-axis domain for better scaling with 50-unit increments
+  const maxTarget = Math.max(...chartData.map(day => day.target))
+  const maxCompleted = Math.max(...chartData.map(day => day.completed))
+  const maxValue = Math.max(maxTarget, maxCompleted)
+  const yAxisMax = Math.ceil((maxValue * 1.1) / 50) * 50 // Round up to nearest 50
+
   const getBarColor = (entry: any) => {
     if (entry.isRestDay) return "#3b82f6" // Blue for rest days
     if (entry.isToday) return "#8b5cf6" // Purple for today
@@ -152,52 +158,81 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
 
   return (
     <Card className="glass-strong">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">📊 23-Day Challenge Progress</CardTitle>
-        </div>
-        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <span>
-            Total: {totalCompleted.toLocaleString()} / {totalTarget.toLocaleString()} squats
-          </span>
-          <span>Overall: {overallPercentage}%</span>
-          <span>Days completed: {daysCompleted}/23</span>
-        </div>
+      <CardHeader className="pb-4">
+        <div className="space-y-3">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            📊 23-Day Challenge Progress
+          </CardTitle>
+          
+          {/* Stats Row */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
+            <span className="font-medium">
+              Total: {totalCompleted.toLocaleString()} / {totalTarget.toLocaleString()} squats
+            </span>
+            <span className="font-medium">Overall: {overallPercentage}%</span>
+            <span className="font-medium">Days completed: {daysCompleted}/23</span>
+          </div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-4 text-xs">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-green-500 rounded"></div>
-            <span>Completed</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-orange-500 rounded"></div>
-            <span>Partial</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-gray-300 rounded"></div>
-            <span>Remaining</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-blue-500 rounded"></div>
-            <span>Rest Day</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 border-2 border-purple-500 rounded"></div>
-            <span>Today</span>
+          {/* Legend */}
+          <div className="flex flex-wrap gap-3 sm:gap-4 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-green-500 rounded"></div>
+              <span>Completed</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-orange-500 rounded"></div>
+              <span>Partial</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-gray-300 rounded"></div>
+              <span>Remaining</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-blue-500 rounded"></div>
+              <span>Rest Day</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 border-2 border-purple-500 rounded"></div>
+              <span>Today</span>
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <XAxis dataKey="day" tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={60} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }} />
-              <Bar dataKey="target" shape={<CustomBar />} />
-            </BarChart>
-          </ResponsiveContainer>
+      <CardContent className="pt-0">
+        {/* Horizontally Scrollable Chart Container */}
+        <div className="overflow-x-auto pb-4">
+          <div className="h-80 md:h-96" style={{ minWidth: `${Math.max(chartData.length * 32, 800)}px` }}>
+            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart 
+                  data={chartData} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+                  barCategoryGap="10%"
+                >
+                  <XAxis 
+                    dataKey="day" 
+                    tick={{ fontSize: 11 }} 
+                    interval={0} 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={50}
+                  />
+                                  <YAxis 
+                    tick={{ fontSize: 11 }} 
+                    width={50} 
+                    domain={[0, yAxisMax]}
+                    tickCount={Math.floor(yAxisMax / 50) + 1}
+                    ticks={Array.from({ length: Math.floor(yAxisMax / 50) + 1 }, (_, i) => i * 50)}
+                  />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }} />
+                <Bar dataKey="target" shape={<CustomBar />} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        {/* Mobile Scroll Hint */}
+        <div className="text-xs text-muted-foreground text-center sm:hidden mt-2">
+          ← Swipe to see all days →
         </div>
       </CardContent>
     </Card>
