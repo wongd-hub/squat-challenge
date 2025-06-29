@@ -172,6 +172,11 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
                 <stop offset="66%" stopColor="#a78bfa" />
                 <stop offset="100%" stopColor="#818cf8" />
               </linearGradient>
+              {/* Orange to rose gradient for negative progress */}
+              <linearGradient id="orangeRoseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#fb923c" /> {/* from-orange-400 */}
+                <stop offset="100%" stopColor="#fb7185" /> {/* to-rose-400 */}
+              </linearGradient>
             </defs>
             {/* Background circle */}
             <circle
@@ -190,7 +195,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
                 cy="50"
                 r="45"
                 fill="none"
-                stroke={isNegative ? 'hsl(var(--destructive))' : 'url(#purpleGradientCircular)'}
+                stroke={isNegative ? 'url(#orangeRoseGradient)' : 'url(#purpleGradientCircular)'}
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeDasharray="282.7"
@@ -239,7 +244,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               <div 
                 className={`${compact ? 'w-5 h-5' : 'w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7'} rounded-full border-2 border-white shadow-lg flex items-center justify-center`}
                 style={{ 
-                  background: isNegative ? 'hsl(var(--destructive))' : 'linear-gradient(135deg, #f9a8d4 0%, #c4b5fd 50%, #818cf8 100%)',
+                  background: isNegative ? 'linear-gradient(135deg, #fb923c 0%, #fb7185 100%)' : 'linear-gradient(135deg, #f9a8d4 0%, #c4b5fd 50%, #818cf8 100%)',
                 }}
               >
                 {/* Inner dot */}
