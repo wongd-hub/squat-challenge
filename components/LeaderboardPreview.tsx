@@ -1,39 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, Users, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { database, isSupabaseConfigured } from '@/lib/supabase';
-
-interface LeaderboardEntry {
-  id: string;
-  name: string;
-  todaySquats: number;
-  totalSquats: number;
-  streak: number;
-  rank: number;
-}
+import { LeaderboardEntry, getMockLeaderboardPreview } from '@/lib/mockData';
 
 interface LeaderboardPreviewProps {
   refreshTrigger?: number; // Add this prop to trigger refreshes
 }
 
-// Function to scramble names for privacy (only when using mock data)
-function scrambleName(name: string): string {
-  const scrambled = name.split(' ').map(part => {
-    if (part.length <= 2) return part;
-    const firstChar = part[0];
-    const lastChar = part[part.length - 1];
-    const middle = part.slice(1, -1).split('').sort(() => Math.random() - 0.5).join('');
-    return `${firstChar}${middle}${lastChar}`;
-  }).join(' ');
-  return scrambled;
-}
-
-export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps = {}) {
+function LeaderboardPreviewComponent({ refreshTrigger }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
@@ -43,20 +23,11 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
     loadLeaderboardData();
   }, []);
 
-  // Refresh leaderboard when refreshTrigger changes
-  useEffect(() => {
-    if (refreshTrigger !== undefined) {
-      console.log('🔄 Refreshing leaderboard data due to trigger change');
-      loadLeaderboardData();
-    }
-  }, [refreshTrigger]);
-
-  const loadLeaderboardData = async () => {
+  const loadLeaderboardData = useCallback(async () => {
     setIsLoading(true);
     
     if (isSupabaseConfigured()) {
       try {
-        console.log('📊 Loading leaderboard from Supabase...');
         const { data, error } = await database.getFullLeaderboard();
         
         if (error) {
@@ -75,42 +46,47 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
           
           setLeaderboardData(formattedData);
           setIsUsingSupabase(true);
-          console.log(`✅ Loaded ${formattedData.length} leaderboard entries from Supabase`);
         }
       } catch (error) {
         console.error('❌ Exception loading leaderboard:', error);
         loadMockData();
       }
     } else {
-      console.log('📊 Supabase not configured, using mock data');
       loadMockData();
     }
     
     setIsLoading(false);
-  };
+  }, []);
 
-  const loadMockData = () => {
-    // Fallback mock leaderboard data with scrambled names
-    const mockData: LeaderboardEntry[] = [
-      { id: '1', name: scrambleName('Darren W'), todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
-      { id: '2', name: scrambleName('Grissel A'), todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
-      { id: '3', name: scrambleName('Afzal A'), todaySquats: 60, totalSquats: 3124, streak: 15, rank: 3 },
-      { id: '4', name: scrambleName('Ching C'), todaySquats: 0, totalSquats: 2764, streak: 0, rank: 4 },
-      { id: '5', name: scrambleName('Braidan S'), todaySquats: 0, totalSquats: 1336, streak: 0, rank: 5 },
-    ];
+  useEffect(() => {
+    loadLeaderboardData();
+  }, [loadLeaderboardData]);
 
+  // Refresh leaderboard when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger !== undefined) {
+      loadLeaderboardData();
+    }
+  }, [refreshTrigger, loadLeaderboardData]);
+
+  const loadMockData = useCallback(() => {
+    // Use shared mock data
+    const mockData = getMockLeaderboardPreview();
     setLeaderboardData(mockData);
     setIsUsingSupabase(false);
-  };
+  }, []);
 
-  const sortedData = [...leaderboardData].sort((a, b) => {
-    if (activeTab === 'today') {
-      return b.todaySquats - a.todaySquats;
-    }
-    return b.totalSquats - a.totalSquats;
-  }).slice(0, 5); // Show top 5
+  // Memoize expensive calculations
+  const sortedData = useMemo(() => {
+    return [...leaderboardData].sort((a, b) => {
+      if (activeTab === 'today') {
+        return b.todaySquats - a.todaySquats;
+      }
+      return b.totalSquats - a.totalSquats;
+    }).slice(0, 5); // Show top 5
+  }, [leaderboardData, activeTab]);
 
-  const getRankIcon = (rank: number) => {
+  const getRankIcon = useCallback((rank: number) => {
     // Only show special icons for all-time leaderboard
     if (activeTab === 'total') {
       switch (rank) {
@@ -127,9 +103,9 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
       // For daily leaderboard, just show rank numbers
       return <span className="w-4 h-4 flex items-center justify-center text-xs font-bold text-muted-foreground">#{rank}</span>;
     }
-  };
+  }, [activeTab]);
 
-  const getRankBadgeColor = (rank: number) => {
+  const getRankBadgeColor = useCallback((rank: number) => {
     // Only show special badges for all-time leaderboard
     if (activeTab === 'total') {
       switch (rank) {
@@ -145,9 +121,9 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
     } else {
       return 'bg-muted/50 text-muted-foreground';
     }
-  };
+  }, [activeTab]);
 
-  const getBadgeText = (rank: number) => {
+  const getBadgeText = useCallback((rank: number) => {
     // Only show special badges for all-time leaderboard
     if (activeTab === 'total') {
       switch (rank) {
@@ -162,7 +138,12 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
       }
     }
     return null;
-  };
+  }, [activeTab]);
+
+  // Memoize community total calculation
+  const communityTotal = useMemo(() => {
+    return leaderboardData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0);
+  }, [leaderboardData, activeTab]);
 
   return (
     <Card className="glass">
@@ -285,10 +266,10 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
               <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-border/50">
                 <div className="text-center">
                   <div className="text-lg font-bold text-primary">
-                    {sortedData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0).toLocaleString()}
+                    {communityTotal.toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {activeTab === 'today' ? "Today's Total" : 'Top 5 Total'}
+                    {activeTab === 'today' ? "Today's Total" : 'Community Total'}
                   </div>
                 </div>
                 
@@ -313,3 +294,6 @@ export function LeaderboardPreview({ refreshTrigger }: LeaderboardPreviewProps =
     </Card>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const LeaderboardPreview = React.memo(LeaderboardPreviewComponent);

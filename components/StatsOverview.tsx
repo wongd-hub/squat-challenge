@@ -1,8 +1,6 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import CountUp from "./CountUp"
 import { Trophy, Target, Flame, Calendar } from "lucide-react"
 
@@ -52,7 +50,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
             <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
               <CountUp end={Math.round(weeklyPercentage)} duration={2000} suffix="%" />
             </div>
-            <p className="text-sm text-muted-foreground">Overall Progress</p>
+            <p className="text-sm text-muted-foreground">Weekly Progress</p>
           </CardContent>
         </Card>
 
@@ -69,29 +67,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
         </Card>
       </div>
 
-      {/* Weekly Progress Card */}
-      <Card className="glass-strong shadow-sm mt-6 mb-6">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-foreground">Weekly Progress</h3>
-            <Badge variant="outline" className="text-xs">
-              Last 7 Days
-            </Badge>
-          </div>
 
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Progress</span>
-              <span className="text-sm font-medium">{Math.round(weeklyPercentage)}%</span>
-            </div>
-            <Progress value={weeklyPercentage} className="h-3" />
-            <div className="flex justify-between items-center text-xs text-muted-foreground">
-              <span>{weeklyProgress.toLocaleString()} squats</span>
-              <span>Goal: {weeklyGoal.toLocaleString()}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

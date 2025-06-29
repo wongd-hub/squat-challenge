@@ -1,5 +1,6 @@
 "use client"
 
+import React, { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, TooltipProps } from "recharts"
 import { CHALLENGE_CONFIG, getChallengeDay } from "@/lib/supabase"
@@ -10,13 +11,8 @@ interface ProgressChartProps {
 }
 
 export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
-  // Debug logging
-  console.log("📊 ProgressChart received data:", data.length, "entries")
-  console.log("📊 ProgressChart received dailyTargets:", dailyTargets.length, "entries")
-  console.log("📊 Sample dailyTargets:", dailyTargets.slice(0, 10))
-
-  // Generate all challenge days with their data
-  const generateChallengeDays = () => {
+  // Memoize expensive chart data generation
+  const chartData = useMemo(() => {
     const today = new Date().toISOString().split("T")[0]
     const currentDay = getChallengeDay(today)
 
@@ -40,11 +36,6 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
       const isCompleted = !isRestDay && completed >= target
       const isPartial = !isRestDay && completed > 0 && completed < target
 
-      // Debug rest days
-      if (isRestDay) {
-        console.log(`🔵 Rest day detected: Day ${day}, target: ${target}`)
-      }
-
       return {
         day: `Day ${day}`,
         dayNumber: day,
@@ -58,21 +49,25 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
         date: dateStr,
       }
     })
-  }
+  }, [data, dailyTargets])
 
-  const chartData = generateChallengeDays()
+  // Memoize stats calculations
+  const stats = useMemo(() => {
+    const totalTarget = CHALLENGE_CONFIG.DAILY_TARGETS.reduce((sum, day) => sum + day.target_squats, 0)
+    const totalCompleted = chartData.reduce((sum, day) => sum + day.completed, 0)
+    const daysCompleted = chartData.filter((day) => !day.isRestDay && day.completed >= day.target).length
+    const overallPercentage = Math.round((totalCompleted / totalTarget) * 100)
 
-  // Calculate stats
-  const totalTarget = CHALLENGE_CONFIG.DAILY_TARGETS.reduce((sum, day) => sum + day.target_squats, 0)
-  const totalCompleted = chartData.reduce((sum, day) => sum + day.completed, 0)
-  const daysCompleted = chartData.filter((day) => !day.isRestDay && day.completed >= day.target).length
-  const overallPercentage = Math.round((totalCompleted / totalTarget) * 100)
+    return { totalTarget, totalCompleted, daysCompleted, overallPercentage }
+  }, [chartData])
 
-  // Calculate Y-axis domain for better scaling with 50-unit increments
-  const maxTarget = Math.max(...chartData.map(day => day.target))
-  const maxCompleted = Math.max(...chartData.map(day => day.completed))
-  const maxValue = Math.max(maxTarget, maxCompleted)
-  const yAxisMax = Math.ceil((maxValue * 1.1) / 50) * 50 // Round up to nearest 50
+  // Memoize Y-axis calculation
+  const yAxisMax = useMemo(() => {
+    const maxTarget = Math.max(...chartData.map(day => day.target))
+    const maxCompleted = Math.max(...chartData.map(day => day.completed))
+    const maxValue = Math.max(maxTarget, maxCompleted)
+    return Math.ceil((maxValue * 1.1) / 50) * 50 // Round up to nearest 50
+  }, [chartData])
 
   const getBarColor = (entry: any) => {
     if (entry.isRestDay) return "#3b82f6" // Blue for rest days
@@ -167,10 +162,10 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
           {/* Stats Row */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
             <span className="font-medium">
-              Total: {totalCompleted.toLocaleString()} / {totalTarget.toLocaleString()} squats
+              Total: {stats.totalCompleted.toLocaleString()} / {stats.totalTarget.toLocaleString()} squats
             </span>
-            <span className="font-medium">Overall: {overallPercentage}%</span>
-            <span className="font-medium">Days completed: {daysCompleted}/23</span>
+            <span className="font-medium">Overall: {stats.overallPercentage}%</span>
+            <span className="font-medium">Days completed: {stats.daysCompleted}/23</span>
           </div>
 
           {/* Legend */}

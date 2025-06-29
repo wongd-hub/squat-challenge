@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,27 +8,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { ArrowLeft, Trophy, Medal, Award, Users, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { database, isSupabaseConfigured } from '@/lib/supabase';
-
-interface LeaderboardEntry {
-  id: string;
-  name: string;
-  todaySquats: number;
-  totalSquats: number;
-  streak: number;
-  rank: number;
-}
-
-// Function to scramble names for privacy (only when using mock data)
-function scrambleName(name: string): string {
-  const scrambled = name.split(' ').map(part => {
-    if (part.length <= 2) return part;
-    const firstChar = part[0];
-    const lastChar = part[part.length - 1];
-    const middle = part.slice(1, -1).split('').sort(() => Math.random() - 0.5).join('');
-    return `${firstChar}${middle}${lastChar}`;
-  }).join(' ');
-  return scrambled;
-}
+import { LeaderboardEntry, getMockLeaderboardFull } from '@/lib/mockData';
 
 export default function LeaderboardPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -78,35 +58,24 @@ export default function LeaderboardPage() {
     setIsLoading(false);
   };
 
-  const loadMockData = () => {
-    // Fallback mock leaderboard data with scrambled names
-    const mockData: LeaderboardEntry[] = [
-      { id: '1', name: scrambleName('Darren W'), todaySquats: 150, totalSquats: 3214, streak: 23, rank: 1 },
-      { id: '2', name: scrambleName('Grissel A'), todaySquats: 150, totalSquats: 2824, streak: 20, rank: 2 },
-      { id: '3', name: scrambleName('Afzal A'), todaySquats: 60, totalSquats: 3124, streak: 15, rank: 3 },
-      { id: '4', name: scrambleName('Ching C'), todaySquats: 0, totalSquats: 2764, streak: 0, rank: 4 },
-      { id: '5', name: scrambleName('Braidan S'), todaySquats: 0, totalSquats: 1336, streak: 0, rank: 5 },
-      { id: '6', name: scrambleName('David M'), todaySquats: 0, totalSquats: 1286, streak: 0, rank: 6 },
-      { id: '7', name: scrambleName('Isaac H'), todaySquats: 0, totalSquats: 955, streak: 0, rank: 7 },
-      { id: '8', name: scrambleName('Devika L'), todaySquats: 0, totalSquats: 581, streak: 0, rank: 8 },
-      { id: '9', name: scrambleName('Vincent D'), todaySquats: 0, totalSquats: 543, streak: 0, rank: 9 },
-      { id: '10', name: scrambleName('Wentao L'), todaySquats: 0, totalSquats: 30, streak: 0, rank: 10 },
-      { id: '11', name: scrambleName('Peter H'), todaySquats: 0, totalSquats: 0, streak: 0, rank: 11 },
-      { id: '12', name: scrambleName('Jake C'), todaySquats: 0, totalSquats: 0, streak: 0, rank: 12 },
-    ];
-
+  const loadMockData = useCallback(() => {
+    // Use shared mock data
+    const mockData = getMockLeaderboardFull();
     setLeaderboardData(mockData);
     setIsUsingSupabase(false);
-  };
+  }, []);
 
-  const sortedData = [...leaderboardData].sort((a, b) => {
-    if (activeTab === 'today') {
-      return b.todaySquats - a.todaySquats;
-    }
-    return b.totalSquats - a.totalSquats;
-  });
+  // Memoize expensive calculations
+  const sortedData = useMemo(() => {
+    return [...leaderboardData].sort((a, b) => {
+      if (activeTab === 'today') {
+        return b.todaySquats - a.todaySquats;
+      }
+      return b.totalSquats - a.totalSquats;
+    });
+  }, [leaderboardData, activeTab]);
 
-  const getRankIcon = (rank: number) => {
+  const getRankIcon = useCallback((rank: number) => {
     // Only show special icons for all-time leaderboard
     if (activeTab === 'total') {
       switch (rank) {
@@ -123,9 +92,9 @@ export default function LeaderboardPage() {
       // For daily leaderboard, just show rank numbers
       return <span className="w-5 h-5 flex items-center justify-center text-sm font-bold text-muted-foreground">#{rank}</span>;
     }
-  };
+  }, [activeTab]);
 
-  const getRankBadgeColor = (rank: number) => {
+  const getRankBadgeColor = useCallback((rank: number) => {
     // Only show special badges for all-time leaderboard
     if (activeTab === 'total') {
       switch (rank) {
@@ -141,9 +110,9 @@ export default function LeaderboardPage() {
     } else {
       return 'bg-muted/50 text-muted-foreground border-border';
     }
-  };
+  }, [activeTab]);
 
-  const getBadgeText = (rank: number) => {
+  const getBadgeText = useCallback((rank: number) => {
     // Only show special badges for all-time leaderboard
     if (activeTab === 'total') {
       switch (rank) {
@@ -158,7 +127,12 @@ export default function LeaderboardPage() {
       }
     }
     return null;
-  };
+  }, [activeTab]);
+
+  // Memoize community total calculation
+  const communityTotal = useMemo(() => {
+    return leaderboardData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0);
+  }, [leaderboardData, activeTab]);
 
   return (
     <div className="min-h-screen gradient-bg">
@@ -383,7 +357,7 @@ export default function LeaderboardPage() {
             <Card className="glass-subtle">
               <CardContent className="p-4 text-center">
                 <div className="text-xl md:text-2xl font-bold text-primary">
-                  {sortedData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0).toLocaleString()}
+                  {communityTotal.toLocaleString()}
                 </div>
                 <div className="text-xs md:text-sm text-muted-foreground">
                   {activeTab === 'today' ? "Today's Total" : 'Community Total'}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { SquatDial } from "@/components/SquatDial"
 import { DailyTarget } from "@/components/DailyTarget"
 import { ProgressChart } from "@/components/ProgressChart"
@@ -158,11 +158,11 @@ export default function Home() {
   // Load daily targets from database or fallback
   const loadDailyTargets = async () => {
     try {
-      console.log("📊 Loading daily targets...")
+  
       const { data, error } = await database.getDailyTargets()
       if (data && !error) {
         setDailyTargets(data)
-        console.log(`✅ Loaded ${data.length} daily targets`)
+        
       } else {
         console.error("❌ Error loading daily targets:", error)
       }
@@ -221,7 +221,7 @@ export default function Home() {
 
           // Calculate total squats from challenge data
           const totalSquats = challengeProgressWithTargets.reduce((acc, day) => acc + day.squats_completed, 0)
-          console.log(`📊 Total challenge squats: ${totalSquats}`)
+      
         }
       } catch (error) {
         console.error("❌ Error loading Supabase data:", error)
@@ -408,41 +408,41 @@ export default function Home() {
     })
   }
 
-  // Debug logging before render
-  console.log("📊 Main page passing to ProgressChart:")
-  console.log("📊 challengeProgressData:", challengeProgressData.length, "entries")
-  console.log("📊 dailyTargets:", dailyTargets.length, "entries")
-  console.log("📊 Sample challengeProgressData:", challengeProgressData.slice(0, 5))
-  console.log("📊 Rest day targets in dailyTargets:", dailyTargets.filter(t => t.target_squats === 0))
+  // Memoize expensive calculations to prevent unnecessary recalculations
+  const totalSquats = useMemo(() => {
+    return challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
+  }, [challengeProgressData])
 
-  // Calculate stats from CHALLENGE progress data only
-  const totalSquats = challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
-  const currentStreak = calculateStreak(challengeProgressData)
+  const currentStreak = useMemo(() => {
+    return calculateStreak(challengeProgressData)
+  }, [challengeProgressData])
 
-  // Calculate weekly progress (last 7 days within challenge period)
+  const weeklyProgress = useMemo(() => {
+    const weeklyGoal = 850
+    const last7Days = challengeProgressData
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 7)
+    return last7Days.reduce((acc, day) => acc + day.squats_completed, 0)
+  }, [challengeProgressData])
+
   const weeklyGoal = 850
-  const last7Days = challengeProgressData
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 7)
-  const weeklyProgress = last7Days.reduce((acc, day) => acc + day.squats_completed, 0)
 
-  // Calculate display values based on challenge status
-  const getDisplayDay = () => {
+  // Memoize display calculations
+  const displayDay = useMemo(() => {
     if (challengeComplete) {
       return CHALLENGE_CONFIG.TOTAL_DAYS // Show final day instead of current day
     }
     return Math.min(currentDay, CHALLENGE_CONFIG.TOTAL_DAYS)
-  }
+  }, [challengeComplete, currentDay])
 
-  const getDisplayDayText = () => {
+  const displayDayText = useMemo(() => {
     if (challengeComplete) {
       return `Challenge Complete (${CHALLENGE_CONFIG.TOTAL_DAYS} days)`
     }
-    return `Day ${getDisplayDay()} of ${CHALLENGE_CONFIG.TOTAL_DAYS}`
-  }
+    return `Day ${displayDay} of ${CHALLENGE_CONFIG.TOTAL_DAYS}`
+  }, [challengeComplete, displayDay])
 
-  // Get display name for user
-  const getDisplayName = () => {
+  const displayName = useMemo(() => {
     if (userProfile?.display_name) {
       return userProfile.display_name
     }
@@ -453,10 +453,9 @@ export default function Home() {
       return user.email.split("@")[0]
     }
     return "User"
-  }
+  }, [userProfile?.display_name, user?.user_metadata?.display_name, user?.email])
 
-  // Determine the correct status badge text and color
-  const getStatusBadge = () => {
+  const statusBadge = useMemo(() => {
     if (!isSupabaseConfigured()) {
       return {
         text: "💾 Offline",
@@ -475,9 +474,7 @@ export default function Home() {
       text: "📡 Online (Not Signed In)",
       className: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300",
     }
-  }
-
-  const statusBadge = getStatusBadge()
+  }, [user])
 
   if (isLoading) {
     return (
@@ -517,7 +514,7 @@ export default function Home() {
                     className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
                   >
                     <User className="w-3 h-3 mr-1" />
-                    {getDisplayName()}
+                    {displayName}
                   </Badge>
                   <Button
                     variant="ghost"
@@ -535,10 +532,7 @@ export default function Home() {
                       variant="ghost"
                       size="sm"
                       className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20"
-                      onClick={() => {
-                        console.log("🔍 Sign In button clicked")
-                        console.log("🔍 Supabase configured:", isSupabaseConfigured())
-                      }}
+                      onClick={() => {}}
                     >
                       <User className="w-3 h-3 mr-1" />
                       Sign In
@@ -574,7 +568,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-2 mb-4">
             <Badge variant="outline" className="text-xs glass-subtle">
               <Calendar className="w-3 h-3 mr-1" />
-              {getDisplayDayText()}
+              {displayDayText}
             </Badge>
             <Badge variant="outline" className={`text-xs ${statusBadge.className}`}>
               {statusBadge.text}
@@ -702,14 +696,14 @@ export default function Home() {
                     onSquatsChange={handleSquatsUpdate}
                     currentSquats={todaySquats}
                     targetSquats={todayTarget}
-                    currentDay={getDisplayDay()}
+                    currentDay={displayDay}
                     compact={false}
                   />
                 </CardContent>
               </Card>
 
               {/* Daily Target */}
-              <DailyTarget targetSquats={todayTarget} completedSquats={todaySquats} day={getDisplayDay()} />
+              <DailyTarget targetSquats={todayTarget} completedSquats={todaySquats} day={displayDay} />
             </div>
           )}
 
