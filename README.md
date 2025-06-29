@@ -1,6 +1,6 @@
 # 🏋️‍♂️ Squat Challenge App
 
-A beautiful, production-ready web application for tracking daily squat progress through a 23-day challenge. Built with Next.js, TypeScript, and Supabase, featuring an intuitive dial interface, real-time progress tracking, and competitive leaderboards.
+A beautiful, production-ready web application for tracking daily squat progress through a 23-day challenge. Built with Next.js, TypeScript, and Supabase, featuring an intuitive dial interface, real-time progress tracking, and competitive leaderboards with social features.
 
 ## ✨ Features
 
