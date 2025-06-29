@@ -4,7 +4,7 @@ A beautiful, production-ready web application for tracking daily squat progress 
 
 ## ✨ Key Features
 
-### 🎯 Core Functionality
+### 🎯 Core Features
 - **Interactive Squat Dial**: Intuitive drag-to-count interface with visual feedback
 - **23-Day Challenge**: Structured program with varying daily targets and rest days
 - **Progress Tracking**: Comprehensive charts showing daily, weekly, and overall progress
