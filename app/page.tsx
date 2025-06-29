@@ -24,6 +24,7 @@ import {
 } from "@/lib/supabase"
 import { Calendar, Info, Users, LogOut, User, Trophy } from "lucide-react"
 import FooterFloat from "@/components/FooterFloat"
+import ScrollLottie from "@/components/ScrollLottie"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -38,17 +39,9 @@ export default function Home() {
   const [dataSource, setDataSource] = useState<"supabase" | "local">("local")
   const [challengeComplete, setChallengeComplete] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
-  const [weightLiftingEmoji, setWeightLiftingEmoji] = useState("🏋️‍♂️")
 
   // Ref for leaderboard section
   const leaderboardRef = useRef<HTMLDivElement>(null)
-
-  // Set random weight lifting emoji on mount
-  useEffect(() => {
-    const emojis = ["🏋️‍♂️", "🏋️‍♀️"]
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)]
-    setWeightLiftingEmoji(randomEmoji)
-  }, [])
 
   // Handle scroll for sticky header
   useEffect(() => {
@@ -504,13 +497,10 @@ export default function Home() {
           <div className="flex justify-between items-center">
             {/* Left side - Logo/Title */}
             <div className="flex items-center gap-3">
-              <h1
-                className={`font-bold transition-all duration-300 ${
-                  isScrolled ? "text-lg" : "text-xl"
-                }`}
-              >
-                {weightLiftingEmoji}
-              </h1>
+              <ScrollLottie 
+                size={isScrolled ? 24 : 32}
+                className="transition-all duration-300"
+              />
             </div>
 
             {/* Right side - User controls */}
