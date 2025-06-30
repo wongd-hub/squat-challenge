@@ -584,11 +584,6 @@ export default function Home() {
                     variant="ghost"
                     size="icon"
                     onClick={handleSignOut}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSignOut();
-                    }}
                     className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none"
                     style={{ touchAction: 'manipulation' }}
                   >

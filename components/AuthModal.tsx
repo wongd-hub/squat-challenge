@@ -224,8 +224,8 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           )}
 
           {step === "code" && (
-            <div onKeyDown={handleKeyDown}>
-              <div className="text-center space-y-2">
+            <div className="space-y-4" onKeyDown={handleKeyDown}>
+              <div className="text-center">
                 <p className="text-sm text-muted-foreground">
                   We've sent a 6-digit code to <strong>{email}</strong>
                 </p>
