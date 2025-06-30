@@ -584,9 +584,15 @@ export default function Home() {
                     variant="ghost"
                     size="icon"
                     onClick={handleSignOut}
-                    className="glass-subtle w-8 h-8 hover:bg-white/10 border-white/20"
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSignOut();
+                    }}
+                    className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none"
+                    style={{ touchAction: 'manipulation' }}
                   >
-                    <LogOut className="w-3 h-3" />
+                    <LogOut className="w-4 h-4 md:w-3 md:h-3" />
                   </Button>
                 </>
               ) : (
@@ -595,7 +601,8 @@ export default function Home() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20"
+                      className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20 touch-manipulation min-h-[40px] md:min-h-[32px]"
+                      style={{ touchAction: 'manipulation' }}
                       onClick={() => {}}
                     >
                       <User className="w-3 h-3 mr-1" />
