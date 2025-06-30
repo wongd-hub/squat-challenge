@@ -57,6 +57,19 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Refresh data when user returns to tab (fixes cross-device sync issues)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && dataSource === "supabase" && user) {
+        console.log("🔄 Tab became visible, refreshing data for cross-device sync")
+        loadData()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
+  }, [dataSource, user])
+
   // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
@@ -193,7 +206,7 @@ export default function Home() {
   }
 
   // Load all data
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     await loadDailyTargets()
 
     const today = new Date().toISOString().split("T")[0]
@@ -206,29 +219,17 @@ export default function Home() {
       try {
         console.log("📡 Loading user data from Supabase...")
 
-        // Load recent progress for chart (last 7 days)
-        const { data: recentProgress } = await database.getUserProgress(user.id, 7)
-        if (recentProgress) {
-          // Add target_squats to each progress entry by looking up from dailyTargets
-          const progressWithTargets = recentProgress.map((progress) => {
-            const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
-            return {
-              ...progress,
-              target_squats: target,
-            }
-          })
+        // Load both datasets in parallel for better consistency
+        const [recentResult, challengeResult] = await Promise.all([
+          database.getUserProgress(user.id, 7),
+          database.getChallengeProgress(user.id)
+        ])
 
-          setProgressData(progressWithTargets)
-          const todayProgress = progressWithTargets.find((p) => p.date === today)
-          setTodaySquats(todayProgress?.squats_completed || 0)
-        }
+        let todaySquatsFromData = 0
 
-        // Load ALL challenge progress for stats (challenge dates only)
-        const { data: challengeProgress } = await database.getChallengeProgress(user.id)
-        if (challengeProgress) {
-          // Add target_squats to each challenge progress entry
-          const challengeProgressWithTargets = challengeProgress.map((progress) => {
+        // Process challenge progress first (more authoritative for today's data)
+        if (challengeResult.data) {
+          const challengeProgressWithTargets = challengeResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
             const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
             return {
@@ -240,10 +241,29 @@ export default function Home() {
           setChallengeProgressData(challengeProgressWithTargets)
           console.log(`✅ Loaded ${challengeProgressWithTargets.length} challenge progress records from Supabase`)
 
-          // Calculate total squats from challenge data
-          const totalSquats = challengeProgressWithTargets.reduce((acc, day) => acc + day.squats_completed, 0)
-      
+          // Get today's progress from the authoritative challenge data
+          const todayProgress = challengeProgressWithTargets.find((p) => p.date === today)
+          todaySquatsFromData = todayProgress?.squats_completed || 0
         }
+
+        // Process recent progress for chart display
+        if (recentResult.data) {
+          const progressWithTargets = recentResult.data.map((progress) => {
+            const progressDay = getChallengeDay(progress.date)
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            return {
+              ...progress,
+              target_squats: target,
+            }
+          })
+
+          setProgressData(progressWithTargets)
+          console.log(`✅ Loaded ${progressWithTargets.length} recent progress records for chart`)
+        }
+
+        // Set today's squats from the most authoritative source
+        setTodaySquats(todaySquatsFromData)
+        console.log(`📊 Set today's squats to ${todaySquatsFromData} from challenge data`)
       } catch (error) {
         console.error("❌ Error loading Supabase data:", error)
         // Fallback to local storage
@@ -253,7 +273,7 @@ export default function Home() {
       // Load from local storage
       loadLocalData()
     }
-  }
+  }, [dataSource, user, dailyTargets])
 
   const loadLocalData = () => {
     console.log("💾 Loading data from local storage...")
@@ -314,15 +334,32 @@ export default function Home() {
     }
   }, [isLoading, dataSource, user])
 
-  const handleSquatsUpdate = async (newSquats: number) => {
-    setTodaySquats(newSquats)
+  const handleSquatsUpdate = async (newTotalSquats: number) => {
     const today = new Date().toISOString().split("T")[0]
+
+    // Validate against daily target
+    if (newTotalSquats > todayTarget) {
+      console.warn(`🚫 Cannot exceed daily target: ${newTotalSquats} > ${todayTarget}`)
+      alert(`Cannot exceed today's target of ${todayTarget} squats.`)
+      return
+    }
+
+    if (newTotalSquats < 0) {
+      console.warn(`🚫 Cannot have negative squats: ${newTotalSquats}`)
+      alert(`Cannot have negative squats.`)
+      return
+    }
 
     if (dataSource === "supabase" && user) {
       // Save to Supabase
       try {
-        await database.updateUserProgress(user.id, today, newSquats, todayTarget)
+        console.log(`💾 Saving ${newTotalSquats} total squats to database`)
+        
+        await database.updateUserProgress(user.id, today, newTotalSquats, todayTarget)
         console.log("✅ Saved to Supabase")
+        
+        // Update local state immediately for responsive UI
+        setTodaySquats(newTotalSquats)
 
         // Reload both challenge progress AND recent progress to update all displays
         const [challengeResult, recentResult] = await Promise.all([
@@ -364,11 +401,14 @@ export default function Home() {
       } catch (error) {
         console.error("❌ Error saving to Supabase:", error)
         // Fallback to local storage
-        storage.updateTodayProgress(newSquats)
+        storage.updateTodayProgress(newTotalSquats)
       }
     } else {
       // Save to local storage
-      storage.updateTodayProgress(newSquats)
+      console.log(`💾 Saving ${newTotalSquats} total squats to local storage`)
+      
+      storage.updateTodayProgress(newTotalSquats)
+      setTodaySquats(newTotalSquats)
       console.log("✅ Saved to local storage")
 
       // Update challenge progress data for local storage
@@ -388,11 +428,11 @@ export default function Home() {
       const todayIndex = updatedProgress.findIndex((p) => p.date === today)
 
       if (todayIndex >= 0) {
-        updatedProgress[todayIndex].squats_completed = newSquats
+        updatedProgress[todayIndex].squats_completed = newTotalSquats
       } else {
         updatedProgress.push({
           date: today,
-          squats_completed: newSquats,
+          squats_completed: newTotalSquats,
           target_squats: todayTarget,
         })
       }
