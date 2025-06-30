@@ -128,6 +128,17 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
     setIsOpen(true)
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (step === "email") {
+        handleSendCode()
+      } else if (step === "code") {
+        handleVerifyCode()
+      }
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -155,6 +166,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="pl-10"
                   />
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -187,6 +199,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   placeholder="How should we call you?"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   disabled={userExists || isCheckingUser}
                   className={userExists ? "bg-muted" : ""}
                 />
@@ -211,7 +224,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
           )}
 
           {step === "code" && (
-            <>
+            <div onKeyDown={handleKeyDown}>
               <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
                   We've sent a 6-digit code to <strong>{email}</strong>
@@ -249,7 +262,7 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
                   )}
                 </Button>
               </div>
-            </>
+            </div>
           )}
 
           {error && (

@@ -535,7 +535,7 @@ export default function Home() {
     }
 
     return {
-      text: "📡 Online (Not Signed In)",
+      text: "📡 Demo Mode (Sign In for Real Data)",
       className: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300",
     }
   }, [user])
