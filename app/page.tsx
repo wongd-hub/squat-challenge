@@ -21,6 +21,8 @@ import {
   getDateFromChallengeDay,
   CHALLENGE_CONFIG,
   isChallengeComplete,
+  checkUserExists,
+  updateUserProfile,
 } from "@/lib/supabase"
 import { Calendar, Info, Users, LogOut, User, Trophy } from "lucide-react"
 import FooterFloat from "@/components/FooterFloat"
@@ -116,6 +118,25 @@ export default function Home() {
           console.log("✅ User signed in:", session.user.email)
           setUser(session.user)
           setDataSource("supabase")
+
+          // Ensure user profile exists in database
+          try {
+            const { exists } = await checkUserExists(session.user.email!)
+            if (!exists) {
+              console.log("🆕 Creating new user profile...")
+              const displayName = session.user.user_metadata?.display_name || 
+                                session.user.email!.split('@')[0]
+              await updateUserProfile(session.user.id, {
+                display_name: displayName,
+                email: session.user.email!
+              })
+              console.log("✅ User profile created successfully")
+            } else {
+              console.log("✅ User profile already exists")
+            }
+          } catch (error) {
+            console.error("❌ Error checking/creating user profile:", error)
+          }
 
           // Get user profile for display name
           if (session.user.user_metadata?.display_name) {
@@ -381,13 +402,16 @@ export default function Home() {
   }
 
   const handleSignOut = async () => {
+    console.log("🔍 Sign out button clicked")
     try {
       if (!auth) {
         console.error("❌ Auth client not available")
         return
       }
-      await auth.signOut()
-      console.log("👋 User signed out")
+      console.log("🔍 Calling auth.signOut()...")
+      const result = await auth.signOut()
+      console.log("🔍 Sign out result:", result)
+      console.log("👋 User signed out successfully")
     } catch (error) {
       console.error("❌ Sign out error:", error)
     }

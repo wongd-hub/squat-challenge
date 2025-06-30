@@ -446,11 +446,13 @@ export async function sendLoginCode(email: string, displayName?: string) {
   try {
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: displayName ? {
-        data: {
-          display_name: displayName,
-        },
-      } : undefined,
+      options: {
+        ...(displayName ? {
+          data: {
+            display_name: displayName,
+          },
+        } : {}),
+      },
     })
 
     if (error) throw error
