@@ -46,6 +46,38 @@ export default function Home() {
   // Ref for leaderboard section
   const leaderboardRef = useRef<HTMLDivElement>(null)
 
+  // User profile for local mode
+  const [localUserProfile, setLocalUserProfile] = useState<{ display_name: string } | null>(null)
+
+  // Track if local mode button should be shown (after 5 seconds)
+  const [showLocalModeButton, setShowLocalModeButton] = useState(false)
+
+  // Load local user profile on startup
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedProfile = localStorage.getItem("local_user_profile")
+      if (savedProfile) {
+        setLocalUserProfile(JSON.parse(savedProfile))
+      }
+    }
+  }, [])
+
+  // Save local user profile
+  const saveLocalProfile = (profile: { display_name: string }) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("local_user_profile", JSON.stringify(profile))
+      setLocalUserProfile(profile)
+    }
+  }
+
+  // Get effective user profile (online or local)
+  const effectiveUserProfile = useMemo(() => {
+    if (dataSource === "supabase" && userProfile) {
+      return userProfile
+    }
+    return localUserProfile
+  }, [dataSource, userProfile, localUserProfile])
+
   // Handle scroll for sticky header
   useEffect(() => {
     const handleScroll = () => {
@@ -70,108 +102,205 @@ export default function Home() {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
   }, [dataSource, user])
 
-  // Check authentication status
+  // Safety timeout to ensure loading state is always cleared
+  useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.warn("⚠️ Safety timeout triggered - forcing loading to false")
+        setIsLoading(false)
+        if (dataSource !== "local" && dataSource !== "supabase") {
+          setDataSource("local")
+        }
+      }
+    }, 15000) // 15 second safety timeout
+
+    return () => clearTimeout(safetyTimeout)
+  }, []) // Run only once on mount
+
+  // Check auth and set data source
   useEffect(() => {
     const checkAuth = async () => {
       console.log("🔍 Starting authentication check...")
-      console.log("🔍 Supabase configured:", isSupabaseConfigured())
-
-      if (!isSupabaseConfigured()) {
-        console.log("🔄 Supabase not configured, using local storage mode")
+      
+      // Set a maximum timeout for the entire auth check
+      const authTimeout = setTimeout(() => {
+        console.warn("⚠️ Authentication check timeout, falling back to local mode")
         setDataSource("local")
         setIsLoading(false)
-        return
-      }
-
+      }, 10000) // 10 second timeout
+      
       try {
+        if (!isSupabaseConfigured()) {
+          console.log("⚠️ Supabase not configured, using local storage")
+          setDataSource("local")
+          setIsLoading(false)
+          clearTimeout(authTimeout)
+          return
+        }
+
+        // Add manual override for Supabase connectivity issues
+        const forceLocalMode = localStorage.getItem('force_local_mode') === 'true'
+        if (forceLocalMode) {
+          console.log("🔧 Manual override: Forcing local storage mode")
+          setDataSource("local")
+          setIsLoading(false)
+          clearTimeout(authTimeout)
+          return
+        }
+
         console.log("🔍 Checking authentication status...")
         if (!auth) {
           console.log("❌ Auth client not available")
           setDataSource("local")
           setIsLoading(false)
+          clearTimeout(authTimeout)
           return
         }
-        const session = await auth.getSession()
-        console.log("🔍 Session data:", session?.data?.session ? "Found" : "Not found")
-
-        if (session?.data?.session?.user) {
-          const currentUser = session.data.session.user
-          console.log("✅ User session found:", currentUser.email)
-          setUser(currentUser)
+        
+        // Add timeout protection for getSession
+        const sessionPromise = auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout')), 5000)
+        )
+        
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any
+        
+        if (error) {
+          console.error("❌ Auth error:", error)
+          setDataSource("local")
+        } else if (session?.user) {
+          console.log("👤 User signed in:", session.user.email)
+          setUser(session.user)
           setDataSource("supabase")
-
-          // Get user profile for display name
-          if (currentUser.user_metadata?.display_name) {
-            setUserProfile({ display_name: currentUser.user_metadata.display_name })
+          
+          // Check if user exists with timeout protection
+          try {
+            console.log("🔍 checkUserExists called with email:", session.user.email || 'no email')
+            
+            const userCheckPromise = checkUserExists(session.user.email || '')
+            const userCheckTimeout = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('checkUserExists timeout')), 3000)
+            )
+            
+            const userCheckResult = await Promise.race([
+              userCheckPromise,
+              userCheckTimeout
+            ]) as any
+            
+            if (!userCheckResult.exists && session.user.email) {
+              // Create profile for new user with timeout protection
+              console.log("➕ Creating profile for new user")
+              const displayName = session.user.user_metadata?.display_name || 
+                                 session.user.email?.split('@')[0] || 
+                                 'User'
+              
+              try {
+                const profilePromise = updateUserProfile(session.user.id, {
+                  display_name: displayName,
+                  email: session.user.email
+                })
+                const profileTimeout = new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('updateUserProfile timeout')), 3000)
+                )
+                
+                await Promise.race([profilePromise, profileTimeout])
+                setUserProfile({ display_name: displayName })
+                console.log("✅ Profile created for new user")
+              } catch (profileError) {
+                console.warn("⚠️ Profile creation failed/timeout, continuing:", profileError)
+                setUserProfile({ display_name: displayName })
+              }
+            } else if (userCheckResult.profile) {
+              // Set existing profile
+              setUserProfile({ display_name: userCheckResult.profile.display_name })
+              console.log("✅ Loaded existing user profile:", userCheckResult.profile.display_name)
+            }
+          } catch (userCheckError) {
+            console.warn("⚠️ User check failed/timeout, continuing:", userCheckError)
+            // Continue with basic user data
           }
         } else {
-          console.log("🔄 No user session found, but Supabase is configured - staying online for auth")
-          // Keep dataSource as 'supabase' even without user so auth modal works
-          setDataSource("supabase")
+          console.log("👤 No user session found")
+          setDataSource("local")
         }
       } catch (error) {
-        console.error("❌ Auth check error:", error)
-        // Even if auth check fails, keep Supabase mode if configured
-        setDataSource("supabase")
-      } finally {
-        setIsLoading(false)
+        console.error("❌ Auth check failed:", error)
+        setDataSource("local")
       }
+      
+      clearTimeout(authTimeout)
+      setIsLoading(false)
     }
 
     checkAuth()
 
     // Listen for auth changes
-    if (isSupabaseConfigured() && auth) {
-      const {
-        data: { subscription },
-      } = auth.onAuthStateChange(async (event, session) => {
-        console.log("🔄 Auth state changed:", event)
-
-        if (event === "SIGNED_IN" && session?.user) {
-          console.log("✅ User signed in:", session.user.email)
-          setUser(session.user)
-          setDataSource("supabase")
-
-          // Ensure user profile exists in database
-          try {
-            const { exists } = await checkUserExists(session.user.email!)
-            if (!exists) {
-              console.log("🆕 Creating new user profile...")
-              const displayName = session.user.user_metadata?.display_name || 
-                                session.user.email!.split('@')[0]
-              await updateUserProfile(session.user.id, {
-                display_name: displayName,
-                email: session.user.email!
-              })
-              console.log("✅ User profile created successfully")
-            } else {
-              console.log("✅ User profile already exists")
-            }
-          } catch (error) {
-            console.error("❌ Error checking/creating user profile:", error)
-          }
-
-          // Get user profile for display name
-          if (session.user.user_metadata?.display_name) {
-            setUserProfile({ display_name: session.user.user_metadata.display_name })
-          }
-
-          // Reload data from Supabase
-          loadData()
-        } else if (event === "SIGNED_OUT") {
-          console.log("👋 User signed out")
-          setUser(null)
-          setUserProfile(null)
-          // Keep dataSource as 'supabase' for auth functionality
-          setDataSource("supabase")
-
-          // Reload data from local storage
-          loadData()
-        }
-      })
-
-      return () => subscription?.unsubscribe()
+    if (!auth) {
+      console.log("❌ Auth client not available for subscription")
+      return
     }
+    
+    const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
+      console.log("🔄 Auth state changed:", event)
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log("👤 User signed in:", session.user.email)
+        setUser(session.user)
+        setDataSource("supabase")
+        
+        // Check if user exists in profiles table and create if needed with timeout protection
+        if (session.user.email) {
+          try {
+            const userCheckPromise = checkUserExists(session.user.email)
+            const userCheckTimeout = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Auth state checkUserExists timeout')), 3000)
+            )
+            
+            const userCheckResult = await Promise.race([
+              userCheckPromise,
+              userCheckTimeout
+            ]) as any
+            
+            if (!userCheckResult.exists) {
+              const displayName = session.user.user_metadata?.display_name || 
+                                 session.user.email?.split('@')[0] || 
+                                 'User'
+              
+              try {
+                const profilePromise = updateUserProfile(session.user.id, {
+                  display_name: displayName,
+                  email: session.user.email
+                })
+                const profileTimeout = new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Auth state updateUserProfile timeout')), 3000)
+                )
+                
+                await Promise.race([profilePromise, profileTimeout])
+                setUserProfile({ display_name: displayName })
+              } catch (profileError) {
+                console.warn("⚠️ Auth state profile creation failed/timeout:", profileError)
+                setUserProfile({ display_name: displayName })
+              }
+            } else if (userCheckResult.profile) {
+              // Set existing profile
+              setUserProfile({ display_name: userCheckResult.profile.display_name })
+            }
+          } catch (userCheckError) {
+            console.warn("⚠️ Auth state user check failed/timeout:", userCheckError)
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log("👋 User signed out")
+        setUser(null)
+        setUserProfile(null)
+        setDataSource("local")
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   // Check if challenge is complete
@@ -397,7 +526,7 @@ export default function Home() {
 
         // Trigger leaderboard refresh after successful Supabase update
         setLeaderboardRefreshTrigger(prev => prev + 1)
-        console.log("🔄 Triggered leaderboard refresh")
+        
       } catch (error) {
         console.error("❌ Error saving to Supabase:", error)
         // Fallback to local storage
@@ -507,8 +636,8 @@ export default function Home() {
   }, [challengeComplete, displayDay])
 
   const displayName = useMemo(() => {
-    if (userProfile?.display_name) {
-      return userProfile.display_name
+    if (effectiveUserProfile?.display_name) {
+      return effectiveUserProfile.display_name
     }
     if (user?.user_metadata?.display_name) {
       return user.user_metadata.display_name
@@ -517,7 +646,7 @@ export default function Home() {
       return user.email.split("@")[0]
     }
     return "User"
-  }, [userProfile?.display_name, user?.user_metadata?.display_name, user?.email])
+  }, [effectiveUserProfile?.display_name, user?.user_metadata?.display_name, user?.email])
 
   const statusBadge = useMemo(() => {
     if (!isSupabaseConfigured()) {
@@ -540,12 +669,69 @@ export default function Home() {
     }
   }, [user])
 
+  // Function to prompt for user name in local mode
+  const promptForLocalName = () => {
+    const name = prompt("Enter your display name:")
+    if (name && name.trim()) {
+      saveLocalProfile({ display_name: name.trim() })
+    }
+  }
+
+  // Check if we should prompt for name in local mode
+  useEffect(() => {
+    if (dataSource === "local" && !localUserProfile && !isLoading) {
+      // Give a moment for UI to load before prompting
+      setTimeout(() => {
+        promptForLocalName()
+      }, 1000)
+    }
+  }, [dataSource, localUserProfile, isLoading])
+
+  // Show local mode button after 5 seconds of loading
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    
+    if (isLoading) {
+      timer = setTimeout(() => {
+        setShowLocalModeButton(true)
+      }, 5000) // 5 seconds delay
+    } else {
+      // Reset when loading completes
+      setShowLocalModeButton(false)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [isLoading])
+
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-bg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-muted-foreground mb-4">Loading...</p>
+          
+          {/* Manual skip option - only shows after 5 seconds */}
+          {showLocalModeButton && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  console.log("🔧 Manual skip triggered by user")
+                  setDataSource("local")
+                  setIsLoading(false)
+                }}
+                className="glass-subtle text-xs"
+              >
+                Skip to Local Mode
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2">
+                Click if loading takes too long
+              </p>
+            </>
+          )}
         </div>
       </div>
     )
@@ -786,7 +972,13 @@ export default function Home() {
 
           {/* Leaderboard Preview */}
           <div ref={leaderboardRef}>
-            <LeaderboardPreview refreshTrigger={leaderboardRefreshTrigger} />
+            <LeaderboardPreview 
+              refreshTrigger={leaderboardRefreshTrigger}
+              userTotalSquats={totalSquats}
+              userTodaySquats={todaySquats}
+              userDisplayName={effectiveUserProfile?.display_name}
+              dataSource={dataSource === "local" ? "localStorage" : "supabase"}
+            />
           </div>
         </div>
 

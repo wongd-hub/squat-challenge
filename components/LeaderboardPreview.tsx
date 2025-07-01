@@ -6,27 +6,51 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, Users, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { database, isSupabaseConfigured } from '@/lib/supabase';
+import { database, isSupabaseConfigured, storage } from '@/lib/supabase';
 import { LeaderboardEntry, getMockLeaderboardPreview } from '@/lib/mockData';
 
 interface LeaderboardPreviewProps {
   refreshTrigger?: number; // Add this prop to trigger refreshes
+  userTotalSquats?: number; // User's total squats for local mode
+  userTodaySquats?: number; // User's today squats for local mode
+  userDisplayName?: string; // User's display name for local mode
+  dataSource?: 'supabase' | 'localStorage'; // Data source indicator
 }
 
-function LeaderboardPreviewComponent({ refreshTrigger }: LeaderboardPreviewProps = {}) {
+function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, dataSource }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
   const [isUsingSupabase, setIsUsingSupabase] = useState(false);
 
-  useEffect(() => {
-    loadLeaderboardData();
-  }, []);
+  const loadMockData = useCallback(() => {
+    // Use shared mock data
+    let mockData = getMockLeaderboardPreview();
+    
+    // If we're in local mode and have user data, inject the user into the leaderboard
+    if (dataSource === 'localStorage' && userDisplayName && (userTotalSquats || userTodaySquats)) {
+      const userStreak = storage.calculateLocalStreak();
+      const userEntry: LeaderboardEntry = {
+        id: 'local-user',
+        name: userDisplayName,
+        todaySquats: userTodaySquats || 0,
+        totalSquats: userTotalSquats || 0,
+        streak: userStreak,
+        rank: 1, // Will be recalculated when sorted
+      };
+      
+      // Add user entry and remove duplicate if exists
+      mockData = [userEntry, ...mockData.filter(entry => entry.id !== 'local-user')];
+    }
+    
+    setLeaderboardData(mockData);
+    setIsUsingSupabase(false);
+  }, [dataSource, userDisplayName, userTotalSquats, userTodaySquats]);
 
   const loadLeaderboardData = useCallback(async () => {
     setIsLoading(true);
     
-    if (isSupabaseConfigured()) {
+    if (isSupabaseConfigured() && dataSource === 'supabase') {
       try {
         const { data, error } = await database.getFullLeaderboard();
         
@@ -56,7 +80,7 @@ function LeaderboardPreviewComponent({ refreshTrigger }: LeaderboardPreviewProps
     }
     
     setIsLoading(false);
-  }, []);
+  }, [loadMockData, dataSource]);
 
   useEffect(() => {
     loadLeaderboardData();
@@ -68,13 +92,6 @@ function LeaderboardPreviewComponent({ refreshTrigger }: LeaderboardPreviewProps
       loadLeaderboardData();
     }
   }, [refreshTrigger, loadLeaderboardData]);
-
-  const loadMockData = useCallback(() => {
-    // Use shared mock data
-    const mockData = getMockLeaderboardPreview();
-    setLeaderboardData(mockData);
-    setIsUsingSupabase(false);
-  }, []);
 
   // Memoize expensive calculations
   const sortedData = useMemo(() => {

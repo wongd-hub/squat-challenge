@@ -42,6 +42,8 @@ if (typeof window !== 'undefined') {
     keyLength: supabaseAnonKey?.length || 0,
     keyStart: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined'
   })
+
+
 }
 
 // Challenge configuration
@@ -156,100 +158,36 @@ export const database = {
   },
 
   async updateUserProgress(userId: string, date: string, squats: number, target: number) {
-    if (!supabase) return { error: "Supabase not configured" }
-
-    console.log("💾 updateUserProgress called with:", {
-      userId: userId?.substring(0, 8) + "...",
-      date,
-      squats,
-      target
-    })
+    if (!supabase) throw new Error("Supabase not configured")
 
     try {
+      console.log(`💾 Saving ${squats} squats to database for ${date}`)
+      
       const upsertData = {
         user_id: userId,
-        date,
+        date: date,
         squats_completed: squats,
         target_squats: target,
-        updated_at: new Date().toISOString(),
       }
 
-      console.log("📤 Upserting data:", upsertData)
-
-      // Try update first, then insert if no record exists
-      const { data: existingData, error: selectError } = await supabase
+      const { data, error } = await supabase
         .from("user_progress")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("date", date)
-        .single()
-
-      console.log("🔍 Existing record check:", { 
-        hasExisting: !!existingData, 
-        hasSelectError: !!selectError,
-        selectErrorCode: selectError?.code 
-      })
-
-      let data, error
-
-      if (existingData) {
-        // Record exists, update it
-        console.log("🔄 Updating existing record...")
-        const result = await supabase
-          .from("user_progress")
-          .update({
-            squats_completed: squats,
-            target_squats: target,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", userId)
-          .eq("date", date)
-          .select()
-        
-        data = result.data
-        error = result.error
-      } else {
-        // No record exists, insert new one
-        console.log("➕ Inserting new record...")
-        const result = await supabase
-          .from("user_progress")
-          .insert(upsertData)
-          .select()
-        
-        data = result.data
-        error = result.error
-      }
-
-      console.log("📡 Upsert response:", { 
-        hasData: !!data, 
-        hasError: !!error,
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        dataLength: data?.length
-      })
+        .upsert(upsertData, { 
+          onConflict: 'user_id,date',
+          ignoreDuplicates: false 
+        })
+        .select()
 
       if (error) {
-        console.error("❌ Supabase error in updateUserProgress:", {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          fullError: error
-        })
+        console.error("❌ Error saving user progress:", error)
         throw error
       }
 
-      console.log("✅ Successfully updated user progress")
-      return { error: null }
-    } catch (error: unknown) {
-      console.error("❌ Exception in updateUserProgress:", {
-        error,
-        errorType: typeof error,
-        errorConstructor: error && typeof error === 'object' && 'constructor' in error ? error.constructor?.name : undefined,
-        errorString: String(error),
-        errorJSON: JSON.stringify(error, null, 2)
-      })
-      return { error }
+      console.log("✅ User progress saved successfully")
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Exception in updateUserProgress:", error)
+      throw error
     }
   },
 
@@ -273,23 +211,40 @@ export const database = {
       
       if (error) throw error
 
-      // Get streaks for each user
-      const leaderboardWithStreaks = await Promise.all(
+      // Get streaks for each user with timeout protection
+      const leaderboardWithStreaks = await Promise.allSettled(
         (data || []).map(async (entry: any) => {
-          const { data: streakData } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
-          return {
-            id: entry.user_id,
-            name: entry.display_name,
-            email: entry.email,
-            totalSquats: Number(entry.total_squats),
-            daysActive: Number(entry.days_active),
-            streak: streakData || 0,
+          try {
+            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
+            return {
+              id: entry.user_id,
+              name: entry.display_name,
+              email: entry.email,
+              totalSquats: Number(entry.total_squats),
+              daysActive: Number(entry.days_active),
+              streak: streakError ? 0 : (streakData || 0),
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to get streak for user ${entry.user_id}:`, error)
+            return {
+              id: entry.user_id,
+              name: entry.display_name,
+              email: entry.email,
+              totalSquats: Number(entry.total_squats),
+              daysActive: Number(entry.days_active),
+              streak: 0,
+            }
           }
         })
       )
 
-      console.log(`✅ Loaded ${leaderboardWithStreaks.length} total leaderboard entries (challenge period only)`)
-      return { data: leaderboardWithStreaks, error: null }
+      // Filter successful results
+      const successfulResults = leaderboardWithStreaks
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .map(result => result.value)
+
+      console.log(`✅ Loaded ${successfulResults.length} total leaderboard entries (challenge period only)`)
+      return { data: successfulResults, error: null }
     } catch (error) {
       console.error("❌ Database error:", error)
       return { data: [], error }
@@ -315,22 +270,38 @@ export const database = {
 
       if (error) throw error
 
-      // Get streaks for each user and format data
-      const dailyLeaderboard = await Promise.all(
+      // Get streaks for each user with timeout protection
+      const dailyLeaderboard = await Promise.allSettled(
         (data || []).map(async (entry: any) => {
-          const { data: streakData } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
-          return {
-            id: entry.user_id,
-            name: entry.profiles.display_name,
-            email: entry.profiles.email,
-            todaySquats: entry.squats_completed,
-            streak: streakData || 0,
+          try {
+            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
+            return {
+              id: entry.user_id,
+              name: entry.profiles.display_name,
+              email: entry.profiles.email,
+              todaySquats: entry.squats_completed,
+              streak: streakError ? 0 : (streakData || 0),
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to get streak for user ${entry.user_id}:`, error)
+            return {
+              id: entry.user_id,
+              name: entry.profiles.display_name,
+              email: entry.profiles.email,
+              todaySquats: entry.squats_completed,
+              streak: 0,
+            }
           }
         })
       )
 
-      console.log(`✅ Loaded ${dailyLeaderboard.length} daily leaderboard entries`)
-      return { data: dailyLeaderboard, error: null }
+      // Filter successful results
+      const successfulResults = dailyLeaderboard
+        .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+        .map(result => result.value)
+
+      console.log(`✅ Loaded ${successfulResults.length} daily leaderboard entries`)
+      return { data: successfulResults, error: null }
     } catch (error) {
       console.error("❌ Database error:", error)
       return { data: [], error }
@@ -437,6 +408,36 @@ export const storage = {
 
     return allProgress.filter((p) => p.date >= startDate && p.date <= endDate)
   },
+
+  calculateLocalStreak(): number {
+    const progress = this.getUserProgress()
+    if (progress.length === 0) return 0
+
+    // Sort progress by date (most recent first)
+    const sortedProgress = progress.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    
+    let streak = 0
+    const today = new Date().toISOString().split("T")[0]
+    let currentDate = new Date(today)
+
+    // Check each day going backwards from today
+    for (let i = 0; i < 365; i++) { // Max 365 days to prevent infinite loop
+      const dateStr = currentDate.toISOString().split("T")[0]
+      const dayProgress = sortedProgress.find(p => p.date === dateStr)
+      
+      if (dayProgress && dayProgress.squats_completed > 0) {
+        streak++
+      } else {
+        // No squats on this day, streak is broken
+        break
+      }
+      
+      // Move to previous day
+      currentDate.setDate(currentDate.getDate() - 1)
+    }
+
+    return streak
+  },
 }
 
 // Auth functions
@@ -508,47 +509,6 @@ export async function updateUserProfile(userId: string, profileData: { display_n
   }
 }
 
-// Test function to verify Supabase connection
-export async function testSupabaseConnection() {
-  if (!supabase) {
-    console.log("❌ Supabase client not available for connection test")
-    return false
-  }
-
-  try {
-    console.log("🧪 Testing Supabase connection with simple query...")
-    
-    // First try a very basic query
-    const { data, error } = await supabase.from("profiles").select("count", { count: "exact", head: true })
-    
-    console.log("🔍 Connection test raw response:", { data, error, hasError: !!error })
-    
-    if (error) {
-      console.error("❌ Supabase connection test failed:", {
-        error,
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        errorDetails: error?.details,
-        errorHint: error?.hint,
-        fullError: JSON.stringify(error, null, 2)
-      })
-      return false
-    }
-    
-    console.log("✅ Supabase connection test successful")
-    return true
-  } catch (error: unknown) {
-    console.error("❌ Supabase connection test exception:", {
-      error,
-      errorType: typeof error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      errorStack: error instanceof Error ? error.stack : undefined,
-      fullError: JSON.stringify(error, null, 2)
-    })
-    return false
-  }
-}
-
 export async function checkUserExists(email: string) {
   console.log("🔍 checkUserExists called with email:", email)
   
@@ -557,60 +517,27 @@ export async function checkUserExists(email: string) {
     return { exists: false, profile: null }
   }
 
-  console.log("✅ Supabase client available, making query...")
-  
-  // Test connection first
-  const connectionOk = await testSupabaseConnection()
-  if (!connectionOk) {
-    console.log("🔄 Connection test failed, returning false")
-    return { exists: false, profile: null }
-  }
-
   try {
     const { data, error } = await supabase.from("profiles").select("*").eq("email", email).single()
-
-    console.log("📡 Supabase query response:", { 
-      hasData: !!data, 
-      hasError: !!error,
-      errorCode: error?.code,
-      errorMessage: error?.message
-    })
 
     // PGRST116 is "not found" error, which is expected when user doesn't exist
     if (error) {
       if (error.code === "PGRST116") {
         // User doesn't exist, this is normal
-        console.log("👤 User not found (PGRST116) - this is normal for new users")
+        console.log("👤 User not found - this is normal for new users")
         return { exists: false, profile: null }
       }
       
-      // Log the actual error for debugging
-      console.error("❌ Supabase error in checkUserExists:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        fullError: error
-      })
-      
-      // Don't throw the error, just return false to allow the flow to continue
-      console.log("🔄 Returning false due to Supabase error to allow auth flow to continue")
+      // Log actual errors but don't throw to allow auth flow to continue
+      console.error("❌ Error in checkUserExists:", error)
       return { exists: false, profile: null }
     }
 
-    console.log("✅ User exists, returning profile data")
-    return { exists: !!data, profile: data }
-  } catch (error: unknown) {
-    console.error("❌ Exception in checkUserExists:", {
-      error,
-      errorType: typeof error,
-      errorConstructor: error && typeof error === 'object' && 'constructor' in error ? error.constructor?.name : undefined,
-      errorString: String(error),
-      errorJSON: JSON.stringify(error, null, 2)
-    })
-    
-    // Return false to allow the flow to continue even if there's an error
-    console.log("🔄 Returning false due to exception to allow auth flow to continue")
+    console.log("✅ User exists")
+    console.log("👤 User data:", data) // Show the actual user data
+    return { exists: true, profile: data }
+  } catch (error) {
+    console.error("❌ Exception in checkUserExists:", error)
     return { exists: false, profile: null }
   }
 }
