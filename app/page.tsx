@@ -53,6 +53,19 @@ export default function Home() {
   // Track if local mode button should be shown (after 5 seconds)
   const [showLocalModeButton, setShowLocalModeButton] = useState(false)
 
+  // Track if we've already prompted for name in this session to prevent repeated prompts
+  const [hasPromptedForName, setHasPromptedForName] = useState(false)
+
+  // Track if data is currently being reloaded to prevent concurrent reloads
+  const [isReloadingData, setIsReloadingData] = useState(false)
+
+  // Feature flag to disable offline mode for debugging 
+  // Set to false to re-enable offline mode with local storage fallbacks
+  const DISABLE_OFFLINE_MODE = true
+
+  // Memoize Supabase configuration to prevent frequent checks
+  const isSupabaseSetup = useMemo(() => isSupabaseConfigured(), [])
+
   // Track current date and update automatically
   const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0])
 
@@ -118,7 +131,11 @@ export default function Home() {
         console.warn("⚠️ Safety timeout triggered - forcing loading to false")
         setIsLoading(false)
         if (dataSource !== "local" && dataSource !== "supabase") {
-          setDataSource("local")
+          if (DISABLE_OFFLINE_MODE) {
+            setDataSource("supabase") // Default to supabase mode when offline disabled
+          } else {
+            setDataSource("local")
+          }
         }
       }
     }, 15000) // 15 second safety timeout
@@ -133,13 +150,26 @@ export default function Home() {
       
       // Set a maximum timeout for the entire auth check
       const authTimeout = setTimeout(() => {
+        if (DISABLE_OFFLINE_MODE) {
+          console.error("❌ Authentication check timeout and offline mode disabled")
+          alert("Authentication check timed out. Offline mode is disabled for debugging.")
+          setIsLoading(false)
+          return
+        }
         console.warn("⚠️ Authentication check timeout, falling back to local mode")
         setDataSource("local")
         setIsLoading(false)
       }, 10000) // 10 second timeout
       
       try {
-        if (!isSupabaseConfigured()) {
+        if (!isSupabaseSetup) {
+          if (DISABLE_OFFLINE_MODE) {
+            console.error("❌ Supabase not configured and offline mode disabled")
+            alert("Supabase configuration required. Offline mode is disabled for debugging.")
+            setIsLoading(false)
+            clearTimeout(authTimeout)
+            return
+          }
           console.log("⚠️ Supabase not configured, using local storage")
           setDataSource("local")
           setIsLoading(false)
@@ -149,7 +179,7 @@ export default function Home() {
 
         // Add manual override for Supabase connectivity issues
         const forceLocalMode = localStorage.getItem('force_local_mode') === 'true'
-        if (forceLocalMode) {
+        if (forceLocalMode && !DISABLE_OFFLINE_MODE) {
           console.log("🔧 Manual override: Forcing local storage mode")
           setDataSource("local")
           setIsLoading(false)
@@ -159,6 +189,13 @@ export default function Home() {
 
         console.log("🔍 Checking authentication status...")
         if (!auth) {
+          if (DISABLE_OFFLINE_MODE) {
+            console.error("❌ Auth client not available and offline mode disabled")
+            alert("Supabase authentication client not available. Please check configuration.")
+            setIsLoading(false)
+            clearTimeout(authTimeout)
+            return
+          }
           console.log("❌ Auth client not available")
           setDataSource("local")
           setIsLoading(false)
@@ -179,6 +216,13 @@ export default function Home() {
         
         if (error) {
           console.error("❌ Auth error:", error)
+          if (DISABLE_OFFLINE_MODE) {
+            console.error("❌ Auth error and offline mode disabled")
+            alert(`Authentication error: ${error.message}. Offline mode is disabled for debugging.`)
+            setIsLoading(false)
+            clearTimeout(authTimeout)
+            return
+          }
           setDataSource("local")
         } else if (session?.user) {
           console.log("👤 User signed in:", session.user.email)
@@ -233,10 +277,22 @@ export default function Home() {
           }
         } else {
           console.log("👤 No user session found")
-          setDataSource("local")
+          if (DISABLE_OFFLINE_MODE) {
+            console.log("👤 No user session and offline mode disabled - waiting for user to sign in")
+            setDataSource("supabase") // Keep as supabase mode but without user
+          } else {
+            setDataSource("local")
+          }
         }
       } catch (error) {
         console.error("❌ Auth check failed:", error)
+        if (DISABLE_OFFLINE_MODE) {
+          console.error("❌ Auth check failed and offline mode disabled")
+          alert(`Authentication check failed: ${error}. Offline mode is disabled for debugging.`)
+          setIsLoading(false)
+          clearTimeout(authTimeout)
+          return
+        }
         setDataSource("local")
       }
       
@@ -301,12 +357,18 @@ export default function Home() {
             console.warn("⚠️ Auth state user check failed/timeout:", userCheckError)
           }
         }
-      } else if (event === 'SIGNED_OUT') {
-        console.log("👋 User signed out")
-        setUser(null)
-        setUserProfile(null)
-        setDataSource("local")
-      }
+              } else if (event === 'SIGNED_OUT') {
+          console.log("👋 User signed out")
+          setUser(null)
+          setUserProfile(null)
+          if (DISABLE_OFFLINE_MODE) {
+            console.log("👋 User signed out - staying in Supabase mode (offline disabled)")
+            setDataSource("supabase") // Stay in supabase mode but without user
+          } else {
+            setDataSource("local")
+            setHasPromptedForName(false) // Reset name prompt flag when signing out
+          }
+        }
     })
 
     return () => subscription.unsubscribe()
@@ -343,7 +405,7 @@ export default function Home() {
     }
   }
 
-  // Load all data
+  // Load all data - Note: avoid including this in other useEffect dependency arrays to prevent infinite loops
   const loadData = useCallback(async () => {
     await loadDailyTargets()
 
@@ -401,8 +463,16 @@ export default function Home() {
         console.log(`📊 Set today's squats to ${todaySquatsFromData} from challenge data`)
       } catch (error) {
         console.error("❌ Error loading Supabase data:", error)
-        // Fallback to local storage
-        loadLocalData()
+        if (DISABLE_OFFLINE_MODE) {
+          console.error("❌ Supabase data load failed and offline mode disabled")
+          // Don't fallback to local storage when offline mode is disabled
+          setTodaySquats(0)
+          setProgressData([])
+          setChallengeProgressData([])
+        } else {
+          // Fallback to local storage
+          loadLocalData()
+        }
       }
     } else {
       // Load from local storage
@@ -463,11 +533,25 @@ export default function Home() {
   // Get today's target
   const todayTarget = dailyTargets.find((t) => t.day === currentDay)?.target_squats || 50
 
+  // Stable user ID to prevent frequent reloads when user object changes
+  const userId = useMemo(() => user?.id, [user?.id])
+
+  // Throttled data loading to prevent excessive calls
+  const lastLoadDataRef = useRef({ dataSource: "", userId: "", timestamp: 0 })
+  
   useEffect(() => {
-    if (!isLoading) {
+    const now = Date.now()
+    const lastLoad = lastLoadDataRef.current
+    
+    // Only load if not currently loading and enough time has passed (minimum 1 second between loads)
+    if (!isLoading && 
+        (lastLoad.dataSource !== dataSource || lastLoad.userId !== userId || now - lastLoad.timestamp > 1000)) {
+      
+      console.log("🔄 Loading data due to dependency change:", { dataSource, userId: !!userId })
+      lastLoadDataRef.current = { dataSource, userId: userId || "", timestamp: now }
       loadData()
     }
-  }, [isLoading, dataSource, user])
+  }, [isLoading, dataSource, userId])
 
   const handleSquatsUpdate = async (newTotalSquats: number) => {
     // Validate against daily target
@@ -528,13 +612,21 @@ export default function Home() {
           console.log("✅ Reloaded recent progress data for chart")
         }
 
-        // Trigger leaderboard refresh after successful Supabase update
-        setLeaderboardRefreshTrigger(prev => prev + 1)
+        // Trigger leaderboard refresh after successful Supabase update (throttled)
+        setTimeout(() => {
+          setLeaderboardRefreshTrigger(prev => prev + 1);
+        }, 1000); // Throttle refresh to at most once per second
         
       } catch (error) {
         console.error("❌ Error saving to Supabase:", error)
-        // Fallback to local storage
-        storage.updateTodayProgress(newTotalSquats)
+        if (DISABLE_OFFLINE_MODE) {
+          console.error("❌ Supabase save failed and offline mode disabled")
+          alert(`Failed to save to database: ${error instanceof Error ? error.message : 'Unknown error'}. Offline mode is disabled.`)
+          return // Don't update local state if we can't save to Supabase
+        } else {
+          // Fallback to local storage
+          storage.updateTodayProgress(newTotalSquats)
+        }
       }
     } else {
       // Save to local storage
@@ -663,8 +755,10 @@ export default function Home() {
           setTodaySquats(squats)
         }
 
-        // Trigger leaderboard refresh
-        setLeaderboardRefreshTrigger(prev => prev + 1)
+            // Trigger leaderboard refresh (throttled)
+    setTimeout(() => {
+      setLeaderboardRefreshTrigger(prev => prev + 1);
+    }, 1000); // Throttle refresh to at most once per second
         
       } catch (error) {
         console.error("❌ Error saving edited day to Supabase:", error)
@@ -733,6 +827,15 @@ export default function Home() {
     return challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
   }, [challengeProgressData])
 
+  // Stable props for LeaderboardPreview to prevent constant re-renders
+  const leaderboardProps = useMemo(() => ({
+    refreshTrigger: leaderboardRefreshTrigger,
+    userTotalSquats: totalSquats,
+    userTodaySquats: todaySquats,
+    userDisplayName: effectiveUserProfile?.display_name,
+    dataSource: dataSource === "local" ? "localStorage" as const : "supabase" as const
+  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, dataSource])
+
   const currentStreak = useMemo(() => {
     return calculateStreak(challengeProgressData)
   }, [challengeProgressData])
@@ -776,7 +879,7 @@ export default function Home() {
   }, [effectiveUserProfile?.display_name, user?.user_metadata?.display_name, user?.email])
 
   const statusBadge = useMemo(() => {
-    if (!isSupabaseConfigured()) {
+    if (!isSupabaseSetup) {
       return {
         text: "💾 Offline",
         className: "bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300",
@@ -794,7 +897,7 @@ export default function Home() {
       text: "📡 Demo Mode (Sign In for Real Data)",
       className: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300",
     }
-  }, [user])
+  }, [user, isSupabaseSetup])
 
   // Function to prompt for user name in local mode
   const promptForLocalName = () => {
@@ -802,17 +905,18 @@ export default function Home() {
     if (name && name.trim()) {
       saveLocalProfile({ display_name: name.trim() })
     }
+    setHasPromptedForName(true) // Mark that we've prompted to prevent repeated prompts
   }
 
-  // Check if we should prompt for name in local mode
+  // Check if we should prompt for name in local mode (only once per session)
   useEffect(() => {
-    if (dataSource === "local" && !localUserProfile && !isLoading) {
+    if (!DISABLE_OFFLINE_MODE && dataSource === "local" && !localUserProfile && !isLoading && !hasPromptedForName) {
       // Give a moment for UI to load before prompting
       setTimeout(() => {
         promptForLocalName()
       }, 1000)
     }
-  }, [dataSource, localUserProfile, isLoading])
+  }, [dataSource, localUserProfile, isLoading, hasPromptedForName])
 
   // Show local mode button after 5 seconds of loading
   useEffect(() => {
@@ -832,37 +936,54 @@ export default function Home() {
     }
   }, [isLoading])
 
-  // Auto-update current date every minute
+  // Auto-update current date every minute - use ref to avoid closure issues
+  const currentDateRef = useRef(currentDate)
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentDateRef.current = currentDate
+  }, [currentDate])
+
   useEffect(() => {
     const checkDateChange = () => {
       const newDate = new Date().toISOString().split("T")[0]
-      if (newDate !== currentDate) {
-        console.log(`📅 Date changed from ${currentDate} to ${newDate}`)
+      if (newDate !== currentDateRef.current) {
+        console.log(`📅 Date changed from ${currentDateRef.current} to ${newDate}`)
         setCurrentDate(newDate)
       }
     }
 
-    // Check immediately
-    checkDateChange()
-
-    // Then check every minute
-    const interval = setInterval(checkDateChange, 60000) // 60 seconds
+    // Check every 5 minutes instead of every minute to reduce frequency
+    const interval = setInterval(checkDateChange, 300000) // 5 minutes
 
     return () => clearInterval(interval)
-  }, [currentDate])
+  }, []) // No dependencies needed since we use ref
 
   // Recalculate current day when date changes
   useEffect(() => {
     const newCurrentDay = getChallengeDay(currentDate)
     setCurrentDay(newCurrentDay)
     console.log(`📅 Updated to challenge day ${newCurrentDay} for date ${currentDate}`)
-    
-    // If not loading and we have established data source, reload data for new day
-    if (!isLoading && (dataSource === "supabase" || dataSource === "local")) {
+  }, [currentDate])
+
+  // Separate effect for data reloading with throttling to prevent loops
+  const lastDataReloadRef = useRef<string>("")
+  
+  useEffect(() => {
+    // Only reload data if the date actually changed and enough time has passed
+    if (currentDate !== lastDataReloadRef.current && !isLoading && !isReloadingData && (dataSource === "supabase" || dataSource === "local")) {
       console.log("🔄 Date changed - reloading data for new day")
-      loadData()
+      lastDataReloadRef.current = currentDate
+      setIsReloadingData(true)
+      
+      // Add delay to prevent rapid reloads
+      setTimeout(() => {
+        loadData()
+          .catch(console.error)
+          .finally(() => setIsReloadingData(false))
+      }, 500) // 500ms delay
     }
-  }, [currentDate, isLoading, dataSource, loadData])
+  }, [currentDate, isLoading, dataSource, isReloadingData])
 
   if (isLoading) {
     return (
@@ -872,7 +993,7 @@ export default function Home() {
           <p className="text-muted-foreground mb-4">Loading...</p>
           
           {/* Manual skip option - only shows after 5 seconds */}
-          {showLocalModeButton && (
+          {showLocalModeButton && !DISABLE_OFFLINE_MODE && (
             <>
               <Button 
                 variant="outline" 
@@ -890,6 +1011,13 @@ export default function Home() {
                 Click if loading takes too long
               </p>
             </>
+          )}
+          
+          {/* Show different message when offline mode is disabled */}
+          {showLocalModeButton && DISABLE_OFFLINE_MODE && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Waiting for Supabase connection... (Offline mode disabled)
+            </p>
           )}
         </div>
       </div>
@@ -936,7 +1064,7 @@ export default function Home() {
                   </Button>
                 </>
               ) : (
-                isSupabaseConfigured() && (
+                isSupabaseSetup && (
                   <AuthModal onAuthSuccess={handleAuthSuccess}>
                     <Button
                       variant="ghost"
@@ -993,7 +1121,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowInfo(!showInfo)} className="glass-subtle text-xs">
               <Info className="w-3 h-3 mr-1" />
-              How it works
+              About
             </Button>
             <Button variant="ghost" size="sm" className="glass-subtle text-xs" onClick={scrollToLeaderboard}>
               <Users className="w-3 h-3 mr-1" />
@@ -1001,6 +1129,25 @@ export default function Home() {
             </Button>
           </div>
         </div>
+
+        {/* Testing Notice */}
+        <Card className="mb-6 md:mb-8 glass-strong border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 max-w-4xl mx-auto">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="text-blue-600 dark:text-blue-400 mt-0.5">
+                🧪
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                  🚀 Challenge Launching July 9th, 2025 - Currently in Testing Phase
+                </h3>
+                <p className="text-xs text-blue-700 dark:text-blue-400">
+                  We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your squats, and provide feedback! All data will be preserved for the official challenge start.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Challenge Complete Message */}
         {challengeComplete && (
@@ -1033,7 +1180,7 @@ export default function Home() {
         )}
 
         {/* Data Source Info */}
-        {!isSupabaseConfigured() && (
+        {!isSupabaseSetup && (
           <Card className="mb-6 md:mb-8 glass-strong border-orange-500/20 max-w-4xl mx-auto">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
@@ -1046,45 +1193,63 @@ export default function Home() {
           </Card>
         )}
 
-        {/* How it works info */}
+        {/* About info */}
         {showInfo && (
           <Card className="mb-6 md:mb-8 glass-strong max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-primary" />
-                How to Use the Squat Dial
+                About the Squat Challenge
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                🎯 <strong>Set your reps:</strong> Drag the dial clockwise to count squats. Each full revolution = 10
-                squats.
-              </p>
-              <p>
-                🔄 <strong>Remove squats:</strong> Drag the dial counter-clockwise to subtract squats from your daily
-                total.
-              </p>
-              <p>
-                💾 <strong>Bank your squats:</strong> Click "Bank Squats" to add the counted squats to your daily total.
-              </p>
-              <p>
-                📈 <strong>Track progress:</strong> Your daily totals are saved and displayed in the progress chart.
-              </p>
-              <p>
-                🏆 <strong>{CHALLENGE_CONFIG.TOTAL_DAYS}-Day Challenge:</strong> Complete daily targets that vary each
-                day - some days are rest days (0 squats)!
-              </p>
-              <p>
-                📅 <strong>Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to{" "}
-                {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)}
-              </p>
-              <p>
-                🔐 <strong>Easy Sign In:</strong> No passwords needed! Just enter your email and we'll send you a
-                6-digit code to sign in.
-              </p>
-              <p>
-                📊 <strong>Stats:</strong> All stats only count squats completed during the challenge period.
-              </p>
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <div className="space-y-3">
+                <p>
+                  <strong>💙 Supporting Important Causes:</strong> While this challenge isn't tied to a specific charity, we encourage participants to consider supporting these impactful organizations:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                  <div className="space-y-2">
+                    <p className="font-semibold text-foreground">🩸 Blood Cancer Research:</p>
+                    <ul className="space-y-1 text-xs ml-4">
+                      <li>• <strong>Lymphoma Research Foundation</strong> (lymphoma.org)</li>
+                      <li>• <strong>Leukemia & Lymphoma Society</strong> (lls.org)</li>
+                      <li>• <strong>Follicular Lymphoma Foundation</strong> (theflf.org)</li>
+                    </ul>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-semibold text-foreground">🧠 Parkinson's Research:</p>
+                    <ul className="space-y-1 text-xs ml-4">
+                      <li>• <strong>Michael J. Fox Foundation</strong> (michaeljfox.org)</li>
+                      <li>• <strong>Parkinson's Foundation</strong> (parkinson.org)</li>
+                      <li>• <strong>Parkinson's & Brain Research Foundation</strong> (researchparkinsons.org)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="border-t border-border pt-4 space-y-3">
+                <p>
+                  <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day squat challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building lower body strength and endurance.
+                </p>
+                <p>
+                  <strong>🎯 How to Use the Squat Dial:</strong> Drag clockwise to count squats (each full revolution = 10 squats), drag counter-clockwise to subtract, then click "Bank Squats" to save your daily total.
+                </p>
+                <p>
+                  <strong>📈 Edit Previous Days:</strong> Use the progress chart below to click on any previous day and edit your squat count - perfect for catching up or making corrections!
+                </p>
+                <p>
+                  <strong>📅 Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)} • Some days are rest days (0 squats) for recovery.
+                </p>
+              </div>
+              
+              <div className="border-t border-border pt-4 space-y-2">
+                <p>
+                  <strong>🔐 Easy Sign In:</strong> No passwords needed! Just enter your email for a 6-digit access code.
+                </p>
+                <p>
+                  <strong>📊 Stats:</strong> All progress and stats only count squats completed during the official challenge period.
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1135,13 +1300,7 @@ export default function Home() {
 
           {/* Leaderboard Preview */}
           <div ref={leaderboardRef}>
-            <LeaderboardPreview 
-              refreshTrigger={leaderboardRefreshTrigger}
-              userTotalSquats={totalSquats}
-              userTodaySquats={todaySquats}
-              userDisplayName={effectiveUserProfile?.display_name}
-              dataSource={dataSource === "local" ? "localStorage" : "supabase"}
-            />
+            <LeaderboardPreview {...leaderboardProps} />
           </div>
         </div>
 
