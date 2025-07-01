@@ -27,6 +27,7 @@ import {
 import { Calendar, Info, Users, LogOut, User, Trophy } from "lucide-react"
 import FooterFloat from "@/components/FooterFloat"
 import ScrollLottie from "@/components/ScrollLottie"
+import { EditDayModal } from "@/components/EditDayModal"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -54,6 +55,11 @@ export default function Home() {
 
   // Track current date and update automatically
   const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0])
+
+  // Edit day modal state
+  const [editDayModalOpen, setEditDayModalOpen] = useState(false)
+  const [selectedEditDate, setSelectedEditDate] = useState<string | null>(null)
+  const [selectedEditSquats, setSelectedEditSquats] = useState(0)
 
   // Load local user profile on startup
   useEffect(() => {
@@ -599,6 +605,129 @@ export default function Home() {
     })
   }
 
+  // Handle clicking on a day in the progress chart
+  const handleDayClick = (date: string, currentSquats: number, target: number) => {
+    console.log(`📅 Clicked on day: ${date}, current: ${currentSquats}, target: ${target}`)
+    setSelectedEditDate(date)
+    setSelectedEditSquats(currentSquats)
+    setEditDayModalOpen(true)
+  }
+
+  // Handle saving edited day squats
+  const handleSaveEditedDay = async (date: string, squats: number) => {
+    console.log(`💾 Saving ${squats} squats for date ${date}`)
+    
+    const challengeDay = getChallengeDay(date)
+    const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50
+
+    if (dataSource === "supabase" && user) {
+      // Save to Supabase
+      try {
+        await database.updateUserProgress(user.id, date, squats, target)
+        console.log("✅ Saved edited day to Supabase")
+        
+        // Reload both challenge progress AND recent progress to update all displays
+        const [challengeResult, recentResult] = await Promise.all([
+          database.getChallengeProgress(user.id),
+          database.getUserProgress(user.id, 7)
+        ])
+
+        // Update challenge progress data for stats
+        if (challengeResult.data) {
+          const challengeProgressWithTargets = challengeResult.data.map((progress) => {
+            const progressDay = getChallengeDay(progress.date)
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            return {
+              ...progress,
+              target_squats: target,
+            }
+          })
+          setChallengeProgressData(challengeProgressWithTargets)
+        }
+
+        // Update recent progress data for chart
+        if (recentResult.data) {
+          const progressWithTargets = recentResult.data.map((progress) => {
+            const progressDay = getChallengeDay(progress.date)
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            return {
+              ...progress,
+              target_squats: target,
+            }
+          })
+          setProgressData(progressWithTargets)
+        }
+
+        // If editing today's date, update today's squats
+        if (date === currentDate) {
+          setTodaySquats(squats)
+        }
+
+        // Trigger leaderboard refresh
+        setLeaderboardRefreshTrigger(prev => prev + 1)
+        
+      } catch (error) {
+        console.error("❌ Error saving edited day to Supabase:", error)
+        throw error
+      }
+    } else {
+      // Save to local storage
+      console.log(`💾 Saving ${squats} squats for ${date} to local storage`)
+      
+      // Update local storage for this specific date
+      localStorage.setItem(`squats_${date}`, squats.toString())
+
+      // Update the progress history
+      const history = storage.getUserProgress()
+      const existingIndex = history.findIndex((p) => p.date === date)
+
+      const progressEntry = {
+        date: date,
+        squats_completed: squats,
+        target_squats: target,
+      }
+
+      if (existingIndex >= 0) {
+        history[existingIndex] = progressEntry
+      } else {
+        history.push(progressEntry)
+      }
+
+      localStorage.setItem("squat_progress", JSON.stringify(history))
+
+      // Update challenge progress data for local storage
+      const challengeProgress = storage.getChallengeProgress()
+      const challengeProgressWithTargets = challengeProgress.map((progress) => {
+        const progressDay = getChallengeDay(progress.date)
+        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        return {
+          ...progress,
+          target_squats: target,
+        }
+      })
+      setChallengeProgressData(challengeProgressWithTargets)
+
+      // Update recent progress data for chart
+      const updatedProgress = [...progressData]
+      const dayIndex = updatedProgress.findIndex((p) => p.date === date)
+
+      if (dayIndex >= 0) {
+        updatedProgress[dayIndex].squats_completed = squats
+      } else {
+        updatedProgress.push(progressEntry)
+      }
+
+      setProgressData(updatedProgress.slice(-7))
+
+      // If editing today's date, update today's squats
+      if (date === currentDate) {
+        setTodaySquats(squats)
+      }
+
+      console.log("✅ Saved edited day to local storage")
+    }
+  }
+
   // Memoize expensive calculations to prevent unnecessary recalculations
   const totalSquats = useMemo(() => {
     return challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
@@ -998,7 +1127,11 @@ export default function Home() {
           />
 
           {/* Progress Chart */}
-          <ProgressChart data={challengeProgressData} dailyTargets={dailyTargets} />
+                      <ProgressChart 
+              data={challengeProgressData} 
+              dailyTargets={dailyTargets} 
+              onDayClick={handleDayClick}
+            />
 
           {/* Leaderboard Preview */}
           <div ref={leaderboardRef}>
@@ -1011,6 +1144,16 @@ export default function Home() {
             />
           </div>
         </div>
+
+        {/* Edit Day Modal */}
+        <EditDayModal
+          isOpen={editDayModalOpen}
+          onClose={() => setEditDayModalOpen(false)}
+          selectedDate={selectedEditDate}
+          currentSquats={selectedEditSquats}
+          dailyTargets={dailyTargets}
+          onSave={handleSaveEditedDay}
+        />
 
         {/* Footer */}
         <FooterFloat />

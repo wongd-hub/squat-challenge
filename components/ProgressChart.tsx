@@ -8,9 +8,10 @@ import { CHALLENGE_CONFIG, getChallengeDay } from "@/lib/supabase"
 interface ProgressChartProps {
   data: any[]
   dailyTargets: any[]
+  onDayClick?: (date: string, currentSquats: number, target: number) => void
 }
 
-export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
+export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartProps) {
   // Memoize expensive chart data generation
   const chartData = useMemo(() => {
     const today = new Date().toISOString().split("T")[0]
@@ -84,8 +85,33 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
     const fillHeight = (height * payload.percentage) / 100
     const emptyHeight = height - fillHeight
 
+    const handleBarClick = (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (onDayClick && payload) {
+        onDayClick(payload.date, payload.completed, payload.target)
+      }
+    }
+
+    const isClickable = onDayClick && !payload.isRestDay && new Date(payload.date) <= new Date()
+    const cursorStyle = isClickable ? 'pointer' : 'default'
+
     return (
-      <g>
+      <g 
+        style={{ cursor: cursorStyle }}
+        onClick={isClickable ? handleBarClick : undefined}
+        className={isClickable ? 'hover:opacity-80 transition-opacity' : ''}
+      >
+        {/* Invisible clickable area for better UX */}
+        {isClickable && (
+          <rect 
+            x={x} 
+            y={y} 
+            width={width} 
+            height={height} 
+            fill="transparent"
+            style={{ cursor: 'pointer' }}
+          />
+        )}
         {/* Empty portion (top) */}
         {emptyHeight > 0 && <rect x={x} y={y} width={width} height={emptyHeight} fill="#e5e7eb" opacity={0.3} />}
         {/* Filled portion (bottom) */}
@@ -144,6 +170,11 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
                 {new Date(data.date).toLocaleDateString()}
               </span>
             </div>
+            {onDayClick && !data.isRestDay && new Date(data.date) <= new Date() && (
+              <div className="text-xs text-primary pt-1 border-t border-border/50 mt-2">
+                📝 Click to edit this day
+              </div>
+            )}
           </div>
         </div>
       )
@@ -190,6 +221,12 @@ export function ProgressChart({ data, dailyTargets }: ProgressChartProps) {
               <div className="w-3 h-3 border-2 border-purple-500 rounded"></div>
               <span>Today</span>
             </div>
+            {onDayClick && (
+              <div className="flex items-center gap-1.5 text-primary">
+                <span>📝</span>
+                <span>Click bars to edit</span>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
