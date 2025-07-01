@@ -9,9 +9,10 @@ interface SquatDialProps {
   targetSquats: number;
   currentDay: number;
   compact?: boolean;
+  hideTip?: boolean;
 }
 
-export function SquatDial({ onSquatsChange, currentSquats, targetSquats, currentDay, compact = false }: SquatDialProps) {
+export function SquatDial({ onSquatsChange, currentSquats, targetSquats, currentDay, compact = false, hideTip = false }: SquatDialProps) {
   const [dialRotation, setDialRotation] = useState(0);
   const [tempSquats, setTempSquats] = useState(0);
   const dialRef = useRef<HTMLDivElement>(null);
@@ -275,7 +276,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
             🎉 Target reached! Great job!
           </p>
         )}
-        {!compact && (
+        {!compact && !hideTip && (
           <p className={`text-sm text-muted-foreground mt-3 px-4`}>
             💡 <strong>Tip:</strong> Use the progress chart below to edit and bank squats for previous days
           </p>

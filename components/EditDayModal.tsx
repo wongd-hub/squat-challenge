@@ -15,6 +15,7 @@ interface EditDayModalProps {
   currentSquats: number;
   dailyTargets: any[];
   onSave: (date: string, squats: number) => Promise<void>;
+  openedFromChart?: boolean;
 }
 
 export function EditDayModal({
@@ -23,7 +24,8 @@ export function EditDayModal({
   selectedDate,
   currentSquats,
   dailyTargets,
-  onSave
+  onSave,
+  openedFromChart = false
 }: EditDayModalProps) {
   const [isSaving, setIsSaving] = useState(false);
 
@@ -65,23 +67,29 @@ export function EditDayModal({
             <Calendar className="w-5 h-5 text-primary" />
             Edit Day {challengeDay}
           </DialogTitle>
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{formattedDate}</p>
-            <div className="flex flex-wrap gap-2">
+            
+            {/* Centered Target Display */}
+            {!isRestDay && (
+              <div className="flex justify-center">
+                <Badge variant="outline" className="text-sm px-3 py-1">
+                  <Target className="w-4 h-4 mr-2" />
+                  Target: {target} squats
+                </Badge>
+              </div>
+            )}
+            
+            <div className="flex justify-center flex-wrap gap-2">
               {isToday && (
                 <Badge variant="outline" className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
                   Today
                 </Badge>
               )}
-              {isRestDay ? (
+              {isRestDay && (
                 <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                   <Coffee className="w-3 h-3 mr-1" />
                   Rest Day
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-xs">
-                  <Target className="w-3 h-3 mr-1" />
-                  Target: {target} squats
                 </Badge>
               )}
             </div>
@@ -112,6 +120,7 @@ export function EditDayModal({
               onSquatsChange={handleSquatsChange}
               currentDay={challengeDay}
               compact={false}
+              hideTip={openedFromChart}
             />
           )}
         </div>
