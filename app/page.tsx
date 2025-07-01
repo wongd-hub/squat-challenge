@@ -73,6 +73,7 @@ export default function Home() {
   const [editDayModalOpen, setEditDayModalOpen] = useState(false)
   const [selectedEditDate, setSelectedEditDate] = useState<string | null>(null)
   const [selectedEditSquats, setSelectedEditSquats] = useState(0)
+  const [modalOpenedFromChart, setModalOpenedFromChart] = useState(false)
 
   // Load local user profile on startup
   useEffect(() => {
@@ -392,22 +393,23 @@ export default function Home() {
   // Load daily targets from database or fallback
   const loadDailyTargets = async () => {
     try {
-  
       const { data, error } = await database.getDailyTargets()
       if (data && !error) {
         setDailyTargets(data)
-        
+        return data // Return the fresh data for immediate use
       } else {
         console.error("❌ Error loading daily targets:", error)
+        return []
       }
     } catch (error) {
       console.error("❌ Error loading daily targets:", error)
+      return []
     }
   }
 
   // Load all data - Note: avoid including this in other useEffect dependency arrays to prevent infinite loops
   const loadData = useCallback(async () => {
-    await loadDailyTargets()
+    const freshDailyTargets = await loadDailyTargets()
 
     console.log(`📅 Loading data for challenge day ${currentDay} (${currentDate})`)
 
@@ -428,7 +430,7 @@ export default function Home() {
         if (challengeResult.data) {
           const challengeProgressWithTargets = challengeResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
             return {
               ...progress,
               target_squats: target,
@@ -447,7 +449,7 @@ export default function Home() {
         if (recentResult.data) {
           const progressWithTargets = recentResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
             return {
               ...progress,
               target_squats: target,
@@ -471,16 +473,16 @@ export default function Home() {
           setChallengeProgressData([])
         } else {
           // Fallback to local storage
-          loadLocalData()
+          loadLocalData(freshDailyTargets)
         }
       }
     } else {
       // Load from local storage
-      loadLocalData()
+      loadLocalData(freshDailyTargets)
     }
-  }, [dataSource, user, dailyTargets, currentDate, currentDay])
+  }, [dataSource, user, currentDate, currentDay])
 
-  const loadLocalData = () => {
+  const loadLocalData = (freshDailyTargets: any[]) => {
     console.log("💾 Loading data from local storage...")
     const today = storage.getTodayProgress()
     setTodaySquats(today)
@@ -492,7 +494,7 @@ export default function Home() {
         const date = new Date()
         date.setDate(date.getDate() - (6 - i))
         const challengeDay = getChallengeDay(date.toISOString().split("T")[0])
-        const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50
+        const target = freshDailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50
 
         return {
           date: date.toISOString().split("T")[0],
@@ -506,7 +508,7 @@ export default function Home() {
       // Add target_squats to saved progress
       const progressWithTargets = savedProgress.map((progress) => {
         const progressDay = getChallengeDay(progress.date)
-        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
         return {
           ...progress,
           target_squats: target,
@@ -519,7 +521,7 @@ export default function Home() {
       const challengeProgress = storage.getChallengeProgress()
       const challengeProgressWithTargets = challengeProgress.map((progress) => {
         const progressDay = getChallengeDay(progress.date)
-        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
         return {
           ...progress,
           target_squats: target,
@@ -702,6 +704,7 @@ export default function Home() {
     console.log(`📅 Clicked on day: ${date}, current: ${currentSquats}, target: ${target}`)
     setSelectedEditDate(date)
     setSelectedEditSquats(currentSquats)
+    setModalOpenedFromChart(true)
     setEditDayModalOpen(true)
   }
 
@@ -827,25 +830,44 @@ export default function Home() {
     return challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
   }, [challengeProgressData])
 
+  const currentStreak = useMemo(() => {
+    return calculateStreak(challengeProgressData)
+  }, [challengeProgressData])
+
   // Stable props for LeaderboardPreview to prevent constant re-renders
   const leaderboardProps = useMemo(() => ({
     refreshTrigger: leaderboardRefreshTrigger,
     userTotalSquats: totalSquats,
     userTodaySquats: todaySquats,
     userDisplayName: effectiveUserProfile?.display_name,
+    userStreak: currentStreak, // Pass the correct current streak
     dataSource: dataSource === "local" ? "localStorage" as const : "supabase" as const
-  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, dataSource])
+  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, currentStreak, dataSource])
 
-  const currentStreak = useMemo(() => {
-    return calculateStreak(challengeProgressData)
+  // Calculate actual completed days (not streak) - exclude rest days
+  const completedDays = useMemo(() => {
+    return challengeProgressData.filter(day => 
+      day.target_squats > 0 && day.squats_completed >= day.target_squats
+    ).length
   }, [challengeProgressData])
 
+  // Calculate current calendar week progress (Sunday to Saturday)
   const weeklyProgress = useMemo(() => {
-    const weeklyGoal = 850
-    const last7Days = challengeProgressData
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 7)
-    return last7Days.reduce((acc, day) => acc + day.squats_completed, 0)
+    const now = new Date()
+    const currentWeekStart = new Date(now)
+    currentWeekStart.setDate(now.getDate() - now.getDay()) // Go to Sunday of current week
+    currentWeekStart.setHours(0, 0, 0, 0)
+    
+    const currentWeekEnd = new Date(currentWeekStart)
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 6) // Saturday of current week
+    currentWeekEnd.setHours(23, 59, 59, 999)
+    
+    const currentWeekDays = challengeProgressData.filter(day => {
+      const dayDate = new Date(day.date)
+      return dayDate >= currentWeekStart && dayDate <= currentWeekEnd
+    })
+    
+    return currentWeekDays.reduce((acc, day) => acc + day.squats_completed, 0)
   }, [challengeProgressData])
 
   const weeklyGoal = 850
@@ -1211,17 +1233,17 @@ export default function Home() {
                   <div className="space-y-2">
                     <p className="font-semibold text-foreground">🩸 Blood Cancer Research:</p>
                     <ul className="space-y-1 text-xs ml-4">
-                      <li>• <strong>Lymphoma Research Foundation</strong> (lymphoma.org)</li>
-                      <li>• <strong>Leukemia & Lymphoma Society</strong> (lls.org)</li>
-                      <li>• <strong>Follicular Lymphoma Foundation</strong> (theflf.org)</li>
+                      <li>• <strong><a href="https://lymphoma.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Lymphoma Research Foundation</a></strong></li>
+                      <li>• <strong><a href="https://lls.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Leukemia & Lymphoma Society</a></strong></li>
+                      <li>• <strong><a href="https://theflf.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Follicular Lymphoma Foundation</a></strong></li>
                     </ul>
                   </div>
                   <div className="space-y-2">
                     <p className="font-semibold text-foreground">🧠 Parkinson's Research:</p>
                     <ul className="space-y-1 text-xs ml-4">
-                      <li>• <strong>Michael J. Fox Foundation</strong> (michaeljfox.org)</li>
-                      <li>• <strong>Parkinson's Foundation</strong> (parkinson.org)</li>
-                      <li>• <strong>Parkinson's & Brain Research Foundation</strong> (researchparkinsons.org)</li>
+                      <li>• <strong><a href="https://michaeljfox.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Michael J. Fox Foundation</a></strong></li>
+                      <li>• <strong><a href="https://parkinson.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Parkinson's Foundation</a></strong></li>
+                      <li>• <strong><a href="https://researchparkinsons.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Parkinson's & Brain Research Foundation</a></strong></li>
                     </ul>
                   </div>
                 </div>
@@ -1307,11 +1329,15 @@ export default function Home() {
         {/* Edit Day Modal */}
         <EditDayModal
           isOpen={editDayModalOpen}
-          onClose={() => setEditDayModalOpen(false)}
+          onClose={() => {
+            setEditDayModalOpen(false)
+            setModalOpenedFromChart(false)
+          }}
           selectedDate={selectedEditDate}
           currentSquats={selectedEditSquats}
           dailyTargets={dailyTargets}
           onSave={handleSaveEditedDay}
+          openedFromChart={modalOpenedFromChart}
         />
 
         {/* Footer */}
@@ -1324,13 +1350,37 @@ export default function Home() {
 function calculateStreak(progressData: any[]): number {
   if (progressData.length === 0) return 0
 
-  const sortedData = [...progressData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  const today = new Date().toISOString().split("T")[0]
+  const currentDay = getChallengeDay(today)
+  
   let streak = 0
-
-  for (const day of sortedData) {
-    if (day.squats_completed >= day.target_squats) {
+  let streakStarted = false
+  
+  // Start from today and work backwards through challenge days
+  for (let day = currentDay; day >= 1; day--) {
+    const dayDate = new Date(CHALLENGE_CONFIG.START_DATE)
+    dayDate.setDate(dayDate.getDate() + day - 1)
+    const dateStr = dayDate.toISOString().split("T")[0]
+    
+    const dayProgress = progressData.find(p => p.date === dateStr)
+    
+    // Skip rest days (they don't break or contribute to streak)
+    if (dayProgress?.target_squats === 0) {
+      continue
+    }
+    
+    // Check if this day was completed
+    const isCompleted = dayProgress && dayProgress.squats_completed >= dayProgress.target_squats && dayProgress.target_squats > 0
+    
+    if (isCompleted) {
       streak++
+      streakStarted = true
     } else {
+      // If we haven't started counting yet (today might not be completed), continue looking back
+      if (!streakStarted) {
+        continue
+      }
+      // If we've started counting and hit an incomplete day, streak is broken
       break
     }
   }
