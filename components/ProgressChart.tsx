@@ -54,9 +54,9 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
 
   // Memoize stats calculations
   const stats = useMemo(() => {
-    const totalTarget = CHALLENGE_CONFIG.DAILY_TARGETS.reduce((sum, day) => sum + day.target_squats, 0)
+    const totalTarget = chartData.reduce((sum, day) => sum + day.target, 0)
     const totalCompleted = chartData.reduce((sum, day) => sum + day.completed, 0)
-    const daysCompleted = chartData.filter((day) => !day.isRestDay && day.completed >= day.target).length
+    const daysCompleted = chartData.filter((day) => day.isCompleted).length
     const overallPercentage = Math.round((totalCompleted / totalTarget) * 100)
 
     return { totalTarget, totalCompleted, daysCompleted, overallPercentage }
