@@ -275,6 +275,11 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
             🎉 Target reached! Great job!
           </p>
         )}
+        {!compact && (
+          <p className={`text-sm text-muted-foreground mt-3 px-4`}>
+            💡 <strong>Tip:</strong> Use the progress chart below to edit and bank squats for previous days
+          </p>
+        )}
       </div>
 
       {/* Bank Button with StarBorder */}
