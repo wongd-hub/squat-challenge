@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, Users, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import CountUp from './CountUp';
 import { database, isSupabaseConfigured, storage } from '@/lib/supabase';
 import { LeaderboardEntry, getMockLeaderboardPreview } from '@/lib/mockData';
 
@@ -20,11 +22,36 @@ interface LeaderboardPreviewProps {
 
 function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, userStreak, dataSource }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [previousData, setPreviousData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isUsingSupabase, setIsUsingSupabase] = useState(false);
 
-  const loadLeaderboardData = useCallback(async () => {
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0
+    },
+    exit: {
+      opacity: 0,
+      x: -100
+    }
+  };
+
+  const loadLeaderboardData = useCallback(async (isRefreshOnly = false) => {
     const loadMockData = () => {
       // Use shared mock data
       let mockData = getMockLeaderboardPreview();
@@ -44,11 +71,20 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
         mockData = [userEntry, ...mockData.filter(entry => entry.id !== 'local-user')];
       }
       
+      // Store previous data before updating for animations
+      setPreviousData(leaderboardData);
       setLeaderboardData(mockData);
       setIsUsingSupabase(false);
     };
 
-    setIsLoading(true);
+    // Only show loading skeleton for initial load, use refreshing state for updates
+    if (isRefreshOnly) {
+      setIsRefreshing(true);
+      // Store previous data before refresh for smooth animations
+      setPreviousData([...leaderboardData]);
+    } else {
+      setIsLoading(true);
+    }
     
     if (isSupabaseConfigured() && dataSource === 'supabase') {
       try {
@@ -68,6 +104,8 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
             rank: index + 1,
           }));
           
+          // Store previous data before updating for animations
+          setPreviousData([...leaderboardData]);
           setLeaderboardData(formattedData);
           setIsUsingSupabase(true);
         }
@@ -80,18 +118,19 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
     }
     
     setIsLoading(false);
+    setIsRefreshing(false);
   }, [dataSource]); // Only depend on dataSource to reduce re-creation
 
   // Load data on mount, when dataSource changes, or when refresh is triggered
   useEffect(() => {
-    loadLeaderboardData();
+    loadLeaderboardData(false); // Initial load
   }, [dataSource]); // Only depend on dataSource, not the function itself
 
   // Refresh leaderboard when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
       console.log("🔄 Leaderboard refresh triggered:", refreshTrigger);
-      loadLeaderboardData();
+      loadLeaderboardData(true); // Background refresh
     }
   }, [refreshTrigger]); // Only depend on refreshTrigger, not the function itself
 
@@ -159,6 +198,12 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
     return null;
   }, [activeTab]);
 
+  // Helper function to get previous value for animations
+  const getPreviousValue = useCallback((entryId: string, field: 'todaySquats' | 'totalSquats') => {
+    const previousEntry = previousData.find(entry => entry.id === entryId);
+    return previousEntry?.[field] || 0;
+  }, [previousData]);
+
   // Memoize community total calculation
   const communityTotal = useMemo(() => {
     return leaderboardData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0);
@@ -175,6 +220,9 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
               <Badge variant="outline" className="text-xs ml-2">
                 Demo Data
               </Badge>
+            )}
+            {isRefreshing && (
+              <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin ml-2" />
             )}
           </CardTitle>
           <Link href="/leaderboard">
@@ -228,48 +276,95 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
             </div>
 
             {/* Top 5 Leaderboard */}
-            <div className="space-y-2">
-              {sortedData.map((entry, index) => {
-                const displayRank = index + 1;
-                const isTopThree = displayRank <= 3 && activeTab === 'total';
-                const badgeText = getBadgeText(displayRank);
-                
-                return (
-                  <div
-                    key={entry.id}
-                    className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 hover:bg-muted/20 cursor-pointer ${
-                      isTopThree ? 'glass-subtle' : 'bg-muted/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-6">
-                        {getRankIcon(displayRank)}
-                      </div>
-                      
-                      <div>
-                        <div className="font-semibold text-foreground text-sm">{entry.name}</div>
-                        {badgeText && (
-                          <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                            {badgeText}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
+            <LayoutGroup>
+              <motion.div 
+                className="space-y-2"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <AnimatePresence mode="popLayout">
+                  {sortedData.map((entry, index) => {
+                    const displayRank = index + 1;
+                    const isTopThree = displayRank <= 3 && activeTab === 'total';
+                    const badgeText = getBadgeText(displayRank);
+                    const currentValue = activeTab === 'today' ? entry.todaySquats : entry.totalSquats;
+                    const previousValue = getPreviousValue(entry.id, activeTab === 'today' ? 'todaySquats' : 'totalSquats');
                     
-                    <div className="text-right">
-                      <div className="font-bold text-primary">
-                        {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {entry.streak > 0 && (
-                          <span className="text-orange-500">🔥{entry.streak}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    return (
+                      <motion.div
+                        key={entry.id}
+                        layout
+                        layoutId={`leaderboard-entry-${entry.id}`}
+                        initial={false}
+                        animate={{
+                          opacity: 1,
+                          y: 0
+                        }}
+                        exit={{
+                          opacity: 0,
+                          x: -100
+                        }}
+                        transition={{
+                          type: "tween",
+                          duration: 0.3,
+                          layout: {
+                            type: "spring",
+                            stiffness: 120,
+                            damping: 20,
+                            mass: 2
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted/20 cursor-pointer ${
+                          isTopThree ? 'glass-subtle' : 'bg-muted/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <motion.div 
+                            className="flex items-center justify-center w-6"
+                            layout
+                          >
+                            {getRankIcon(displayRank)}
+                          </motion.div>
+                          
+                          <motion.div layout>
+                            <motion.div 
+                              className="font-semibold text-foreground text-sm"
+                              layout
+                            >
+                              {entry.name}
+                            </motion.div>
+                            {badgeText && (
+                              <motion.div layout>
+                                <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
+                                  {badgeText}
+                                </Badge>
+                              </motion.div>
+                            )}
+                          </motion.div>
+                        </div>
+                        
+                        <motion.div className="text-right" layout>
+                          <motion.div className="font-bold text-primary" layout>
+                            <CountUp
+                              key={`${entry.id}-${activeTab}-${currentValue}`}
+                              start={previousValue}
+                              end={currentValue}
+                              duration={1500}
+                            />
+                          </motion.div>
+                          <motion.div className="text-xs text-muted-foreground" layout>
+                            {entry.streak > 0 && (
+                              <span className="text-orange-500">🔥{entry.streak}</span>
+                            )}
+                          </motion.div>
+                        </motion.div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            </LayoutGroup>
 
             {/* Quick Stats */}
             {isLoading ? (
