@@ -4,26 +4,31 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Configuration check
+// Configuration check with reduced logging
+let configCheckLogged = false
 export function isSupabaseConfigured(): boolean {
   const hasUrl = !!supabaseUrl
   const hasKey = !!supabaseAnonKey
   const urlValid = supabaseUrl ? supabaseUrl.startsWith("https://") && supabaseUrl.includes(".supabase.co") : false
   const keyValid = supabaseAnonKey ? supabaseAnonKey.length > 100 : false
 
-  console.log("🔧 Supabase configuration check:", {
-    hasUrl,
-    hasKey,
-    urlValid,
-    keyValid,
-    url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : "undefined",
-    keyLength: supabaseAnonKey?.length || 0,
-  })
+  // Only log configuration check once to reduce console spam
+  if (!configCheckLogged) {
+    console.log("🔧 Supabase configuration check:", {
+      hasUrl,
+      hasKey,
+      urlValid,
+      keyValid,
+      url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : "undefined",
+      keyLength: supabaseAnonKey?.length || 0,
+    })
 
-  const configured = hasUrl && hasKey && urlValid && keyValid
-  console.log("🔧 Supabase configured:", configured)
+    const configured = hasUrl && hasKey && urlValid && keyValid
+    console.log("🔧 Supabase configured:", configured)
+    configCheckLogged = true
+  }
 
-  return configured
+  return hasUrl && hasKey && urlValid && keyValid
 }
 
 // Create Supabase client
@@ -191,18 +196,14 @@ export const database = {
     }
   },
 
-  // Leaderboard functions
+  // Leaderboard functions with reduced logging
   async getTotalLeaderboard() {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
-      console.log("🏆 Fetching total leaderboard...")
-      
       // Calculate challenge date range
       const startDate = CHALLENGE_CONFIG.START_DATE
       const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
-      
-      console.log(`🗓️ Filtering leaderboard data from ${startDate} to ${endDate}`)
       
       const { data, error } = await supabase.rpc('get_total_leaderboard', {
         start_date: startDate,
@@ -243,7 +244,6 @@ export const database = {
         .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
         .map(result => result.value)
 
-      console.log(`✅ Loaded ${successfulResults.length} total leaderboard entries (challenge period only)`)
       return { data: successfulResults, error: null }
     } catch (error) {
       console.error("❌ Database error:", error)
@@ -256,7 +256,6 @@ export const database = {
 
     try {
       const targetDate = date || new Date().toISOString().split('T')[0]
-      console.log("📅 Fetching daily leaderboard for:", targetDate)
 
       const { data, error } = await supabase
         .from('user_progress')
@@ -300,7 +299,6 @@ export const database = {
         .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
         .map(result => result.value)
 
-      console.log(`✅ Loaded ${successfulResults.length} daily leaderboard entries`)
       return { data: successfulResults, error: null }
     } catch (error) {
       console.error("❌ Database error:", error)
@@ -312,8 +310,6 @@ export const database = {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
-      console.log("🏆 Fetching full leaderboard...")
-      
       // Get total leaderboard data
       const { data: totalData, error: totalError } = await this.getTotalLeaderboard()
       if (totalError) throw totalError
@@ -351,7 +347,6 @@ export const database = {
         }
       })
 
-      console.log(`✅ Loaded full leaderboard with ${fullLeaderboard.length} entries`)
       return { data: fullLeaderboard, error: null }
     } catch (error) {
       console.error("❌ Database error:", error)
