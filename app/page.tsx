@@ -16,6 +16,7 @@ import {
   storage,
   database,
   auth,
+  supabase,
   isSupabaseConfigured,
   getChallengeDay,
   getDateFromChallengeDay,
@@ -144,161 +145,133 @@ export default function Home() {
     return () => clearTimeout(safetyTimeout)
   }, []) // Run only once on mount
 
-  // Check auth and set data source
+  // Setup auth subscription
   useEffect(() => {
+    
+    // Set timeout for auth operations to prevent hanging
+    const authTimeout = setTimeout(() => {
+      console.log("⚠️ Auth operations timed out, falling back to local mode")
+      if (!DISABLE_OFFLINE_MODE) {
+        setDataSource("local")
+      }
+      setIsLoading(false)
+    }, 8000) // 8 second timeout
+
     const checkAuth = async () => {
       console.log("🔍 Starting authentication check...")
       
-      // Set a maximum timeout for the entire auth check
-      const authTimeout = setTimeout(() => {
-        if (DISABLE_OFFLINE_MODE) {
-          console.error("❌ Authentication check timeout and offline mode disabled")
-          alert("Authentication check timed out. Offline mode is disabled for debugging.")
-          setIsLoading(false)
-          return
-        }
-        console.warn("⚠️ Authentication check timeout, falling back to local mode")
-        setDataSource("local")
-        setIsLoading(false)
-      }, 10000) // 10 second timeout
-      
-      try {
-        if (!isSupabaseSetup) {
-          if (DISABLE_OFFLINE_MODE) {
-            console.error("❌ Supabase not configured and offline mode disabled")
-            alert("Supabase configuration required. Offline mode is disabled for debugging.")
-            setIsLoading(false)
-            clearTimeout(authTimeout)
-            return
-          }
-          console.log("⚠️ Supabase not configured, using local storage")
+      if (!isSupabaseConfigured()) {
+        console.log("⚠️ Supabase not configured, using local storage")
+        if (!DISABLE_OFFLINE_MODE) {
           setDataSource("local")
-          setIsLoading(false)
-          clearTimeout(authTimeout)
-          return
+        } else {
+          // If offline mode is disabled and Supabase isn't configured, keep in Supabase mode
+          setDataSource("supabase")
         }
-
-        // Add manual override for Supabase connectivity issues
+        setIsLoading(false)
+        clearTimeout(authTimeout)
+        return
+      }
+      
+      // Check for manual override
+      if (!DISABLE_OFFLINE_MODE) {
         const forceLocalMode = localStorage.getItem('force_local_mode') === 'true'
-        if (forceLocalMode && !DISABLE_OFFLINE_MODE) {
+        if (forceLocalMode) {
           console.log("🔧 Manual override: Forcing local storage mode")
           setDataSource("local")
           setIsLoading(false)
           clearTimeout(authTimeout)
           return
         }
+      }
 
+      try {
         console.log("🔍 Checking authentication status...")
+        
         if (!auth) {
-          if (DISABLE_OFFLINE_MODE) {
-            console.error("❌ Auth client not available and offline mode disabled")
-            alert("Supabase authentication client not available. Please check configuration.")
-            setIsLoading(false)
-            clearTimeout(authTimeout)
-            return
-          }
           console.log("❌ Auth client not available")
-          setDataSource("local")
+          if (!DISABLE_OFFLINE_MODE) {
+            setDataSource("local")
+          } else {
+            setDataSource("supabase") // Stay in Supabase mode even without auth
+          }
           setIsLoading(false)
           clearTimeout(authTimeout)
           return
         }
-        
-        // Add timeout protection for getSession
-        const sessionPromise = auth.getSession()
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getSession timeout')), 5000)
-        )
-        
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any
+
+        // Check for existing session
+        const { data: { session }, error } = await auth.getSession()
         
         if (error) {
-          console.error("❌ Auth error:", error)
-          if (DISABLE_OFFLINE_MODE) {
-            console.error("❌ Auth error and offline mode disabled")
-            alert(`Authentication error: ${error.message}. Offline mode is disabled for debugging.`)
-            setIsLoading(false)
-            clearTimeout(authTimeout)
-            return
+          console.error("❌ Session check error:", error)
+          if (!DISABLE_OFFLINE_MODE) {
+            setDataSource("local")
+          } else {
+            setDataSource("supabase")
           }
-          setDataSource("local")
-        } else if (session?.user) {
+          setIsLoading(false)
+          clearTimeout(authTimeout)
+          return
+        }
+
+        if (session?.user) {
           console.log("👤 User signed in:", session.user.email)
           setUser(session.user)
           setDataSource("supabase")
           
-          // Check if user exists with timeout protection
-          try {
-            console.log("🔍 checkUserExists called with email:", session.user.email || 'no email')
-            
-            const userCheckPromise = checkUserExists(session.user.email || '')
-            const userCheckTimeout = new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('checkUserExists timeout')), 3000)
-            )
-            
-            const userCheckResult = await Promise.race([
-              userCheckPromise,
-              userCheckTimeout
-            ]) as any
-            
-            if (!userCheckResult.exists && session.user.email) {
-              // Create profile for new user with timeout protection
-              console.log("➕ Creating profile for new user")
-              const displayName = session.user.user_metadata?.display_name || 
-                                 session.user.email?.split('@')[0] || 
-                                 'User'
+          // Check if user exists in profiles table and create if needed
+          if (session.user.email) {
+            try {
+              console.log("🔍 checkUserExists called with email:", session.user.email || 'no email')
+              const userCheckResult = await checkUserExists(session.user.email)
               
-              try {
-                const profilePromise = updateUserProfile(session.user.id, {
-                  display_name: displayName,
-                  email: session.user.email
-                })
-                const profileTimeout = new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('updateUserProfile timeout')), 3000)
-                )
+              if (!userCheckResult.exists) {
+                const displayName = session.user.user_metadata?.display_name || 
+                                   session.user.email?.split('@')[0] || 
+                                   'User'
                 
-                await Promise.race([profilePromise, profileTimeout])
-                setUserProfile({ display_name: displayName })
-                console.log("✅ Profile created for new user")
-              } catch (profileError) {
-                console.warn("⚠️ Profile creation failed/timeout, continuing:", profileError)
-                setUserProfile({ display_name: displayName })
+                console.log("➕ Creating profile for new user")
+                try {
+                  await updateUserProfile(session.user.id, {
+                    display_name: displayName,
+                    email: session.user.email
+                  })
+                  setUserProfile({ display_name: displayName })
+                  console.log("✅ Profile created for new user")
+                } catch (profileError) {
+                  console.error("❌ Error creating profile:", profileError)
+                  setUserProfile({ display_name: displayName })
+                }
+              } else if (userCheckResult.profile) {
+                // Set existing profile
+                setUserProfile({ display_name: userCheckResult.profile.display_name })
+                console.log("✅ Loaded existing user profile:", userCheckResult.profile.display_name)
               }
-            } else if (userCheckResult.profile) {
-              // Set existing profile
-              setUserProfile({ display_name: userCheckResult.profile.display_name })
-              console.log("✅ Loaded existing user profile:", userCheckResult.profile.display_name)
+            } catch (userCheckError) {
+              console.error("❌ Error checking user:", userCheckError)
             }
-          } catch (userCheckError) {
-            console.warn("⚠️ User check failed/timeout, continuing:", userCheckError)
-            // Continue with basic user data
           }
         } else {
           console.log("👤 No user session found")
           if (DISABLE_OFFLINE_MODE) {
             console.log("👤 No user session and offline mode disabled - waiting for user to sign in")
-            setDataSource("supabase") // Keep as supabase mode but without user
+            setDataSource("supabase") // Stay in supabase mode but show sign-in prompt
           } else {
             setDataSource("local")
           }
         }
       } catch (error) {
-        console.error("❌ Auth check failed:", error)
-        if (DISABLE_OFFLINE_MODE) {
-          console.error("❌ Auth check failed and offline mode disabled")
-          alert(`Authentication check failed: ${error}. Offline mode is disabled for debugging.`)
-          setIsLoading(false)
-          clearTimeout(authTimeout)
-          return
+        console.error("❌ Auth check error:", error)
+        if (!DISABLE_OFFLINE_MODE) {
+          setDataSource("local")
+        } else {
+          setDataSource("supabase")
         }
-        setDataSource("local")
       }
       
-      clearTimeout(authTimeout)
       setIsLoading(false)
+      clearTimeout(authTimeout)
     }
 
     checkAuth()
@@ -554,6 +527,78 @@ export default function Home() {
       loadData()
     }
   }, [isLoading, dataSource, userId])
+
+  // Setup real-time subscription for current user's progress
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !user || !supabase) {
+      return // No real-time subscription needed for local mode or when not signed in
+    }
+
+    console.log("🔔 Setting up real-time subscription for user_progress updates")
+
+    // Subscribe to changes in user_progress table for current user only
+    const userSubscription = supabase
+      .channel('user_progress_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'user_progress',
+          filter: `user_id=eq.${user.id}` // Only listen to changes for current user
+        },
+        (payload: any) => {
+          console.log("🔔 Real-time update received for current user:", payload.eventType, payload.new || payload.old)
+          
+          // Reload data when current user's progress changes
+          loadData()
+        }
+      )
+      .subscribe((status: string) => {
+        console.log("🔔 User progress subscription status:", status)
+      })
+
+    return () => {
+      console.log("🔔 Cleaning up user progress subscription")
+      userSubscription.unsubscribe()
+    }
+  }, [user, dataSource, loadData])
+
+  // Setup real-time subscription for leaderboard updates (all users)
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !supabase) {
+      return // No subscription needed for local mode
+    }
+
+    console.log("🏆 Setting up real-time subscription for leaderboard updates")
+
+    // Subscribe to ALL user_progress changes for leaderboard updates
+    const leaderboardSubscription = supabase
+      .channel('leaderboard_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'user_progress'
+          // No filter - listen to ALL user progress changes
+        },
+        (payload: any) => {
+          console.log("🏆 Leaderboard real-time update received:", payload.eventType, payload.new?.user_id || payload.old?.user_id)
+          
+          // Only trigger leaderboard refresh, not full data reload
+          setLeaderboardRefreshTrigger(prev => prev + 1)
+        }
+      )
+      .subscribe((status: string) => {
+        console.log("🏆 Leaderboard subscription status:", status)
+      })
+
+    return () => {
+      console.log("🏆 Cleaning up leaderboard subscription")
+      leaderboardSubscription.unsubscribe()
+    }
+  }, [dataSource]) // Only depends on dataSource, not user
 
   const handleSquatsUpdate = async (newTotalSquats: number) => {
     // Validate against daily target
