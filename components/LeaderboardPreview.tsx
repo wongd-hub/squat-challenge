@@ -14,10 +14,11 @@ interface LeaderboardPreviewProps {
   userTotalSquats?: number; // User's total squats for local mode
   userTodaySquats?: number; // User's today squats for local mode
   userDisplayName?: string; // User's display name for local mode
+  userStreak?: number; // User's current streak for local mode
   dataSource?: 'supabase' | 'localStorage'; // Data source indicator
 }
 
-function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, dataSource }: LeaderboardPreviewProps = {}) {
+function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, userStreak, dataSource }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
@@ -30,13 +31,12 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
       
       // If we're in local mode and have user data, inject the user into the leaderboard
       if (dataSource === 'localStorage' && userDisplayName && (userTotalSquats || userTodaySquats)) {
-        const userStreak = storage.calculateLocalStreak();
         const userEntry: LeaderboardEntry = {
           id: 'local-user',
           name: userDisplayName,
           todaySquats: userTodaySquats || 0,
           totalSquats: userTotalSquats || 0,
-          streak: userStreak,
+          streak: userStreak || 0, // Use the passed userStreak prop instead of calculating locally
           rank: 1, // Will be recalculated when sorted
         };
         
