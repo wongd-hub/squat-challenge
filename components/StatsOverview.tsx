@@ -38,7 +38,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               <CountUp end={streak} duration={1500} />
             </div>
-            <p className="text-sm text-muted-foreground">Days Completed</p>
+            <p className="text-sm text-muted-foreground">Current Streak</p>
           </CardContent>
         </Card>
 
