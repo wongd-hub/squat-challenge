@@ -23,31 +23,31 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
   const [isLoading, setIsLoading] = useState(true);
   const [isUsingSupabase, setIsUsingSupabase] = useState(false);
 
-  const loadMockData = useCallback(() => {
-    // Use shared mock data
-    let mockData = getMockLeaderboardPreview();
-    
-    // If we're in local mode and have user data, inject the user into the leaderboard
-    if (dataSource === 'localStorage' && userDisplayName && (userTotalSquats || userTodaySquats)) {
-      const userStreak = storage.calculateLocalStreak();
-      const userEntry: LeaderboardEntry = {
-        id: 'local-user',
-        name: userDisplayName,
-        todaySquats: userTodaySquats || 0,
-        totalSquats: userTotalSquats || 0,
-        streak: userStreak,
-        rank: 1, // Will be recalculated when sorted
-      };
-      
-      // Add user entry and remove duplicate if exists
-      mockData = [userEntry, ...mockData.filter(entry => entry.id !== 'local-user')];
-    }
-    
-    setLeaderboardData(mockData);
-    setIsUsingSupabase(false);
-  }, [dataSource, userDisplayName, userTotalSquats, userTodaySquats]);
-
   const loadLeaderboardData = useCallback(async () => {
+    const loadMockData = () => {
+      // Use shared mock data
+      let mockData = getMockLeaderboardPreview();
+      
+      // If we're in local mode and have user data, inject the user into the leaderboard
+      if (dataSource === 'localStorage' && userDisplayName && (userTotalSquats || userTodaySquats)) {
+        const userStreak = storage.calculateLocalStreak();
+        const userEntry: LeaderboardEntry = {
+          id: 'local-user',
+          name: userDisplayName,
+          todaySquats: userTodaySquats || 0,
+          totalSquats: userTotalSquats || 0,
+          streak: userStreak,
+          rank: 1, // Will be recalculated when sorted
+        };
+        
+        // Add user entry and remove duplicate if exists
+        mockData = [userEntry, ...mockData.filter(entry => entry.id !== 'local-user')];
+      }
+      
+      setLeaderboardData(mockData);
+      setIsUsingSupabase(false);
+    };
+
     setIsLoading(true);
     
     if (isSupabaseConfigured() && dataSource === 'supabase') {
@@ -80,18 +80,20 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
     }
     
     setIsLoading(false);
-  }, [loadMockData, dataSource]);
+  }, [dataSource]); // Only depend on dataSource to reduce re-creation
 
+  // Load data on mount, when dataSource changes, or when refresh is triggered
   useEffect(() => {
     loadLeaderboardData();
-  }, [loadLeaderboardData]);
+  }, [dataSource]); // Only depend on dataSource, not the function itself
 
   // Refresh leaderboard when refreshTrigger changes
   useEffect(() => {
-    if (refreshTrigger !== undefined) {
+    if (refreshTrigger !== undefined && refreshTrigger > 0) {
+      console.log("🔄 Leaderboard refresh triggered:", refreshTrigger);
       loadLeaderboardData();
     }
-  }, [refreshTrigger, loadLeaderboardData]);
+  }, [refreshTrigger]); // Only depend on refreshTrigger, not the function itself
 
   // Memoize expensive calculations
   const sortedData = useMemo(() => {
