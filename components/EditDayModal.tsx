@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Target, Coffee, Save, X } from 'lucide-react';
+import { Calendar, Target, Coffee, X } from 'lucide-react';
 import { SquatDial } from './SquatDial';
 import { getChallengeDay } from '@/lib/supabase';
 
@@ -25,13 +25,7 @@ export function EditDayModal({
   dailyTargets,
   onSave
 }: EditDayModalProps) {
-  const [squats, setSquats] = useState(currentSquats);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Update squats when modal opens with new data
-  useEffect(() => {
-    setSquats(currentSquats);
-  }, [currentSquats, selectedDate]);
 
   if (!selectedDate) return null;
 
@@ -46,12 +40,12 @@ export function EditDayModal({
     day: 'numeric'
   });
 
-  const handleSave = async () => {
+  const handleSquatsChange = async (newSquats: number) => {
     if (isSaving) return;
     
     setIsSaving(true);
     try {
-      await onSave(selectedDate, squats);
+      await onSave(selectedDate, newSquats);
       onClose();
     } catch (error) {
       console.error('Error saving day:', error);
@@ -61,14 +55,11 @@ export function EditDayModal({
     }
   };
 
-  const handleCancel = () => {
-    setSquats(currentSquats); // Reset to original value
-    onClose();
-  };
 
-  return (
+
+    return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-strong max-w-md mx-auto">
+      <DialogContent className="bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-white/30 dark:border-white/20 shadow-2xl max-w-lg mx-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
@@ -105,53 +96,25 @@ export function EditDayModal({
                 <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400">Rest Day</h3>
                 <p className="text-sm text-muted-foreground">Take a well-deserved break!</p>
               </div>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="mt-4"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Close
+              </Button>
             </div>
           ) : (
-            <div className="space-y-4">
-                             <SquatDial
-                 currentSquats={squats}
-                 targetSquats={target}
-                 onSquatsChange={setSquats}
-                 currentDay={challengeDay}
-                 compact={true}
-               />
-              
-              {/* Progress indicator */}
-              <div className="text-center space-y-2">
-                <div className="text-sm text-muted-foreground">
-                  {squats} of {target} squats ({Math.round((squats / target) * 100)}%)
-                </div>
-                {squats >= target && (
-                  <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-                    🎉 Target Achieved!
-                  </Badge>
-                )}
-              </div>
-            </div>
+            <SquatDial
+              currentSquats={currentSquats}
+              targetSquats={target}
+              onSquatsChange={handleSquatsChange}
+              currentDay={challengeDay}
+              compact={false}
+            />
           )}
         </div>
-
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className="flex-1"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Cancel
-          </Button>
-          {!isRestDay && (
-            <Button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex-1"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          )}
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
