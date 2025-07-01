@@ -52,6 +52,9 @@ export default function Home() {
   // Track if local mode button should be shown (after 5 seconds)
   const [showLocalModeButton, setShowLocalModeButton] = useState(false)
 
+  // Track current date and update automatically
+  const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0])
+
   // Load local user profile on startup
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -338,10 +341,7 @@ export default function Home() {
   const loadData = useCallback(async () => {
     await loadDailyTargets()
 
-    const today = new Date().toISOString().split("T")[0]
-    const challengeDay = getChallengeDay(today)
-    setCurrentDay(challengeDay)
-    console.log(`📅 Today is challenge day ${challengeDay}`)
+    console.log(`📅 Loading data for challenge day ${currentDay} (${currentDate})`)
 
     if (dataSource === "supabase" && user) {
       // Load from Supabase
@@ -371,7 +371,7 @@ export default function Home() {
           console.log(`✅ Loaded ${challengeProgressWithTargets.length} challenge progress records from Supabase`)
 
           // Get today's progress from the authoritative challenge data
-          const todayProgress = challengeProgressWithTargets.find((p) => p.date === today)
+          const todayProgress = challengeProgressWithTargets.find((p) => p.date === currentDate)
           todaySquatsFromData = todayProgress?.squats_completed || 0
         }
 
@@ -402,7 +402,7 @@ export default function Home() {
       // Load from local storage
       loadLocalData()
     }
-  }, [dataSource, user, dailyTargets])
+  }, [dataSource, user, dailyTargets, currentDate, currentDay])
 
   const loadLocalData = () => {
     console.log("💾 Loading data from local storage...")
@@ -464,8 +464,6 @@ export default function Home() {
   }, [isLoading, dataSource, user])
 
   const handleSquatsUpdate = async (newTotalSquats: number) => {
-    const today = new Date().toISOString().split("T")[0]
-
     // Validate against daily target
     if (newTotalSquats > todayTarget) {
       console.warn(`🚫 Cannot exceed daily target: ${newTotalSquats} > ${todayTarget}`)
@@ -484,7 +482,7 @@ export default function Home() {
       try {
         console.log(`💾 Saving ${newTotalSquats} total squats to database`)
         
-        await database.updateUserProgress(user.id, today, newTotalSquats, todayTarget)
+        await database.updateUserProgress(user.id, currentDate, newTotalSquats, todayTarget)
         console.log("✅ Saved to Supabase")
         
         // Update local state immediately for responsive UI
@@ -554,13 +552,13 @@ export default function Home() {
 
       // Update progress data for chart (local storage)
       const updatedProgress = [...progressData]
-      const todayIndex = updatedProgress.findIndex((p) => p.date === today)
+      const todayIndex = updatedProgress.findIndex((p) => p.date === currentDate)
 
       if (todayIndex >= 0) {
         updatedProgress[todayIndex].squats_completed = newTotalSquats
       } else {
         updatedProgress.push({
-          date: today,
+          date: currentDate,
           squats_completed: newTotalSquats,
           target_squats: todayTarget,
         })
@@ -704,6 +702,38 @@ export default function Home() {
       if (timer) clearTimeout(timer)
     }
   }, [isLoading])
+
+  // Auto-update current date every minute
+  useEffect(() => {
+    const checkDateChange = () => {
+      const newDate = new Date().toISOString().split("T")[0]
+      if (newDate !== currentDate) {
+        console.log(`📅 Date changed from ${currentDate} to ${newDate}`)
+        setCurrentDate(newDate)
+      }
+    }
+
+    // Check immediately
+    checkDateChange()
+
+    // Then check every minute
+    const interval = setInterval(checkDateChange, 60000) // 60 seconds
+
+    return () => clearInterval(interval)
+  }, [currentDate])
+
+  // Recalculate current day when date changes
+  useEffect(() => {
+    const newCurrentDay = getChallengeDay(currentDate)
+    setCurrentDay(newCurrentDay)
+    console.log(`📅 Updated to challenge day ${newCurrentDay} for date ${currentDate}`)
+    
+    // If not loading and we have established data source, reload data for new day
+    if (!isLoading && (dataSource === "supabase" || dataSource === "local")) {
+      console.log("🔄 Date changed - reloading data for new day")
+      loadData()
+    }
+  }, [currentDate, isLoading, dataSource, loadData])
 
   if (isLoading) {
     return (
