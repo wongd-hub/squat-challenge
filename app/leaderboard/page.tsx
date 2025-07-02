@@ -25,7 +25,6 @@ export default function LeaderboardPage() {
     
     if (isSupabaseConfigured()) {
       try {
-        console.log('📊 Loading leaderboard from Supabase...');
         const { data, error } = await database.getFullLeaderboard();
         
         if (error) {
@@ -44,14 +43,12 @@ export default function LeaderboardPage() {
           
           setLeaderboardData(formattedData);
           setIsUsingSupabase(true);
-          console.log(`✅ Loaded ${formattedData.length} leaderboard entries from Supabase`);
         }
       } catch (error) {
         console.error('❌ Exception loading leaderboard:', error);
         loadMockData();
       }
     } else {
-      console.log('📊 Supabase not configured, using mock data');
       loadMockData();
     }
     

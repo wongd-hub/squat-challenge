@@ -114,7 +114,6 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   }
 
   const handleOpenChange = (open: boolean) => {
-    console.log("🔍 Dialog open state changed:", open)
     setIsOpen(open)
     if (!open) {
       resetForm()
@@ -124,7 +123,6 @@ export default function AuthModal({ children, onAuthSuccess }: AuthModalProps) {
   const handleTriggerClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    console.log("🔍 Auth trigger clicked - opening modal")
     setIsOpen(true)
   }
 

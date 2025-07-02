@@ -37,19 +37,7 @@ export const supabase = isSupabaseConfigured() ? createClient(supabaseUrl!, supa
 // Auth client
 export const auth = supabase?.auth
 
-// Additional debugging for client creation
-if (typeof window !== 'undefined') {
-  console.log("🔧 Supabase client creation:", {
-    hasSupabase: !!supabase,
-    hasAuth: !!auth,
-    url: supabaseUrl ? `${supabaseUrl.substring(0, 50)}...` : 'undefined',
-    fullUrl: supabaseUrl, // Show the full URL for debugging
-    keyLength: supabaseAnonKey?.length || 0,
-    keyStart: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined'
-  })
 
-
-}
 
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
@@ -178,8 +166,6 @@ export const database = {
     if (!supabase) throw new Error("Supabase not configured")
 
     try {
-      console.log(`💾 Saving ${squats} squats to database for ${date}`)
-      
       const upsertData = {
         user_id: userId,
         date: date,
@@ -200,7 +186,6 @@ export const database = {
         throw error
       }
 
-      console.log("✅ User progress saved successfully")
       return { data, error: null }
     } catch (error) {
       console.error("❌ Exception in updateUserProgress:", error)
@@ -517,10 +502,7 @@ export async function updateUserProfile(userId: string, profileData: { display_n
 }
 
 export async function checkUserExists(email: string) {
-  console.log("🔍 checkUserExists called with email:", email)
-  
   if (!supabase) {
-    console.log("❌ Supabase client not available")
     return { exists: false, profile: null }
   }
 
@@ -531,7 +513,6 @@ export async function checkUserExists(email: string) {
     if (error) {
       if (error.code === "PGRST116") {
         // User doesn't exist, this is normal
-        console.log("👤 User not found - this is normal for new users")
         return { exists: false, profile: null }
       }
       
@@ -540,8 +521,6 @@ export async function checkUserExists(email: string) {
       return { exists: false, profile: null }
     }
 
-    console.log("✅ User exists")
-    console.log("👤 User data:", data) // Show the actual user data
     return { exists: true, profile: data }
   } catch (error) {
     console.error("❌ Exception in checkUserExists:", error)

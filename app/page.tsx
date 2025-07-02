@@ -120,13 +120,11 @@ export default function Home() {
         // Always check for date changes when tab becomes visible
         const newDate = new Date().toISOString().split("T")[0]
         if (newDate !== currentDate) {
-          console.log(`🔄 Tab became visible - date changed from ${currentDate} to ${newDate}`)
           setCurrentDate(newDate)
         }
         
         // Also refresh data for Supabase users
         if (dataSource === "supabase" && user) {
-          console.log("🔄 Tab became visible, refreshing data for cross-device sync")
           loadData()
         }
       }
@@ -168,8 +166,6 @@ export default function Home() {
     }, 8000) // 8 second timeout
 
     const checkAuth = async () => {
-      console.log("🔍 Starting authentication check...")
-      
       if (!isSupabaseConfigured()) {
         console.log("⚠️ Supabase not configured, using local storage")
         if (!DISABLE_OFFLINE_MODE) {
@@ -187,7 +183,6 @@ export default function Home() {
       if (!DISABLE_OFFLINE_MODE) {
         const forceLocalMode = localStorage.getItem('force_local_mode') === 'true'
         if (forceLocalMode) {
-          console.log("🔧 Manual override: Forcing local storage mode")
           setDataSource("local")
           setIsLoading(false)
           clearTimeout(authTimeout)
@@ -196,8 +191,6 @@ export default function Home() {
       }
 
       try {
-        console.log("🔍 Checking authentication status...")
-        
         if (!auth) {
           console.log("❌ Auth client not available")
           if (!DISABLE_OFFLINE_MODE) {
@@ -226,14 +219,12 @@ export default function Home() {
         }
 
         if (session?.user) {
-          console.log("👤 User signed in:", session.user.email)
           setUser(session.user)
           setDataSource("supabase")
           
           // Check if user exists in profiles table and create if needed
           if (session.user.email) {
             try {
-              console.log("🔍 checkUserExists called with email:", session.user.email || 'no email')
               const userCheckResult = await checkUserExists(session.user.email)
               
               if (!userCheckResult.exists) {
@@ -241,14 +232,12 @@ export default function Home() {
                                    session.user.email?.split('@')[0] || 
                                    'User'
                 
-                console.log("➕ Creating profile for new user")
                 try {
                   await updateUserProfile(session.user.id, {
                     display_name: displayName,
                     email: session.user.email
                   })
                   setUserProfile({ display_name: displayName })
-                  console.log("✅ Profile created for new user")
                 } catch (profileError) {
                   console.error("❌ Error creating profile:", profileError)
                   setUserProfile({ display_name: displayName })
@@ -256,16 +245,13 @@ export default function Home() {
               } else if (userCheckResult.profile) {
                 // Set existing profile
                 setUserProfile({ display_name: userCheckResult.profile.display_name })
-                console.log("✅ Loaded existing user profile:", userCheckResult.profile.display_name)
               }
             } catch (userCheckError) {
               console.error("❌ Error checking user:", userCheckError)
             }
           }
         } else {
-          console.log("👤 No user session found")
           if (DISABLE_OFFLINE_MODE) {
-            console.log("👤 No user session and offline mode disabled - waiting for user to sign in")
             setDataSource("supabase") // Stay in supabase mode but show sign-in prompt
           } else {
             setDataSource("local")
@@ -293,10 +279,7 @@ export default function Home() {
     }
     
     const { data: { subscription } } = auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 Auth state changed:", event)
-      
       if (event === 'SIGNED_IN' && session?.user) {
-        console.log("👤 User signed in:", session.user.email)
         setUser(session.user)
         setDataSource("supabase")
         
@@ -342,11 +325,9 @@ export default function Home() {
           }
         }
               } else if (event === 'SIGNED_OUT') {
-          console.log("👋 User signed out")
           setUser(null)
           setUserProfile(null)
           if (DISABLE_OFFLINE_MODE) {
-            console.log("👋 User signed out - staying in Supabase mode (offline disabled)")
             setDataSource("supabase") // Stay in supabase mode but without user
           } else {
             setDataSource("local")
@@ -363,11 +344,6 @@ export default function Home() {
     const checkChallengeStatus = () => {
       const isComplete = isChallengeComplete()
       setChallengeComplete(isComplete)
-      console.log("🏁 Challenge complete status:", isComplete)
-
-      if (isComplete) {
-        console.log("🎉 Challenge has ended! Showing completion screen.")
-      }
     }
 
     checkChallengeStatus()
@@ -394,13 +370,9 @@ export default function Home() {
   const loadData = useCallback(async () => {
     const freshDailyTargets = await loadDailyTargets()
 
-    console.log(`📅 Loading data for challenge day ${currentDay} (${currentDate})`)
-
     if (dataSource === "supabase" && user) {
       // Load from Supabase
       try {
-        console.log("📡 Loading user data from Supabase...")
-
         // Load both datasets in parallel for better consistency
         const [recentResult, challengeResult] = await Promise.all([
           database.getUserProgress(user.id, 7),
@@ -421,7 +393,6 @@ export default function Home() {
           })
 
           setChallengeProgressData(challengeProgressWithTargets)
-          console.log(`✅ Loaded ${challengeProgressWithTargets.length} challenge progress records from Supabase`)
 
           // Get today's progress from the authoritative challenge data
           const todayProgress = challengeProgressWithTargets.find((p) => p.date === currentDate)
@@ -440,12 +411,10 @@ export default function Home() {
           })
 
           setProgressData(progressWithTargets)
-          console.log(`✅ Loaded ${progressWithTargets.length} recent progress records for chart`)
         }
 
         // Set today's squats from the most authoritative source
         setTodaySquats(todaySquatsFromData)
-        console.log(`📊 Set today's squats to ${todaySquatsFromData} from challenge data`)
       } catch (error) {
         console.error("❌ Error loading Supabase data:", error)
         if (DISABLE_OFFLINE_MODE) {
@@ -466,7 +435,6 @@ export default function Home() {
   }, [dataSource, user, currentDate, currentDay])
 
   const loadLocalData = (freshDailyTargets: any[]) => {
-    console.log("💾 Loading data from local storage...")
     const today = storage.getTodayProgress()
     setTodaySquats(today)
 
@@ -512,7 +480,6 @@ export default function Home() {
       })
       setChallengeProgressData(challengeProgressWithTargets)
     }
-    console.log("✅ Loaded data from local storage")
   }
 
   // Get today's target
@@ -532,7 +499,6 @@ export default function Home() {
     if (!isLoading && 
         (lastLoad.dataSource !== dataSource || lastLoad.userId !== userId || now - lastLoad.timestamp > 1000)) {
       
-      console.log("🔄 Loading data due to dependency change:", { dataSource, userId: !!userId })
       lastLoadDataRef.current = { dataSource, userId: userId || "", timestamp: now }
       loadData()
     }
@@ -543,8 +509,6 @@ export default function Home() {
     if (!isSupabaseConfigured() || dataSource !== "supabase" || !user || !supabase) {
       return // No real-time subscription needed for local mode or when not signed in
     }
-
-    console.log("🔔 Setting up real-time subscription for user_progress updates")
 
     // Subscribe to changes in user_progress table for current user only
     const userSubscription = supabase
@@ -558,18 +522,13 @@ export default function Home() {
           filter: `user_id=eq.${user.id}` // Only listen to changes for current user
         },
         (payload: any) => {
-          console.log("🔔 Real-time update received for current user:", payload.eventType, payload.new || payload.old)
-          
           // Reload data when current user's progress changes
           loadData()
         }
       )
-      .subscribe((status: string) => {
-        console.log("🔔 User progress subscription status:", status)
-      })
+      .subscribe()
 
     return () => {
-      console.log("🔔 Cleaning up user progress subscription")
       userSubscription.unsubscribe()
     }
   }, [user, dataSource, loadData])
@@ -579,8 +538,6 @@ export default function Home() {
     if (!isSupabaseConfigured() || dataSource !== "supabase" || !supabase) {
       return // No subscription needed for local mode
     }
-
-    console.log("🏆 Setting up real-time subscription for leaderboard updates")
 
     // Subscribe to ALL user_progress changes for leaderboard updates
     const leaderboardSubscription = supabase
@@ -594,18 +551,13 @@ export default function Home() {
           // No filter - listen to ALL user progress changes
         },
         (payload: any) => {
-          console.log("🏆 Leaderboard real-time update received:", payload.eventType, payload.new?.user_id || payload.old?.user_id)
-          
           // Only trigger leaderboard refresh, not full data reload
           setLeaderboardRefreshTrigger(prev => prev + 1)
         }
       )
-      .subscribe((status: string) => {
-        console.log("🏆 Leaderboard subscription status:", status)
-      })
+      .subscribe()
 
     return () => {
-      console.log("🏆 Cleaning up leaderboard subscription")
       leaderboardSubscription.unsubscribe()
     }
   }, [dataSource]) // Only depends on dataSource, not user
@@ -627,10 +579,7 @@ export default function Home() {
     if (dataSource === "supabase" && user) {
       // Save to Supabase
       try {
-        console.log(`💾 Saving ${newTotalSquats} total squats to database`)
-        
         await database.updateUserProgress(user.id, currentDate, newTotalSquats, todayTarget)
-        console.log("✅ Saved to Supabase")
         
         // Update local state immediately for responsive UI
         setTodaySquats(newTotalSquats)
@@ -652,7 +601,6 @@ export default function Home() {
             }
           })
           setChallengeProgressData(challengeProgressWithTargets)
-          console.log("✅ Reloaded challenge progress data")
         }
 
         // Update recent progress data for chart
@@ -666,7 +614,6 @@ export default function Home() {
             }
           })
           setProgressData(progressWithTargets)
-          console.log("✅ Reloaded recent progress data for chart")
         }
 
         // Trigger leaderboard refresh after successful Supabase update (throttled)
@@ -687,11 +634,8 @@ export default function Home() {
       }
     } else {
       // Save to local storage
-      console.log(`💾 Saving ${newTotalSquats} total squats to local storage`)
-      
       storage.updateTodayProgress(newTotalSquats)
       setTodaySquats(newTotalSquats)
-      console.log("✅ Saved to local storage")
 
       // Update challenge progress data for local storage
       const challengeProgress = storage.getChallengeProgress()
@@ -724,16 +668,12 @@ export default function Home() {
   }
 
   const handleSignOut = async () => {
-    console.log("🔍 Sign out button clicked")
     try {
       if (!auth) {
         console.error("❌ Auth client not available")
         return
       }
-      console.log("🔍 Calling auth.signOut()...")
-      const result = await auth.signOut()
-      console.log("🔍 Sign out result:", result)
-      console.log("👋 User signed out successfully")
+      await auth.signOut()
     } catch (error) {
       console.error("❌ Sign out error:", error)
     }
@@ -756,7 +696,6 @@ export default function Home() {
 
   // Handle clicking on a day in the progress chart
   const handleDayClick = (date: string, currentSquats: number, target: number) => {
-    console.log(`📅 Clicked on day: ${date}, current: ${currentSquats}, target: ${target}`)
     setSelectedEditDate(date)
     setSelectedEditSquats(currentSquats)
     setModalOpenedFromChart(true)
@@ -765,8 +704,6 @@ export default function Home() {
 
   // Handle saving edited day squats
   const handleSaveEditedDay = async (date: string, squats: number) => {
-    console.log(`💾 Saving ${squats} squats for date ${date}`)
-    
     const challengeDay = getChallengeDay(date)
     const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50
 
@@ -774,7 +711,6 @@ export default function Home() {
       // Save to Supabase
       try {
         await database.updateUserProgress(user.id, date, squats, target)
-        console.log("✅ Saved edited day to Supabase")
         
         // Reload both challenge progress AND recent progress to update all displays
         const [challengeResult, recentResult] = await Promise.all([
@@ -824,8 +760,6 @@ export default function Home() {
       }
     } else {
       // Save to local storage
-      console.log(`💾 Saving ${squats} squats for ${date} to local storage`)
-      
       // Update local storage for this specific date
       localStorage.setItem(`squats_${date}`, squats.toString())
 
@@ -876,7 +810,6 @@ export default function Home() {
         setTodaySquats(squats)
       }
 
-      console.log("✅ Saved edited day to local storage")
     }
   }
 
@@ -886,18 +819,7 @@ export default function Home() {
   }, [challengeProgressData])
 
   const currentStreak = useMemo(() => {
-    const streak = calculateStreak(challengeProgressData)
-    console.log(`🔥 Streak calculation triggered:`, {
-      dataLength: challengeProgressData.length,
-      calculatedStreak: streak,
-      recentDays: challengeProgressData.slice(-5).map(d => ({
-        date: d.date,
-        squats: d.squats_completed,
-        target: d.target_squats,
-        completed: d.squats_completed >= d.target_squats && d.target_squats > 0
-      }))
-    })
-    return streak
+    return calculateStreak(challengeProgressData)
   }, [challengeProgressData])
 
   // Stable props for LeaderboardPreview to prevent constant re-renders
@@ -1035,14 +957,11 @@ export default function Home() {
   useEffect(() => {
     const checkDateChange = () => {
       const newDate = new Date().toISOString().split("T")[0]
-      console.log(`🔍 Debug: Checking date change - Current: ${currentDateRef.current}, New: ${newDate}`)
       
       if (newDate !== currentDateRef.current) {
-        console.log(`📅 Date changed from ${currentDateRef.current} to ${newDate}`)
         setCurrentDate(newDate)
       } else {
         // Force update current date to trigger recalculation
-        console.log(`🔄 Force refreshing current date: ${newDate}`)
         setCurrentDate(newDate)
       }
     }
@@ -1065,32 +984,17 @@ export default function Home() {
 
   // Recalculate current day when date changes
   useEffect(() => {
-    // Debug: Force check the current date
+    // Force check the current date
     const actualToday = new Date().toISOString().split("T")[0]
-    console.log(`🔍 DEBUG: currentDate state = ${currentDate}, actual today = ${actualToday}`)
     
     // If there's a mismatch, force update
     if (currentDate !== actualToday) {
-      console.log(`❌ Date mismatch detected! Forcing update to ${actualToday}`)
       setCurrentDate(actualToday)
       return // Exit early, this will retrigger the effect
     }
     
     const newCurrentDay = getChallengeDay(currentDate)
     setCurrentDay(newCurrentDay)
-    console.log(`📅 Updated to challenge day ${newCurrentDay} for date ${currentDate}`)
-    console.log(`📅 Challenge started: ${CHALLENGE_CONFIG.START_DATE}, Current: ${currentDate}`)
-    console.log(`📅 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`)
-    
-    // Debug the math manually
-    const [startYear, startMonth, startDay] = CHALLENGE_CONFIG.START_DATE.split('-').map(Number)
-    const [currentYear, currentMonth, currentDay] = currentDate.split('-').map(Number)
-    const startDate = new Date(startYear, startMonth - 1, startDay, 12, 0, 0)
-    const currentDateObj = new Date(currentYear, currentMonth - 1, currentDay, 12, 0, 0)
-    const diffTime = currentDateObj.getTime() - startDate.getTime()
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    const calculatedDay = Math.max(1, Math.min(diffDays + 1, CHALLENGE_CONFIG.TOTAL_DAYS))
-    console.log(`🔢 Manual calculation: ${CHALLENGE_CONFIG.START_DATE} → ${currentDate} = ${diffDays} days = Day ${calculatedDay}`)
   }, [currentDate])
 
   // Separate effect for data reloading with throttling to prevent loops
@@ -1099,7 +1003,6 @@ export default function Home() {
   useEffect(() => {
     // Only reload data if the date actually changed and enough time has passed
     if (currentDate !== lastDataReloadRef.current && !isLoading && !isReloadingData && (dataSource === "supabase" || dataSource === "local")) {
-      console.log("🔄 Date changed - reloading data for new day")
       lastDataReloadRef.current = currentDate
       setIsReloadingData(true)
       
@@ -1126,7 +1029,6 @@ export default function Home() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
-                  console.log("🔧 Manual skip triggered by user")
                   setDataSource("local")
                   setIsLoading(false)
                 }}
@@ -1261,7 +1163,6 @@ export default function Home() {
                 size="sm" 
                 onClick={() => {
                   const today = new Date().toISOString().split("T")[0]
-                  console.log(`🔧 MANUAL FIX: Forcing date to ${today}`)
                   setCurrentDate(today)
                 }} 
                 className="glass-subtle text-xs border-red-500 text-red-600"
@@ -1475,8 +1376,6 @@ function calculateStreak(progressData: any[]): number {
   
   let streak = 0
   
-  console.log(`🔥 calculateStreak: Starting calculation for day ${currentDay} (${today})`)
-  
   // Start from yesterday (or latest completed day) and work backwards to find CONSECUTIVE streak
   // This ensures we only count the current active streak, not historical streaks
   for (let day = currentDay - 1; day >= 1; day--) {
@@ -1493,16 +1392,8 @@ function calculateStreak(progressData: any[]): number {
     
     const dayProgress = progressData.find(p => p.date === dateStr)
     
-    console.log(`🔥 Day ${day} (${dateStr}):`, {
-      found: !!dayProgress,
-      squats: dayProgress?.squats_completed || 0,
-      target: dayProgress?.target_squats || 0,
-      isCompleted: dayProgress && dayProgress.squats_completed >= dayProgress.target_squats && dayProgress.target_squats > 0
-    })
-    
     // Skip rest days (they don't break streak)
     if (dayProgress?.target_squats === 0) {
-      console.log(`🔥 Day ${day}: Rest day - skipping`)
       continue
     }
     
@@ -1511,16 +1402,12 @@ function calculateStreak(progressData: any[]): number {
     
     if (isCompleted) {
       streak++
-      console.log(`🔥 Day ${day}: Completed! Streak now: ${streak}`)
     } else {
       // As soon as we hit an incomplete day, the consecutive streak is broken
-      console.log(`🔥 Day ${day}: Not completed, consecutive streak broken at: ${streak}`)
       break
     }
   }
 
   // Limit streak to challenge duration (can't have a streak longer than the challenge itself)
-  const limitedStreak = Math.min(streak, 23)
-  console.log(`🔥 Final consecutive streak: ${streak}, limited to: ${limitedStreak}`)
-  return limitedStreak
+  return Math.min(streak, 23)
 }

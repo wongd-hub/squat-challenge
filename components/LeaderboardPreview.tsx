@@ -129,7 +129,6 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
   // Refresh leaderboard when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
-      console.log("🔄 Leaderboard refresh triggered:", refreshTrigger);
       loadLeaderboardData(true); // Background refresh
     }
   }, [refreshTrigger]); // Only depend on refreshTrigger, not the function itself
