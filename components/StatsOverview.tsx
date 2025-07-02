@@ -36,7 +36,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress 
               <Flame className="w-5 h-5 text-orange-500" />
             </div>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              <CountUp end={streak} duration={1500} />
+              <CountUp end={streak} duration={800} />
             </div>
             <p className="text-sm text-muted-foreground">Current Streak</p>
           </CardContent>

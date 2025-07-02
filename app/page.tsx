@@ -886,7 +886,18 @@ export default function Home() {
   }, [challengeProgressData])
 
   const currentStreak = useMemo(() => {
-    return calculateStreak(challengeProgressData)
+    const streak = calculateStreak(challengeProgressData)
+    console.log(`🔥 Streak calculation triggered:`, {
+      dataLength: challengeProgressData.length,
+      calculatedStreak: streak,
+      recentDays: challengeProgressData.slice(-5).map(d => ({
+        date: d.date,
+        squats: d.squats_completed,
+        target: d.target_squats,
+        completed: d.squats_completed >= d.target_squats && d.target_squats > 0
+      }))
+    })
+    return streak
   }, [challengeProgressData])
 
   // Stable props for LeaderboardPreview to prevent constant re-renders
@@ -1344,7 +1355,7 @@ export default function Home() {
                     <ul className="space-y-1 text-xs ml-4">
                       <li>• <strong><a href="https://lymphoma.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Lymphoma Research Foundation</a></strong></li>
                       <li>• <strong><a href="https://lls.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Leukemia & Lymphoma Society</a></strong></li>
-                      <li>• <strong><a href="https://theflf.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Follicular Lymphoma Foundation</a></strong></li>
+                      <li>• <strong><a href="https://www.theflf.org/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors cursor-pointer">Follicular Lymphoma Foundation</a></strong></li>
                     </ul>
                   </div>
                   <div className="space-y-2">
@@ -1463,18 +1474,35 @@ function calculateStreak(progressData: any[]): number {
   const currentDay = getChallengeDay(today)
   
   let streak = 0
-  let streakStarted = false
   
-  // Start from today and work backwards through challenge days
-  for (let day = currentDay; day >= 1; day--) {
-    const dayDate = new Date(CHALLENGE_CONFIG.START_DATE)
-    dayDate.setDate(dayDate.getDate() + day - 1)
-    const dateStr = dayDate.toISOString().split("T")[0]
+  console.log(`🔥 calculateStreak: Starting calculation for day ${currentDay} (${today})`)
+  
+  // Start from yesterday (or latest completed day) and work backwards to find CONSECUTIVE streak
+  // This ensures we only count the current active streak, not historical streaks
+  for (let day = currentDay - 1; day >= 1; day--) {
+    // Use consistent timezone-safe date calculation
+    const [startYear, startMonth, startDay] = CHALLENGE_CONFIG.START_DATE.split('-').map(Number)
+    const startDate = new Date(startYear, startMonth - 1, startDay, 12, 0, 0)
+    const dayDate = new Date(startDate)
+    dayDate.setDate(startDate.getDate() + day - 1)
+    
+    const year = dayDate.getFullYear()
+    const month = String(dayDate.getMonth() + 1).padStart(2, '0')
+    const dayStr = String(dayDate.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${dayStr}`
     
     const dayProgress = progressData.find(p => p.date === dateStr)
     
-    // Skip rest days (they don't break or contribute to streak)
+    console.log(`🔥 Day ${day} (${dateStr}):`, {
+      found: !!dayProgress,
+      squats: dayProgress?.squats_completed || 0,
+      target: dayProgress?.target_squats || 0,
+      isCompleted: dayProgress && dayProgress.squats_completed >= dayProgress.target_squats && dayProgress.target_squats > 0
+    })
+    
+    // Skip rest days (they don't break streak)
     if (dayProgress?.target_squats === 0) {
+      console.log(`🔥 Day ${day}: Rest day - skipping`)
       continue
     }
     
@@ -1483,16 +1511,16 @@ function calculateStreak(progressData: any[]): number {
     
     if (isCompleted) {
       streak++
-      streakStarted = true
+      console.log(`🔥 Day ${day}: Completed! Streak now: ${streak}`)
     } else {
-      // If we haven't started counting yet (today might not be completed), continue looking back
-      if (!streakStarted) {
-        continue
-      }
-      // If we've started counting and hit an incomplete day, streak is broken
+      // As soon as we hit an incomplete day, the consecutive streak is broken
+      console.log(`🔥 Day ${day}: Not completed, consecutive streak broken at: ${streak}`)
       break
     }
   }
 
-  return streak
+  // Limit streak to challenge duration (can't have a streak longer than the challenge itself)
+  const limitedStreak = Math.min(streak, 23)
+  console.log(`🔥 Final consecutive streak: ${streak}, limited to: ${limitedStreak}`)
+  return limitedStreak
 }

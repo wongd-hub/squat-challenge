@@ -42,8 +42,9 @@ BEGIN
     RETURN 0;
   END IF;
   
-  -- Loop backwards from current challenge day to day 1
-  FOR check_day IN REVERSE current_challenge_day..1 LOOP
+  -- Loop backwards from yesterday to day 1 (skip today to match JavaScript logic)
+  -- This ensures we only count CONSECUTIVE streak, not historical streaks
+  FOR check_day IN REVERSE (current_challenge_day - 1)..1 LOOP
     -- Calculate the date for this challenge day
     day_date := challenge_start_date + (check_day - 1);
     
@@ -61,7 +62,7 @@ BEGIN
       progress_record.target_squats := 50; -- Default target
     END IF;
     
-    -- Skip rest days (they don't break or contribute to streak)
+    -- Skip rest days (they don't break streak)
     IF progress_record.target_squats = 0 THEN
       CONTINUE;
     END IF;
@@ -70,17 +71,13 @@ BEGIN
     IF progress_record.squats_completed >= progress_record.target_squats 
        AND progress_record.target_squats > 0 THEN
       streak_count := streak_count + 1;
-      streak_started := true;
     ELSE
-      -- If we haven't started counting yet (today might not be completed), continue looking back
-      IF NOT streak_started THEN
-        CONTINUE;
-      END IF;
-      -- If we've started counting and hit an incomplete day, streak is broken
+      -- As soon as we hit an incomplete day, the consecutive streak is broken
       EXIT;
     END IF;
   END LOOP;
   
-  RETURN streak_count;
+  -- Limit streak to challenge duration (can't have a streak longer than the challenge itself)
+  RETURN LEAST(streak_count, 23);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER; 
