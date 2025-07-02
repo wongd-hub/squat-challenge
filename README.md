@@ -35,16 +35,7 @@ A beautiful, production-ready web application for tracking daily squat progress 
 
 ## 🎮 Challenge Structure
 
-### Daily Targets
-- **Days 1-6**: 50, 55, 60, 65, 70, 75 squats
-- **Day 7**: Rest day (0 squats) 🛌
-- **Days 8-13**: 80, 85, 90, 95, 100, 105 squats  
-- **Day 14**: Rest day (0 squats) 🛌
-- **Days 15-20**: 110, 115, 120, 125, 130, 135 squats
-- **Day 21**: Rest day (0 squats) 🛌
-- **Days 22-23**: 140, 150 squats 🎯
-
-**Total Challenge**: 2,045 squats over 23 days with 3 strategic rest days
+**Total Challenge**: 3,214 squats over 23 days with 3 strategic rest days - mimicking the structure of the [2025 Pushup Challenge](https://www.thepushupchallenge.com.au/).
 
 ## 🚀 Quick Start
 
@@ -76,7 +67,7 @@ A beautiful, production-ready web application for tracking daily squat progress 
    NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
    ```
    
-   > **Note**: The app works perfectly in offline mode without Supabase configuration
+   > **Note**: The app works in offline mode without Supabase configuration
 
 4. **Run the development server**
    ```bash
@@ -113,13 +104,13 @@ npm start
 ### Project Structure
 ```
 squat-challenge/
-├── app/                          # Next.js App Router
+├── app/                         # Next.js App Router
 │   ├── globals.css              # Global styles and glassmorphism effects
 │   ├── layout.tsx               # Root layout with theme provider
 │   ├── page.tsx                 # Main dashboard page
 │   └── leaderboard/
 │       └── page.tsx             # Full leaderboard page
-├── components/                   # Reusable UI components
+├── components/                  # Reusable UI components
 │   ├── ui/                      # shadcn/ui components (40+ components)
 │   ├── AuthModal.tsx            # Authentication modal with OTP
 │   ├── CountUp.tsx              # Animated number counter
