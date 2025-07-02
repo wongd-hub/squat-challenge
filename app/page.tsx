@@ -116,15 +116,25 @@ export default function Home() {
   // Refresh data when user returns to tab (fixes cross-device sync issues)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && dataSource === "supabase" && user) {
-        console.log("🔄 Tab became visible, refreshing data for cross-device sync")
-        loadData()
+      if (!document.hidden) {
+        // Always check for date changes when tab becomes visible
+        const newDate = new Date().toISOString().split("T")[0]
+        if (newDate !== currentDate) {
+          console.log(`🔄 Tab became visible - date changed from ${currentDate} to ${newDate}`)
+          setCurrentDate(newDate)
+        }
+        
+        // Also refresh data for Supabase users
+        if (dataSource === "supabase" && user) {
+          console.log("🔄 Tab became visible, refreshing data for cross-device sync")
+          loadData()
+        }
       }
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange)
-  }, [dataSource, user])
+  }, [dataSource, user, currentDate])
 
   // Safety timeout to ensure loading state is always cleared
   useEffect(() => {
@@ -1014,23 +1024,62 @@ export default function Home() {
   useEffect(() => {
     const checkDateChange = () => {
       const newDate = new Date().toISOString().split("T")[0]
+      console.log(`🔍 Debug: Checking date change - Current: ${currentDateRef.current}, New: ${newDate}`)
+      
       if (newDate !== currentDateRef.current) {
         console.log(`📅 Date changed from ${currentDateRef.current} to ${newDate}`)
+        setCurrentDate(newDate)
+      } else {
+        // Force update current date to trigger recalculation
+        console.log(`🔄 Force refreshing current date: ${newDate}`)
         setCurrentDate(newDate)
       }
     }
 
-    // Check every 5 minutes instead of every minute to reduce frequency
-    const interval = setInterval(checkDateChange, 300000) // 5 minutes
+    // Check immediately on mount
+    checkDateChange()
+    
+    // Check every minute around midnight (11:58 PM to 12:02 AM)
+    const now = new Date()
+    const hour = now.getHours()
+    const minute = now.getMinutes()
+    const isAroundMidnight = hour === 23 && minute >= 58 || hour === 0 && minute <= 2
+    
+    // Use 1-minute intervals around midnight, 5-minute intervals otherwise
+    const intervalTime = isAroundMidnight ? 60000 : 300000 // 1 minute or 5 minutes
+    const interval = setInterval(checkDateChange, intervalTime)
 
     return () => clearInterval(interval)
   }, []) // No dependencies needed since we use ref
 
   // Recalculate current day when date changes
   useEffect(() => {
+    // Debug: Force check the current date
+    const actualToday = new Date().toISOString().split("T")[0]
+    console.log(`🔍 DEBUG: currentDate state = ${currentDate}, actual today = ${actualToday}`)
+    
+    // If there's a mismatch, force update
+    if (currentDate !== actualToday) {
+      console.log(`❌ Date mismatch detected! Forcing update to ${actualToday}`)
+      setCurrentDate(actualToday)
+      return // Exit early, this will retrigger the effect
+    }
+    
     const newCurrentDay = getChallengeDay(currentDate)
     setCurrentDay(newCurrentDay)
     console.log(`📅 Updated to challenge day ${newCurrentDay} for date ${currentDate}`)
+    console.log(`📅 Challenge started: ${CHALLENGE_CONFIG.START_DATE}, Current: ${currentDate}`)
+    console.log(`📅 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`)
+    
+    // Debug the math manually
+    const [startYear, startMonth, startDay] = CHALLENGE_CONFIG.START_DATE.split('-').map(Number)
+    const [currentYear, currentMonth, currentDay] = currentDate.split('-').map(Number)
+    const startDate = new Date(startYear, startMonth - 1, startDay, 12, 0, 0)
+    const currentDateObj = new Date(currentYear, currentMonth - 1, currentDay, 12, 0, 0)
+    const diffTime = currentDateObj.getTime() - startDate.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    const calculatedDay = Math.max(1, Math.min(diffDays + 1, CHALLENGE_CONFIG.TOTAL_DAYS))
+    console.log(`🔢 Manual calculation: ${CHALLENGE_CONFIG.START_DATE} → ${currentDate} = ${diffDays} days = Day ${calculatedDay}`)
   }, [currentDate])
 
   // Separate effect for data reloading with throttling to prevent loops
@@ -1194,6 +1243,21 @@ export default function Home() {
               <Users className="w-3 h-3 mr-1" />
               Leaderboard
             </Button>
+            {/* Temporary debug button */}
+            {currentDay !== 18 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  const today = new Date().toISOString().split("T")[0]
+                  console.log(`🔧 MANUAL FIX: Forcing date to ${today}`)
+                  setCurrentDate(today)
+                }} 
+                className="glass-subtle text-xs border-red-500 text-red-600"
+              >
+                🔧 Fix Day (Debug)
+              </Button>
+            )}
           </div>
         </div>
 

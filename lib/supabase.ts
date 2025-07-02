@@ -84,18 +84,30 @@ export const CHALLENGE_CONFIG = {
 
 // Helper functions
 export function getChallengeDay(date: string): number {
-  const startDate = new Date(CHALLENGE_CONFIG.START_DATE)
-  const currentDate = new Date(date)
+  // Parse dates consistently by creating them as local dates at noon to avoid timezone issues
+  const [startYear, startMonth, startDay] = CHALLENGE_CONFIG.START_DATE.split('-').map(Number)
+  const [currentYear, currentMonth, currentDay] = date.split('-').map(Number)
+  
+  const startDate = new Date(startYear, startMonth - 1, startDay, 12, 0, 0) // noon local time
+  const currentDate = new Date(currentYear, currentMonth - 1, currentDay, 12, 0, 0) // noon local time
+  
   const diffTime = currentDate.getTime() - startDate.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
   return Math.max(1, Math.min(diffDays + 1, CHALLENGE_CONFIG.TOTAL_DAYS))
 }
 
 export function getDateFromChallengeDay(day: number): string {
-  const startDate = new Date(CHALLENGE_CONFIG.START_DATE)
+  // Parse start date consistently as local date
+  const [startYear, startMonth, startDay] = CHALLENGE_CONFIG.START_DATE.split('-').map(Number)
+  const startDate = new Date(startYear, startMonth - 1, startDay, 12, 0, 0) // noon local time
+  
   const targetDate = new Date(startDate)
   targetDate.setDate(startDate.getDate() + day - 1)
-  return targetDate.toISOString().split("T")[0]
+  
+  const year = targetDate.getFullYear()
+  const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+  const dayStr = String(targetDate.getDate()).padStart(2, '0')
+  return `${year}-${month}-${dayStr}`
 }
 
 export function isChallengeComplete(): boolean {
