@@ -93,6 +93,11 @@ export function isChallengeComplete(): boolean {
   return today > endDate
 }
 
+export function isBeforeChallengeStart(): boolean {
+  const today = new Date().toISOString().split("T")[0]
+  return today < CHALLENGE_CONFIG.START_DATE
+}
+
 // Database functions
 export const database = {
   async getDailyTargets() {

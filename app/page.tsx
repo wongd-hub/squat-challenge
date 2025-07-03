@@ -22,6 +22,7 @@ import {
   getDateFromChallengeDay,
   CHALLENGE_CONFIG,
   isChallengeComplete,
+  isBeforeChallengeStart,
   checkUserExists,
   updateUserProfile,
 } from "@/lib/supabase"
@@ -29,6 +30,7 @@ import { Calendar, Info, Users, LogOut, User, Trophy } from "lucide-react"
 import FooterFloat from "@/components/FooterFloat"
 import ScrollLottie from "@/components/ScrollLottie"
 import { EditDayModal } from "@/components/EditDayModal"
+import { PreChallengeWelcome } from "@/components/PreChallengeWelcome"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -42,6 +44,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [dataSource, setDataSource] = useState<"supabase" | "local">("local")
   const [challengeComplete, setChallengeComplete] = useState(false)
+  const [isBeforeChallengeStartState, setIsBeforeChallengeStartState] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [leaderboardRefreshTrigger, setLeaderboardRefreshTrigger] = useState(0)
 
@@ -123,10 +126,16 @@ export default function Home() {
           setCurrentDate(newDate)
         }
         
-        // Also refresh data for Supabase users
+        // Also refresh data for Supabase users and check challenge status
         if (dataSource === "supabase" && user) {
           loadData()
         }
+        
+        // Check if challenge status changed (start/end dates)
+        const isBeforeStart = isBeforeChallengeStart()
+        const isComplete = isChallengeComplete()
+        setIsBeforeChallengeStartState(isBeforeStart)
+        setChallengeComplete(isComplete)
       }
     }
 
@@ -335,11 +344,13 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Check if challenge is complete
+  // Check if challenge is complete or before start
   useEffect(() => {
     const checkChallengeStatus = () => {
       const isComplete = isChallengeComplete()
+      const isBeforeStart = isBeforeChallengeStart()
       setChallengeComplete(isComplete)
+      setIsBeforeChallengeStartState(isBeforeStart)
     }
 
     checkChallengeStatus()
@@ -964,6 +975,12 @@ export default function Home() {
         // Force update current date to trigger recalculation
         setCurrentDate(newDate)
       }
+      
+      // Also check challenge status when date changes
+      const isBeforeStart = isBeforeChallengeStart()
+      const isComplete = isChallengeComplete()
+      setIsBeforeChallengeStartState(isBeforeStart)
+      setChallengeComplete(isComplete)
     }
 
     // Check immediately on mount
@@ -1049,6 +1066,81 @@ export default function Home() {
             </p>
           )}
         </div>
+      </div>
+    )
+  }
+
+  // Show pre-challenge welcome screen if before start date
+  if (isBeforeChallengeStartState) {
+    return (
+      <div className="min-h-screen gradient-bg">
+        {/* Sticky Header */}
+        <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
+          isScrolled ? "backdrop-blur-xl bg-background/10 border-b border-white/10 shadow-xl" : "bg-transparent"
+        }`}>
+          <div className="container mx-auto px-4 py-3 max-w-6xl">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <ScrollLottie 
+                  size={isScrolled ? 24 : 32}
+                  className="transition-all duration-300"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                {user ? (
+                  <>
+                    <Badge
+                      variant="outline"
+                      className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
+                    >
+                      <User className="w-3 h-3 mr-1" />
+                      {displayName}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleSignOut}
+                      className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20"
+                    >
+                      <LogOut className="w-4 h-4 md:w-3 md:h-3" />
+                    </Button>
+                  </>
+                ) : (
+                  isSupabaseSetup && (
+                    <AuthModal onAuthSuccess={handleAuthSuccess}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20"
+                      >
+                        <User className="w-3 h-3 mr-1" />
+                        Sign In
+                      </Button>
+                    </AuthModal>
+                  )
+                )}
+                <ThemeToggle />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Pre-Challenge Welcome Screen */}
+        <PreChallengeWelcome 
+          onCountdownComplete={() => {
+            // Refresh challenge status when countdown completes
+            const isBeforeStart = isBeforeChallengeStart()
+            const isComplete = isChallengeComplete()
+            setIsBeforeChallengeStartState(isBeforeStart)
+            setChallengeComplete(isComplete)
+          }}
+        />
+
+        {/* Footer */}
+        <FooterFloat />
+
+        {/* Scroll Lottie Animation */}
+        <ScrollLottie />
       </div>
     )
   }
@@ -1275,9 +1367,6 @@ export default function Home() {
               <div className="border-t border-border pt-4 space-y-2">
                 <p>
                   <strong>🔐 Easy Sign In:</strong> No passwords needed! Just enter your email for a 6-digit access code.
-                </p>
-                <p>
-                  <strong>📊 Stats:</strong> All progress and stats only count squats completed during the official challenge period.
                 </p>
               </div>
             </CardContent>
