@@ -1368,9 +1368,6 @@ export default function Home() {
                 <p>
                   <strong>🔐 Easy Sign In:</strong> No passwords needed! Just enter your email for a 6-digit access code.
                 </p>
-                <p>
-                  <strong>📊 Stats:</strong> All progress and stats only count squats completed during the official challenge period.
-                </p>
               </div>
             </CardContent>
           </Card>

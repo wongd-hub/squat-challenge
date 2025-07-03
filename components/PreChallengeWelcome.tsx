@@ -96,9 +96,6 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
             <p>
               <strong className="text-foreground">🔐 Easy Access:</strong> No passwords needed! Just enter your email for a 6-digit access code to sync across devices and compete with others.
             </p>
-            <p>
-              <strong className="text-foreground">📊 Smart Tracking:</strong> Works offline with local storage, and syncs when you're online. All progress and stats count squats completed during the official challenge period.
-            </p>
           </div>
         </CardContent>
       </Card>
