@@ -158,7 +158,6 @@ export default function Home() {
     
     // Set timeout for auth operations to prevent hanging
     const authTimeout = setTimeout(() => {
-      console.log("⚠️ Auth operations timed out, falling back to local mode")
       if (!DISABLE_OFFLINE_MODE) {
         setDataSource("local")
       }
@@ -167,7 +166,6 @@ export default function Home() {
 
     const checkAuth = async () => {
       if (!isSupabaseConfigured()) {
-        console.log("⚠️ Supabase not configured, using local storage")
         if (!DISABLE_OFFLINE_MODE) {
           setDataSource("local")
         } else {
@@ -192,7 +190,6 @@ export default function Home() {
 
       try {
         if (!auth) {
-          console.log("❌ Auth client not available")
           if (!DISABLE_OFFLINE_MODE) {
             setDataSource("local")
           } else {
@@ -274,7 +271,6 @@ export default function Home() {
 
     // Listen for auth changes
     if (!auth) {
-      console.log("❌ Auth client not available for subscription")
       return
     }
     
@@ -352,6 +348,8 @@ export default function Home() {
   // Load daily targets from database or fallback
   const loadDailyTargets = async () => {
     try {
+
+      
       const { data, error } = await database.getDailyTargets()
       if (data && !error) {
         setDailyTargets(data)
@@ -385,7 +383,7 @@ export default function Home() {
         if (challengeResult.data) {
           const challengeProgressWithTargets = challengeResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
             return {
               ...progress,
               target_squats: target,
@@ -403,7 +401,7 @@ export default function Home() {
         if (recentResult.data) {
           const progressWithTargets = recentResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
             return {
               ...progress,
               target_squats: target,
@@ -445,7 +443,7 @@ export default function Home() {
         const date = new Date()
         date.setDate(date.getDate() - (6 - i))
         const challengeDay = getChallengeDay(date.toISOString().split("T")[0])
-        const target = freshDailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50
+        const target = freshDailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50
 
         return {
           date: date.toISOString().split("T")[0],
@@ -459,7 +457,7 @@ export default function Home() {
       // Add target_squats to saved progress
       const progressWithTargets = savedProgress.map((progress) => {
         const progressDay = getChallengeDay(progress.date)
-        const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
         return {
           ...progress,
           target_squats: target,
@@ -472,7 +470,7 @@ export default function Home() {
       const challengeProgress = storage.getChallengeProgress()
       const challengeProgressWithTargets = challengeProgress.map((progress) => {
         const progressDay = getChallengeDay(progress.date)
-        const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        const target = freshDailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
         return {
           ...progress,
           target_squats: target,
@@ -483,7 +481,9 @@ export default function Home() {
   }
 
   // Get today's target
-  const todayTarget = dailyTargets.find((t) => t.day === currentDay)?.target_squats || 50
+  const todayTarget = dailyTargets.find((t) => t.day === currentDay)?.target_squats ?? 50
+  
+
 
   // Stable user ID to prevent frequent reloads when user object changes
   const userId = useMemo(() => user?.id, [user?.id])
@@ -594,7 +594,7 @@ export default function Home() {
         if (challengeResult.data) {
           const challengeProgressWithTargets = challengeResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
             return {
               ...progress,
               target_squats: target,
@@ -607,7 +607,7 @@ export default function Home() {
         if (recentResult.data) {
           const progressWithTargets = recentResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
             return {
               ...progress,
               target_squats: target,
@@ -641,7 +641,7 @@ export default function Home() {
       const challengeProgress = storage.getChallengeProgress()
       const challengeProgressWithTargets = challengeProgress.map((progress) => {
         const progressDay = getChallengeDay(progress.date)
-        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
         return {
           ...progress,
           target_squats: target,
@@ -705,7 +705,7 @@ export default function Home() {
   // Handle saving edited day squats
   const handleSaveEditedDay = async (date: string, squats: number) => {
     const challengeDay = getChallengeDay(date)
-    const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50
+    const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50
 
     if (dataSource === "supabase" && user) {
       // Save to Supabase
@@ -722,7 +722,7 @@ export default function Home() {
         if (challengeResult.data) {
           const challengeProgressWithTargets = challengeResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
             return {
               ...progress,
               target_squats: target,
@@ -735,7 +735,7 @@ export default function Home() {
         if (recentResult.data) {
           const progressWithTargets = recentResult.data.map((progress) => {
             const progressDay = getChallengeDay(progress.date)
-            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+            const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
             return {
               ...progress,
               target_squats: target,
@@ -785,7 +785,7 @@ export default function Home() {
       const challengeProgress = storage.getChallengeProgress()
       const challengeProgressWithTargets = challengeProgress.map((progress) => {
         const progressDay = getChallengeDay(progress.date)
-        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats || 50
+        const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
         return {
           ...progress,
           target_squats: target,

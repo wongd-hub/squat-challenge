@@ -14,17 +14,6 @@ export function isSupabaseConfigured(): boolean {
 
   // Only log configuration check once to reduce console spam
   if (!configCheckLogged) {
-    console.log("🔧 Supabase configuration check:", {
-      hasUrl,
-      hasKey,
-      urlValid,
-      keyValid,
-      url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : "undefined",
-      keyLength: supabaseAnonKey?.length || 0,
-    })
-
-    const configured = hasUrl && hasKey && urlValid && keyValid
-    console.log("🔧 Supabase configured:", configured)
     configCheckLogged = true
   }
 
@@ -44,28 +33,28 @@ export const CHALLENGE_CONFIG = {
   START_DATE: process.env.NEXT_PUBLIC_CHALLENGE_START_DATE || "2025-06-15",
   TOTAL_DAYS: parseInt(process.env.NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS || "23"),
   DAILY_TARGETS: [
-    { day: 1, target_squats: 50 },
-    { day: 2, target_squats: 55 },
-    { day: 3, target_squats: 60 },
-    { day: 4, target_squats: 65 },
-    { day: 5, target_squats: 70 },
-    { day: 6, target_squats: 75 },
-    { day: 7, target_squats: 0 }, // Rest day
-    { day: 8, target_squats: 80 },
-    { day: 9, target_squats: 85 },
-    { day: 10, target_squats: 90 },
-    { day: 11, target_squats: 95 },
-    { day: 12, target_squats: 100 },
-    { day: 13, target_squats: 105 },
-    { day: 14, target_squats: 0 }, // Rest day
-    { day: 15, target_squats: 110 },
-    { day: 16, target_squats: 115 },
-    { day: 17, target_squats: 120 },
-    { day: 18, target_squats: 125 },
-    { day: 19, target_squats: 130 },
-    { day: 20, target_squats: 135 },
-    { day: 21, target_squats: 0 }, // Rest day
-    { day: 22, target_squats: 140 },
+    { day: 1, target_squats: 120 },
+    { day: 2, target_squats: 75 },
+    { day: 3, target_squats: 140 },
+    { day: 4, target_squats: 143 },
+    { day: 5, target_squats: 0 }, // Rest day
+    { day: 6, target_squats: 128 },
+    { day: 7, target_squats: 103 },
+    { day: 8, target_squats: 170 },
+    { day: 9, target_squats: 167 },
+    { day: 10, target_squats: 130 },
+    { day: 11, target_squats: 200 },
+    { day: 12, target_squats: 0 }, // Rest day
+    { day: 13, target_squats: 163 },
+    { day: 14, target_squats: 174 },
+    { day: 15, target_squats: 160 },
+    { day: 16, target_squats: 170 },
+    { day: 17, target_squats: 210 },
+    { day: 18, target_squats: 191 },
+    { day: 19, target_squats: 0 }, // Rest day
+    { day: 20, target_squats: 220 },
+    { day: 21, target_squats: 170 },
+    { day: 22, target_squats: 230 },
     { day: 23, target_squats: 150 },
   ],
 }
@@ -114,11 +103,19 @@ export const database = {
     try {
       const { data, error } = await supabase.from("daily_targets").select("*").order("day")
 
-      if (error) throw error
-      return { data: data || CHALLENGE_CONFIG.DAILY_TARGETS, error: null }
+      if (error) {
+        console.warn("⚠️ Database not available, using hardcoded targets:", error.message)
+        return { data: CHALLENGE_CONFIG.DAILY_TARGETS, error: null }
+      }
+      
+      if (data && data.length > 0) {
+        return { data, error: null }
+      } else {
+        return { data: CHALLENGE_CONFIG.DAILY_TARGETS, error: null }
+      }
     } catch (error) {
-      console.error("Database error:", error)
-      return { data: CHALLENGE_CONFIG.DAILY_TARGETS, error }
+      console.warn("⚠️ Database connection failed, using hardcoded targets")
+      return { data: CHALLENGE_CONFIG.DAILY_TARGETS, error: null }
     }
   },
 
@@ -166,27 +163,40 @@ export const database = {
     if (!supabase) throw new Error("Supabase not configured")
 
     try {
-      const upsertData = {
-        user_id: userId,
-        date: date,
-        squats_completed: squats,
-        target_squats: target,
+      // First, try to update existing record
+      const { data: updateData, error: updateError } = await supabase
+        .from("user_progress")
+        .update({
+          squats_completed: squats,
+          target_squats: target,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('date', date)
+        .select()
+
+      // If update succeeded (row existed), return
+      if (!updateError && updateData && updateData.length > 0) {
+        return { data: updateData, error: null }
       }
 
-      const { data, error } = await supabase
+      // If no rows were updated (record doesn't exist), insert new one
+      const { data: insertData, error: insertError } = await supabase
         .from("user_progress")
-        .upsert(upsertData, { 
-          onConflict: 'user_id,date',
-          ignoreDuplicates: false 
+        .insert({
+          user_id: userId,
+          date: date,
+          squats_completed: squats,
+          target_squats: target,
         })
         .select()
 
-      if (error) {
-        console.error("❌ Error saving user progress:", error)
-        throw error
+      if (insertError) {
+        console.error("❌ Error inserting user progress:", insertError)
+        throw insertError
       }
 
-      return { data, error: null }
+      return { data: insertData, error: null }
     } catch (error) {
       console.error("❌ Exception in updateUserProgress:", error)
       throw error
@@ -207,17 +217,30 @@ export const database = {
         end_date: endDate
       })
       
-      if (error) throw error
+      if (error) {
+        console.warn("⚠️ Leaderboard not available:", error.message)
+        return { data: [], error: null }
+      }
+
+      if (!data || data.length === 0) {
+        return { data: [], error: null }
+      }
 
       // Get streaks for each user with timeout protection
+
       const leaderboardWithStreaks = await Promise.allSettled(
-        (data || []).map(async (entry: any) => {
+        data.map(async (entry: any) => {
           try {
             const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { 
               input_user_id: entry.user_id,
               challenge_start_date: CHALLENGE_CONFIG.START_DATE,
               total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS
             })
+            
+            if (streakError) {
+              console.error("❌ Streak calculation error for user", entry.user_id, ":", streakError)
+            }
+            
             return {
               id: entry.user_id,
               name: entry.display_name,
@@ -227,7 +250,7 @@ export const database = {
               streak: streakError ? 0 : (streakData || 0),
             }
           } catch (error) {
-            console.warn(`⚠️ Failed to get streak for user ${entry.user_id}:`, error)
+            console.error("❌ Exception calculating streak for user", entry.user_id, ":", error)
             return {
               id: entry.user_id,
               name: entry.display_name,
@@ -247,8 +270,8 @@ export const database = {
 
       return { data: successfulResults, error: null }
     } catch (error) {
-      console.error("❌ Database error:", error)
-      return { data: [], error }
+      console.warn("⚠️ Leaderboard service unavailable")
+      return { data: [], error: null }
     }
   },
 
@@ -268,11 +291,18 @@ export const database = {
         .eq('date', targetDate)
         .order('squats_completed', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.warn("⚠️ Daily leaderboard not available:", error.message)
+        return { data: [], error: null }
+      }
+
+      if (!data || data.length === 0) {
+        return { data: [], error: null }
+      }
 
       // Get streaks for each user with timeout protection
       const dailyLeaderboard = await Promise.allSettled(
-        (data || []).map(async (entry: any) => {
+        data.map(async (entry: any) => {
           try {
             const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { 
               input_user_id: entry.user_id,
@@ -287,7 +317,6 @@ export const database = {
               streak: streakError ? 0 : (streakData || 0),
             }
           } catch (error) {
-            console.warn(`⚠️ Failed to get streak for user ${entry.user_id}:`, error)
             return {
               id: entry.user_id,
               name: entry.profiles.display_name,
@@ -306,8 +335,8 @@ export const database = {
 
       return { data: successfulResults, error: null }
     } catch (error) {
-      console.error("❌ Database error:", error)
-      return { data: [], error }
+      console.warn("⚠️ Daily leaderboard service unavailable")
+      return { data: [], error: null }
     }
   },
 
