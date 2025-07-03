@@ -20,6 +20,7 @@ import {
   isSupabaseConfigured,
   getChallengeDay,
   getDateFromChallengeDay,
+  getLocalDateString,
   CHALLENGE_CONFIG,
   isChallengeComplete,
   isBeforeChallengeStart,
@@ -71,7 +72,7 @@ export default function Home() {
   const isSupabaseSetup = useMemo(() => isSupabaseConfigured(), [])
 
   // Track current date and update automatically
-  const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split("T")[0])
+  const [currentDate, setCurrentDate] = useState(() => getLocalDateString())
 
   // Edit day modal state
   const [editDayModalOpen, setEditDayModalOpen] = useState(false)
@@ -121,7 +122,7 @@ export default function Home() {
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         // Always check for date changes when tab becomes visible
-        const newDate = new Date().toISOString().split("T")[0]
+        const newDate = getLocalDateString()
         if (newDate !== currentDate) {
           setCurrentDate(newDate)
         }
@@ -967,7 +968,7 @@ export default function Home() {
 
   useEffect(() => {
     const checkDateChange = () => {
-      const newDate = new Date().toISOString().split("T")[0]
+      const newDate = getLocalDateString()
       
       if (newDate !== currentDateRef.current) {
         setCurrentDate(newDate)
@@ -1002,7 +1003,7 @@ export default function Home() {
   // Recalculate current day when date changes
   useEffect(() => {
     // Force check the current date
-    const actualToday = new Date().toISOString().split("T")[0]
+    const actualToday = getLocalDateString()
     
     // If there's a mismatch, force update
     if (currentDate !== actualToday) {
@@ -1447,7 +1448,7 @@ export default function Home() {
 function calculateStreak(progressData: any[]): number {
   if (progressData.length === 0) return 0
 
-  const today = new Date().toISOString().split("T")[0]
+  const today = getLocalDateString()
   const currentDay = getChallengeDay(today)
   
   let streak = 0

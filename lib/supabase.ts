@@ -60,6 +60,14 @@ export const CHALLENGE_CONFIG = {
 }
 
 // Helper functions
+export function getLocalDateString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export function getChallengeDay(date: string): number {
   // Parse dates consistently by creating them as local dates at noon to avoid timezone issues
   const [startYear, startMonth, startDay] = CHALLENGE_CONFIG.START_DATE.split('-').map(Number)
@@ -88,13 +96,13 @@ export function getDateFromChallengeDay(day: number): string {
 }
 
 export function isChallengeComplete(): boolean {
-  const today = new Date().toISOString().split("T")[0]
+  const today = getLocalDateString()
   const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
   return today > endDate
 }
 
 export function isBeforeChallengeStart(): boolean {
-  const today = new Date().toISOString().split("T")[0]
+  const today = getLocalDateString()
   return today < CHALLENGE_CONFIG.START_DATE
 }
 
@@ -398,14 +406,14 @@ export const database = {
 export const storage = {
   getTodayProgress(): number {
     if (typeof window === "undefined") return 0
-    const today = new Date().toISOString().split("T")[0]
+    const today = getLocalDateString()
     const saved = localStorage.getItem(`squats_${today}`)
     return saved ? Number.parseInt(saved, 10) : 0
   },
 
   updateTodayProgress(squats: number): void {
     if (typeof window === "undefined") return
-    const today = new Date().toISOString().split("T")[0]
+    const today = getLocalDateString()
     localStorage.setItem(`squats_${today}`, squats.toString())
 
     // Also update the progress history
@@ -451,12 +459,16 @@ export const storage = {
     const sortedProgress = progress.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     
     let streak = 0
-    const today = new Date().toISOString().split("T")[0]
-    let currentDate = new Date(today)
+    const today = getLocalDateString()
+    let currentDate = new Date()
 
     // Check each day going backwards from today
     for (let i = 0; i < 365; i++) { // Max 365 days to prevent infinite loop
-      const dateStr = currentDate.toISOString().split("T")[0]
+      const year = currentDate.getFullYear()
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0')
+      const day = String(currentDate.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+      
       const dayProgress = sortedProgress.find(p => p.date === dateStr)
       
       if (dayProgress && dayProgress.squats_completed > 0) {
