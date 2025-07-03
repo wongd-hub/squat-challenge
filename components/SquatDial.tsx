@@ -273,7 +273,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         )}
         {isTargetReached && (
           <p className={`${compact ? 'text-sm' : 'text-base'} text-green-600 dark:text-green-400 mt-2 font-semibold`}>
-            🎉 Target reached! Great job!
+            {targetSquats === 0 ? '☕ Rest day! No squats needed today.' : '🎉 Target reached! Great job!'}
           </p>
         )}
         {!compact && !hideTip && (
@@ -293,7 +293,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         disabled={!canBankSquats}
       >
         <span className={`${compact ? 'text-base' : 'text-base sm:text-lg md:text-lg'} font-medium`}>
-          {isNegative ? 'Remove Squats' : isTargetReached ? 'Target Reached!' : 'Bank Squats'}
+          {isNegative ? 'Remove Squats' : isTargetReached ? (targetSquats === 0 ? 'Enjoying Rest Day' : 'Target Reached!') : 'Bank Squats'}
         </span>
       </StarBorder>
     </div>
