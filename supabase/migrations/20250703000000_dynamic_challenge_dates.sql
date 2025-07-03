@@ -1,31 +1,24 @@
 /*
-  # Fix User Streak Calculation Function
-
-  1. Function Updates
-    - Fix streak calculation to properly handle rest days (target_squats = 0)
-    - Ensure consecutive day checking starting from current challenge day
-    - Match the logic from the corrected JavaScript calculateStreak function
-    - Only count days within the challenge period
-    - Skip rest days (don't break streak, but don't count toward it)
-
-  2. Changes Made
-    - Proper consecutive day checking from today backwards
-    - Rest day handling (skip days with target_squats = 0)
-    - Challenge period filtering (only days within challenge dates)
-    - Match JavaScript logic exactly
+  # Make Challenge Functions Dynamic
+  
+  This migration updates the calculate_user_streak function to accept 
+  challenge_start_date and total_challenge_days as parameters instead 
+  of hardcoding them, allowing the frontend to pass values from 
+  environment variables.
 */
 
--- Drop the existing function first
+-- Drop the existing function
 DROP FUNCTION IF EXISTS calculate_user_streak(uuid);
 
--- Create the corrected function
-CREATE OR REPLACE FUNCTION calculate_user_streak(input_user_id uuid)
+-- Create the new dynamic function
+CREATE OR REPLACE FUNCTION calculate_user_streak(
+  input_user_id uuid,
+  challenge_start_date date,
+  total_challenge_days integer
+)
 RETURNS integer AS $$
 DECLARE
   streak_count integer := 0;
-  streak_started boolean := false;
-  challenge_start_date date := '2025-06-15'::date; -- Challenge start date
-  total_challenge_days integer := 23; -- Total challenge days
   current_challenge_day integer;
   check_day integer;
   day_date date;
@@ -78,6 +71,6 @@ BEGIN
   END LOOP;
   
   -- Limit streak to challenge duration (can't have a streak longer than the challenge itself)
-  RETURN LEAST(streak_count, 23);
+  RETURN LEAST(streak_count, total_challenge_days);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER; 

@@ -213,7 +213,11 @@ export const database = {
       const leaderboardWithStreaks = await Promise.allSettled(
         (data || []).map(async (entry: any) => {
           try {
-            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
+            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { 
+              input_user_id: entry.user_id,
+              challenge_start_date: CHALLENGE_CONFIG.START_DATE,
+              total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS
+            })
             return {
               id: entry.user_id,
               name: entry.display_name,
@@ -270,7 +274,11 @@ export const database = {
       const dailyLeaderboard = await Promise.allSettled(
         (data || []).map(async (entry: any) => {
           try {
-            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { input_user_id: entry.user_id })
+            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { 
+              input_user_id: entry.user_id,
+              challenge_start_date: CHALLENGE_CONFIG.START_DATE,
+              total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS
+            })
             return {
               id: entry.user_id,
               name: entry.profiles.display_name,

@@ -1156,20 +1156,7 @@ export default function Home() {
               <Users className="w-3 h-3 mr-1" />
               Leaderboard
             </Button>
-            {/* Temporary debug button */}
-            {currentDay !== 18 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => {
-                  const today = new Date().toISOString().split("T")[0]
-                  setCurrentDate(today)
-                }} 
-                className="glass-subtle text-xs border-red-500 text-red-600"
-              >
-                🔧 Fix Day (Debug)
-              </Button>
-            )}
+
           </div>
         </div>
 
