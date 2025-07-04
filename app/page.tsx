@@ -27,11 +27,12 @@ import {
   checkUserExists,
   updateUserProfile,
 } from "@/lib/supabase"
-import { Calendar, Info, Users, LogOut, User, Trophy } from "lucide-react"
+import { Calendar, Info, Users, LogOut, User, Trophy, Bug } from "lucide-react"
 import FooterFloat from "@/components/FooterFloat"
 import ScrollLottie from "@/components/ScrollLottie"
 import { EditDayModal } from "@/components/EditDayModal"
 import { PreChallengeWelcome } from "@/components/PreChallengeWelcome"
+import BugReportModal from "@/components/BugReportModal"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -79,6 +80,7 @@ export default function Home() {
   const [selectedEditDate, setSelectedEditDate] = useState<string | null>(null)
   const [selectedEditSquats, setSelectedEditSquats] = useState(0)
   const [modalOpenedFromChart, setModalOpenedFromChart] = useState(false)
+  const [bugReportModalOpen, setBugReportModalOpen] = useState(false)
 
   // Load local user profile on startup
   useEffect(() => {
@@ -1088,38 +1090,58 @@ export default function Home() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                {user ? (
-                  <>
-                    <Badge
-                      variant="outline"
-                      className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
-                    >
-                      <User className="w-3 h-3 mr-1" />
-                      {displayName}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleSignOut}
-                      className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20"
-                    >
-                      <LogOut className="w-4 h-4 md:w-3 md:h-3" />
-                    </Button>
-                  </>
-                ) : (
-                  isSupabaseSetup && (
-                    <AuthModal onAuthSuccess={handleAuthSuccess}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20"
+                {/* User info and controls - slide right when bug button is hidden */}
+                <div className={`flex items-center gap-2 transition-all duration-500 ${
+                  isScrolled ? 'transform translate-x-10 md:translate-x-8' : ''
+                }`}>
+                  {user ? (
+                    <>
+                      <Badge
+                        variant="outline"
+                        className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
                       >
                         <User className="w-3 h-3 mr-1" />
-                        Sign In
+                        {displayName}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleSignOut}
+                        className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20"
+                      >
+                        <LogOut className="w-4 h-4 md:w-3 md:h-3" />
                       </Button>
-                    </AuthModal>
-                  )
-                )}
+                    </>
+                  ) : (
+                    isSupabaseSetup && (
+                      <AuthModal onAuthSuccess={handleAuthSuccess}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20"
+                        >
+                          <User className="w-3 h-3 mr-1" />
+                          Sign In
+                        </Button>
+                      </AuthModal>
+                    )
+                  )}
+                </div>
+                
+                {/* Bug Report Button - fades out when scrolling */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setBugReportModalOpen(true)}
+                  className={`glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none transition-all duration-500 ${
+                    isScrolled ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+                  }`}
+                  style={{ touchAction: 'manipulation' }}
+                  title="Report a bug"
+                >
+                  <Bug className="w-4 h-4 md:w-3 md:h-3" />
+                </Button>
+                
                 <ThemeToggle />
               </div>
             </div>
@@ -1142,6 +1164,12 @@ export default function Home() {
 
         {/* Scroll Lottie Animation */}
         <ScrollLottie />
+
+        {/* Bug Report Modal */}
+        <BugReportModal
+          isOpen={bugReportModalOpen}
+          onClose={() => setBugReportModalOpen(false)}
+        />
       </div>
     )
   }
@@ -1166,41 +1194,61 @@ export default function Home() {
 
             {/* Right side - User controls */}
             <div className="flex items-center gap-2">
-              {user ? (
-                <>
-                  <Badge
-                    variant="outline"
-                    className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
-                  >
-                    <User className="w-3 h-3 mr-1" />
-                    {displayName}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleSignOut}
-                    className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none"
-                    style={{ touchAction: 'manipulation' }}
-                  >
-                    <LogOut className="w-4 h-4 md:w-3 md:h-3" />
-                  </Button>
-                </>
-              ) : (
-                isSupabaseSetup && (
-                  <AuthModal onAuthSuccess={handleAuthSuccess}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20 touch-manipulation min-h-[40px] md:min-h-[32px]"
-                      style={{ touchAction: 'manipulation' }}
-                      onClick={() => {}}
+              {/* User info and controls - slide right when bug button is hidden */}
+              <div className={`flex items-center gap-2 transition-all duration-500 ${
+                isScrolled ? 'transform translate-x-10 md:translate-x-8' : ''
+              }`}>
+                {user ? (
+                  <>
+                    <Badge
+                      variant="outline"
+                      className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
                     >
                       <User className="w-3 h-3 mr-1" />
-                      Sign In
+                      {displayName}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleSignOut}
+                      className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none"
+                      style={{ touchAction: 'manipulation' }}
+                    >
+                      <LogOut className="w-4 h-4 md:w-3 md:h-3" />
                     </Button>
-                  </AuthModal>
-                )
-              )}
+                  </>
+                ) : (
+                  isSupabaseSetup && (
+                    <AuthModal onAuthSuccess={handleAuthSuccess}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20 touch-manipulation min-h-[40px] md:min-h-[32px]"
+                        style={{ touchAction: 'manipulation' }}
+                        onClick={() => {}}
+                      >
+                        <User className="w-3 h-3 mr-1" />
+                        Sign In
+                      </Button>
+                    </AuthModal>
+                  )
+                )}
+              </div>
+              
+              {/* Bug Report Button - fades out when scrolling */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setBugReportModalOpen(true)}
+                className={`glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none transition-all duration-500 ${
+                  isScrolled ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+                }`}
+                style={{ touchAction: 'manipulation' }}
+                title="Report a bug"
+              >
+                <Bug className="w-4 h-4 md:w-3 md:h-3" />
+              </Button>
+              
               <ThemeToggle />
             </div>
           </div>
@@ -1436,6 +1484,12 @@ export default function Home() {
           dailyTargets={dailyTargets}
           onSave={handleSaveEditedDay}
           openedFromChart={modalOpenedFromChart}
+        />
+
+        {/* Bug Report Modal */}
+        <BugReportModal
+          isOpen={bugReportModalOpen}
+          onClose={() => setBugReportModalOpen(false)}
         />
 
         {/* Footer */}
