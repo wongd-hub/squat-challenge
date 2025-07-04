@@ -1291,7 +1291,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowInfo(!showInfo)} className="glass-subtle text-xs">
               <Info className="w-3 h-3 mr-1" />
-              About / Donations
+              About / Causes
             </Button>
             <Button variant="ghost" size="sm" className="glass-subtle text-xs" onClick={scrollToLeaderboard}>
               <Users className="w-3 h-3 mr-1" />
@@ -1370,7 +1370,7 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-primary" />
-                About / Donations
+                About / Causes
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-muted-foreground">
