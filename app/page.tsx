@@ -1467,15 +1467,21 @@ function calculateStreak(progressData: any[]): number {
     const dayStr = String(dayDate.getDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${dayStr}`
     
-    const dayProgress = progressData.find(p => p.date === dateStr)
+    // Get the target for this day from CHALLENGE_CONFIG (authoritative source)
+    const targetEntry = CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === day)
+    const target = targetEntry?.target_squats ?? 50  // Use nullish coalescing to preserve 0 values
     
     // Skip rest days (they don't break streak)
-    if (dayProgress?.target_squats === 0) {
+    if (target === 0) {
       continue
     }
     
+    // Find progress data for this day
+    const dayProgress = progressData.find(p => p.date === dateStr)
+    const squatsCompleted = dayProgress?.squats_completed || 0
+    
     // Check if this day was completed
-    const isCompleted = dayProgress && dayProgress.squats_completed >= dayProgress.target_squats && dayProgress.target_squats > 0
+    const isCompleted = squatsCompleted >= target && target > 0
     
     if (isCompleted) {
       streak++
@@ -1484,7 +1490,7 @@ function calculateStreak(progressData: any[]): number {
       break
     }
   }
-
+  
   // Limit streak to challenge duration (can't have a streak longer than the challenge itself)
   return Math.min(streak, 23)
 }
