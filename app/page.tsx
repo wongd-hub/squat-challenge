@@ -1545,6 +1545,18 @@ function calculateStreak(progressData: any[]): number {
     }
   }
   
+  // Include today in streak if it is completed and not a rest day
+  const todayTargetEntry = CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === currentDay)
+  const todayTarget = todayTargetEntry?.target_squats ?? 50
+
+  if (todayTarget > 0) {
+    const todayProgress = progressData.find(p => p.date === today)
+    const todayCompleted = (todayProgress?.squats_completed || 0) >= todayTarget
+    if (todayCompleted) {
+      streak++
+    }
+  }
+
   // Limit streak to challenge duration (can't have a streak longer than the challenge itself)
-  return Math.min(streak, 23)
+  return Math.min(streak, CHALLENGE_CONFIG.TOTAL_DAYS)
 }
