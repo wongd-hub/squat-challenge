@@ -50,6 +50,12 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
             3,214 Total Squats
           </Badge>
         </div>
+        {/* Testing Notice */}
+        <Card className="mb-8 glass-strong border-yellow-300/30 dark:border-yellow-800/30 bg-yellow-50/40 dark:bg-yellow-900/20">
+          <CardContent className="p-4 text-center text-sm text-yellow-800 dark:text-yellow-300">
+            ⚠️ This environment is in testing mode. The real challenge starts on <strong>9&nbsp;July&nbsp;2025</strong>. Feel free to explore!
+          </CardContent>
+        </Card>
       </div>
 
       {/* Countdown Section */}
