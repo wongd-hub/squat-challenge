@@ -322,6 +322,7 @@ export const database = {
               challenge_start_date: CHALLENGE_CONFIG.START_DATE,
               total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS
             })
+            
             return {
               id: entry.user_id,
               name: entry.profiles.display_name,

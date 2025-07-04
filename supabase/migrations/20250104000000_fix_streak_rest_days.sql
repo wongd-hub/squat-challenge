@@ -1,16 +1,15 @@
 /*
-  # Make Challenge Functions Dynamic
+  # Fix Streak Calculation for Rest Days
   
-  This migration updates the calculate_user_streak function to accept 
-  challenge_start_date and total_challenge_days as parameters instead 
-  of hardcoding them, allowing the frontend to pass values from 
-  environment variables.
+  This migration fixes the calculate_user_streak function to properly handle
+  rest days by looking up actual targets from the daily_targets table
+  instead of defaulting to 50 when no progress record exists.
+  
+  Issue: Users who correctly don't log squats on rest days (target=0) 
+  were having their streaks broken because the function defaulted to target=50.
 */
 
--- Drop the existing function
-DROP FUNCTION IF EXISTS calculate_user_streak(uuid);
-
--- Create the new dynamic function
+-- Update the streak calculation function to use actual targets
 CREATE OR REPLACE FUNCTION calculate_user_streak(
   input_user_id uuid,
   challenge_start_date date,
@@ -25,9 +24,9 @@ DECLARE
   progress_record RECORD;
   actual_target integer;
 BEGIN
-  -- Calculate current challenge day
+  -- Calculate current challenge day (PostgreSQL date arithmetic)
   current_challenge_day := LEAST(
-    EXTRACT(days FROM (CURRENT_DATE - challenge_start_date))::integer + 1,
+    (CURRENT_DATE - challenge_start_date) + 1,
     total_challenge_days
   );
   
