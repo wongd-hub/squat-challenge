@@ -396,3 +396,7 @@ If applicable, add screenshots
 **Built with ❤️ for fitness enthusiasts who love beautiful, functional apps.**
 
 *Challenge yourself. Track your progress. Compete with friends. Support important causes.*
+
+## Deployment Note
+
+Triggered redeploy on Vercel – July 2025.
