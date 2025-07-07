@@ -1307,23 +1307,25 @@ export default function Home() {
         </div>
 
         {/* Testing Notice */}
-        <Card className="mb-6 md:mb-8 glass-strong border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 max-w-4xl mx-auto">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="text-blue-600 dark:text-blue-400 mt-0.5">
-                🧪
+        {process.env.NEXT_PUBLIC_SHOW_TEST_MODE === 'true' && (
+          <Card className="mb-6 md:mb-8 glass-strong border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 max-w-4xl mx-auto">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="text-blue-600 dark:text-blue-400 mt-0.5">
+                  🧪
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-blue-800 dark:text-blue-300 text-sm">
+                    🚀 Challenge Launching July 9th, 2025 - Currently in Testing Phase
+                  </h3>
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
+                    We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your squats, and provide feedback! All data will be preserved for the official challenge start.
+                  </p>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold text-blue-800 dark:text-blue-300 text-sm">
-                  🚀 Challenge Launching July 9th, 2025 - Currently in Testing Phase
-                </h3>
-                <p className="text-xs text-blue-700 dark:text-blue-400">
-                  We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your squats, and provide feedback! All data will be preserved for the official challenge start.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Challenge Complete Message */}
         {challengeComplete && (

@@ -59,12 +59,22 @@ A beautiful, production-ready web application for tracking daily squat progress 
 
 3. **Environment Setup (Optional)**
    
-   For cloud features, create `.env.local`:
+   For cloud features and customization, create `.env.local`:
    ```env
+   # Test Mode Control
+   NEXT_PUBLIC_SHOW_TEST_MODE=true                    # Show/hide test mode indicators
+   
+   # Supabase Configuration
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-   NEXT_PUBLIC_CHALLENGE_START_DATE=2025-06-15
+   
+   # Challenge Configuration
+   NEXT_PUBLIC_CHALLENGE_START_DATE=2025-07-09
    NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
+   
+   # GitHub Integration (for bug reports)
+   GITHUB_TOKEN=your-github-token
+   GITHUB_REPO=yourusername/your-repo
    ```
    
    > **Note**: The app works in offline mode without Supabase configuration
@@ -187,11 +197,28 @@ filter_leaderboard_by_challenge_dates() → trigger
 
 ## 🔧 Configuration
 
+### Test Mode Control
+Control whether test mode indicators are displayed throughout the app:
+
+```env
+# Set to "true" to show test mode boxes, "false" or leave empty to hide them
+NEXT_PUBLIC_SHOW_TEST_MODE=true
+```
+
+When `NEXT_PUBLIC_SHOW_TEST_MODE=true`, users will see:
+- Testing notice in the main app dashboard
+- Testing mode indicator in the pre-challenge welcome screen
+
+This is useful for:
+- **Development**: Show test indicators during development
+- **Staging**: Hide test indicators in staging/production environments
+- **Feature Toggling**: Easily switch between test and production modes
+
 ### Challenge Settings
 Edit `lib/supabase.ts` to modify:
 ```typescript
 export const CHALLENGE_CONFIG = {
-  START_DATE: '2025-06-15',  // Challenge start date
+  START_DATE: '2025-07-09',  // Challenge start date
   TOTAL_DAYS: 23,            // Total challenge duration
   DAILY_TARGETS: [
     { day: 1, target_squats: 50 },
@@ -203,13 +230,20 @@ export const CHALLENGE_CONFIG = {
 
 ### Environment Variables
 ```env
+# Test Mode Control
+NEXT_PUBLIC_SHOW_TEST_MODE=true                    # Show/hide test mode indicators
+
 # Required for cloud features
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # Optional configuration
-NEXT_PUBLIC_CHALLENGE_START_DATE=2025-06-15
+NEXT_PUBLIC_CHALLENGE_START_DATE=2025-07-09
 NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
+
+# GitHub Integration (for bug reports)
+GITHUB_TOKEN=your-github-token
+GITHUB_REPO=yourusername/your-repo
 ```
 
 ## 📱 Deployment
