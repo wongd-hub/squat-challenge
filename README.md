@@ -2,8 +2,6 @@
 
 A beautiful, production-ready web application for tracking daily squat progress through a 23-day challenge. Built with Next.js, TypeScript, and Supabase, featuring an intuitive dial interface, real-time progress tracking, and competitive leaderboards with social features.
 
-> **🚀 Currently in Testing Phase** - Launching July 9th, 2025. Try it now and help us test!
-
 ## ✨ Key Features
 
 ### 🎯 Core Features
