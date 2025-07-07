@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Target, Coffee, X } from 'lucide-react';
 import { SquatDial } from './SquatDial';
-import { getChallengeDay } from '@/lib/supabase';
+import { getChallengeDay, getLocalDateString } from '@/lib/supabase';
 
 interface EditDayModalProps {
   isOpen: boolean;
@@ -34,7 +34,7 @@ export function EditDayModal({
   const challengeDay = getChallengeDay(selectedDate);
   const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50;
   const isRestDay = target === 0;
-  const isToday = selectedDate === new Date().toISOString().split("T")[0];
+  const isToday = selectedDate === getLocalDateString();
   const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',

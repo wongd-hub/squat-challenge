@@ -3,7 +3,7 @@
 import React, { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, TooltipProps } from "recharts"
-import { CHALLENGE_CONFIG, getChallengeDay } from "@/lib/supabase"
+import { CHALLENGE_CONFIG, getChallengeDay, getLocalDateString, getDateFromChallengeDay } from "@/lib/supabase"
 
 interface ProgressChartProps {
   data: any[]
@@ -14,7 +14,7 @@ interface ProgressChartProps {
 export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartProps) {
   // Memoize expensive chart data generation
   const chartData = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0]
+    const today = getLocalDateString()
     const currentDay = getChallengeDay(today)
 
     return Array.from({ length: CHALLENGE_CONFIG.TOTAL_DAYS }, (_, index) => {
@@ -24,10 +24,8 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
         CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === day)?.target_squats ??
         50
 
-      // Find actual progress for this day
-      const dayDate = new Date(CHALLENGE_CONFIG.START_DATE)
-      dayDate.setDate(dayDate.getDate() + index)
-      const dateStr = dayDate.toISOString().split("T")[0]
+      // Find actual progress for this day using consistent date calculation
+      const dateStr = getDateFromChallengeDay(day)
 
       const progress = data.find((d) => d.date === dateStr)
       const completed = progress?.squats_completed || 0
@@ -92,7 +90,7 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
       }
     }
 
-    const isClickable = onDayClick && !payload.isRestDay && new Date(payload.date) <= new Date()
+    const isClickable = onDayClick && !payload.isRestDay && payload.date <= getLocalDateString()
     const cursorStyle = isClickable ? 'pointer' : 'default'
 
     return (
@@ -170,7 +168,7 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
                 {new Date(data.date).toLocaleDateString()}
               </span>
             </div>
-            {onDayClick && !data.isRestDay && new Date(data.date) <= new Date() && (
+            {onDayClick && !data.isRestDay && data.date <= getLocalDateString() && (
               <div className="text-xs text-primary pt-1 border-t border-border/50 mt-2">
                 📝 Click to edit this day
               </div>

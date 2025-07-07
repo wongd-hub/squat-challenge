@@ -292,7 +292,7 @@ export const database = {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
-      const targetDate = date || new Date().toISOString().split('T')[0]
+      const targetDate = date || getLocalDateString()
 
       const { data, error } = await supabase
         .from('user_progress')

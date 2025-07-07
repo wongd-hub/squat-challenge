@@ -456,11 +456,16 @@ export default function Home() {
       const sampleData = Array.from({ length: 7 }, (_, i) => {
         const date = new Date()
         date.setDate(date.getDate() - (6 - i))
-        const challengeDay = getChallengeDay(date.toISOString().split("T")[0])
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        const dateStr = `${year}-${month}-${day}`
+        
+        const challengeDay = getChallengeDay(dateStr)
         const target = freshDailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50
 
         return {
-          date: date.toISOString().split("T")[0],
+          date: dateStr,
           squats_completed: Math.floor(Math.random() * 150) + 50, // Higher values: 50-200
           target_squats: target,
         }
