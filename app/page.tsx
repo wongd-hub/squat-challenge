@@ -35,6 +35,7 @@ import ScrollLottie from "@/components/ScrollLottie"
 import { EditDayModal } from "@/components/EditDayModal"
 import { PreChallengeWelcome } from "@/components/PreChallengeWelcome"
 import BugReportModal from "@/components/BugReportModal"
+import ConfettiExplosion from "react-confetti-explosion"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -89,6 +90,9 @@ export default function Home() {
 
   // Track achieved milestones for today to avoid duplicate messages
   const [todayMilestones, setTodayMilestones] = useState<Set<50 | 75 | 100>>(new Set())
+
+  // Track if confetti should be shown for 100% completion (resets on page refresh)
+  const [showConfetti, setShowConfetti] = useState(false)
 
   // Load local user profile on startup
   useEffect(() => {
@@ -803,6 +807,11 @@ export default function Home() {
             description: message,
             duration: 5000, // 5 seconds for all milestones
           })
+          
+          // Trigger confetti for 100% completion
+          if (isCompletion) {
+            setShowConfetti(true)
+          }
         })
         if (newMilestones.length > 0) {
           setTodayMilestones(prev => {
@@ -875,6 +884,11 @@ export default function Home() {
           description: message,
           duration: 5000, // 5 seconds for all milestones
         })
+        
+        // Trigger confetti for 100% completion
+        if (isCompletion) {
+          setShowConfetti(true)
+        }
       })
       if (newMilestones.length > 0) {
         setTodayMilestones(prev => {
@@ -1005,6 +1019,11 @@ export default function Home() {
               description: message,
               duration: 5000, // 5 seconds for all milestones
             })
+            
+            // Trigger confetti for 100% completion
+            if (isCompletion) {
+              setShowConfetti(true)
+            }
           })
           if (newMilestones.length > 0) {
             setTodayMilestones(prev => {
@@ -1085,6 +1104,11 @@ export default function Home() {
             description: message,
             duration: 5000, // 5 seconds for all milestones
           })
+          
+          // Trigger confetti for 100% completion
+          if (isCompletion) {
+            setShowConfetti(true)
+          }
         })
         if (newMilestones.length > 0) {
           setTodayMilestones(prev => {
@@ -1763,6 +1787,19 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Confetti Explosion */}
+        {showConfetti && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50">
+            <ConfettiExplosion 
+              force={0.8}
+              duration={3000}
+              particleCount={250}
+              width={1600}
+              onComplete={() => setShowConfetti(false)}
+            />
+          </div>
         )}
 
         {/* Centered Content Layout */}
