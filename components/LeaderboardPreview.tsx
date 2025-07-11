@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Trophy, Medal, Award, Users, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import CountUp from './CountUp';
-import { database, isSupabaseConfigured, storage } from '@/lib/supabase';
+import { database, isSupabaseConfigured, storage, supabase } from '@/lib/supabase';
 import { LeaderboardEntry, getMockLeaderboardPreview } from '@/lib/mockData';
 
 interface LeaderboardPreviewProps {
@@ -18,9 +18,10 @@ interface LeaderboardPreviewProps {
   userDisplayName?: string; // User's display name for local mode
   userStreak?: number; // User's current streak for local mode
   dataSource?: 'supabase' | 'localStorage'; // Data source indicator
+  liveDataTrigger?: number; // Live data trigger for real-time updates
 }
 
-function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, userStreak, dataSource }: LeaderboardPreviewProps = {}) {
+function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, userStreak, dataSource, liveDataTrigger }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [previousData, setPreviousData] = useState<LeaderboardEntry[]>([]);
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
@@ -132,6 +133,57 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
       loadLeaderboardData(true); // Background refresh
     }
   }, [refreshTrigger]); // Only depend on refreshTrigger, not the function itself
+
+  // Refresh leaderboard when liveDataTrigger changes
+  useEffect(() => {
+    if (liveDataTrigger !== undefined && liveDataTrigger > 0) {
+      loadLeaderboardData(true); // Background refresh for live data
+    }
+  }, [liveDataTrigger]); // Respond to live data changes
+
+  // Setup additional real-time subscription for immediate updates
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== 'supabase' || !supabase) {
+      return
+    }
+
+    // Subscribe to real-time changes for immediate leaderboard updates
+    const realtimeSubscription = supabase
+      .channel('leaderboard_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_progress'
+        },
+        (payload: any) => {
+          // Immediate refresh for better real-time experience
+          setTimeout(() => {
+            loadLeaderboardData(true)
+          }, 100) // Small delay to ensure data consistency
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload: any) => {
+          // Refresh when profile changes (display names)
+          setTimeout(() => {
+            loadLeaderboardData(true)
+          }, 100)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      realtimeSubscription.unsubscribe()
+    }
+  }, [dataSource, loadLeaderboardData])
 
   // Memoize expensive calculations
   const sortedData = useMemo(() => {

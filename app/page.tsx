@@ -581,6 +581,188 @@ export default function Home() {
     }
   }, [dataSource]) // Only depends on dataSource, not user
 
+  // Setup real-time subscription for profile updates (display name changes)
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !supabase) {
+      return // No subscription needed for local mode
+    }
+
+    // Subscribe to profile changes for real-time display name updates
+    const profileSubscription = supabase
+      .channel('profile_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'profiles'
+          // No filter - listen to ALL profile changes
+        },
+        (payload: any) => {
+          // If it's the current user's profile, update local state
+          if (user && payload.new && payload.new.id === user.id) {
+            setUserProfile({ display_name: payload.new.display_name })
+          }
+          // Also trigger leaderboard refresh for display name changes
+          setLeaderboardRefreshTrigger(prev => prev + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      profileSubscription.unsubscribe()
+    }
+  }, [dataSource, user]) // Depends on both dataSource and user
+
+  // Setup real-time subscription for daily targets updates
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !supabase) {
+      return // No subscription needed for local mode
+    }
+
+    // Subscribe to daily targets changes (less frequent but important)
+    const targetsSubscription = supabase
+      .channel('daily_targets_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'daily_targets'
+          // No filter - listen to ALL daily target changes
+        },
+        (payload: any) => {
+          // Reload daily targets when they change
+          loadDailyTargets()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      targetsSubscription.unsubscribe()
+    }
+  }, [dataSource]) // Only depends on dataSource
+
+  // Throttled refresh trigger for stats and charts
+  const [statsRefreshTrigger, setStatsRefreshTrigger] = useState(0)
+  const statsRefreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Setup throttled stats refresh mechanism
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !user || !supabase) {
+      return
+    }
+
+    // Subscribe to changes that affect stats calculations
+    const statsSubscription = supabase
+      .channel('stats_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_progress',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload: any) => {
+          // Throttle stats refresh to prevent excessive recalculations
+          if (statsRefreshTimeoutRef.current) {
+            clearTimeout(statsRefreshTimeoutRef.current)
+          }
+          
+          statsRefreshTimeoutRef.current = setTimeout(() => {
+            setStatsRefreshTrigger(prev => prev + 1)
+          }, 500) // 500ms throttle
+        }
+      )
+      .subscribe()
+
+    return () => {
+      if (statsRefreshTimeoutRef.current) {
+        clearTimeout(statsRefreshTimeoutRef.current)
+      }
+      statsSubscription.unsubscribe()
+    }
+  }, [user, dataSource])
+
+  // Force recalculation of stats when stats refresh trigger changes
+  useEffect(() => {
+    if (statsRefreshTrigger > 0 && user && dataSource === "supabase") {
+      // Trigger a background refresh of challenge data for stats
+      const refreshStats = async () => {
+        try {
+          const challengeResult = await database.getChallengeProgress(user.id)
+          if (challengeResult.data) {
+            const challengeProgressWithTargets = challengeResult.data.map((progress) => {
+              const progressDay = getChallengeDay(progress.date)
+              const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
+              return {
+                ...progress,
+                target_squats: target,
+              }
+            })
+            setChallengeProgressData(challengeProgressWithTargets)
+          }
+        } catch (error) {
+          console.error("❌ Error refreshing stats:", error)
+        }
+      }
+      
+      refreshStats()
+    }
+  }, [statsRefreshTrigger, user, dataSource, dailyTargets])
+
+  // Setup real-time subscription for progress chart updates
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !supabase) {
+      return
+    }
+
+    // Subscribe to changes that affect progress chart
+    const chartSubscription = supabase
+      .channel('progress_chart_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_progress'
+          // Listen to all progress changes for chart updates
+        },
+        (payload: any) => {
+          // For chart updates, we need to refresh progress data
+          if (user && payload.new && payload.new.user_id === user.id) {
+            // Update progress data for chart
+            const refreshChart = async () => {
+              try {
+                const recentResult = await database.getUserProgress(user.id, 7)
+                if (recentResult.data) {
+                  const progressWithTargets = recentResult.data.map((progress) => {
+                    const progressDay = getChallengeDay(progress.date)
+                    const target = dailyTargets.find((t) => t.day === progressDay)?.target_squats ?? 50
+                    return {
+                      ...progress,
+                      target_squats: target,
+                    }
+                  })
+                  setProgressData(progressWithTargets)
+                }
+              } catch (error) {
+                console.error("❌ Error refreshing chart data:", error)
+              }
+            }
+            
+            refreshChart()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      chartSubscription.unsubscribe()
+    }
+  }, [user, dataSource, dailyTargets])
+
   const handleSquatsUpdate = async (newTotalSquats: number) => {
     // Validate against daily target
     if (newTotalSquats > todayTarget) {
@@ -841,6 +1023,73 @@ export default function Home() {
     return calculateStreak(challengeProgressData)
   }, [challengeProgressData])
 
+  // Force re-render trigger for all components showing live data
+  const [liveDataTrigger, setLiveDataTrigger] = useState(0)
+
+  // Setup comprehensive real-time synchronization
+  useEffect(() => {
+    if (!isSupabaseConfigured() || dataSource !== "supabase" || !supabase) {
+      return
+    }
+
+    // Subscribe to all database changes that affect displayed values
+    const comprehensiveSubscription = supabase
+      .channel('comprehensive_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_progress'
+        },
+        (payload: any) => {
+          // Update live data trigger to force re-render of all components
+          setLiveDataTrigger(prev => prev + 1)
+          
+          // Also refresh leaderboard
+          setTimeout(() => {
+            setLeaderboardRefreshTrigger(prev => prev + 1)
+          }, 200)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profiles'
+        },
+        (payload: any) => {
+          // Update live data trigger for profile changes
+          setLiveDataTrigger(prev => prev + 1)
+          setLeaderboardRefreshTrigger(prev => prev + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      comprehensiveSubscription.unsubscribe()
+    }
+  }, [dataSource])
+
+  // Update today's squats when live data changes
+  useEffect(() => {
+    if (liveDataTrigger > 0 && user && dataSource === "supabase") {
+      const refreshTodaySquats = async () => {
+        try {
+          const todayProgress = challengeProgressData.find(p => p.date === currentDate)
+          if (todayProgress) {
+            setTodaySquats(todayProgress.squats_completed)
+          }
+        } catch (error) {
+          console.error("❌ Error refreshing today's squats:", error)
+        }
+      }
+      
+      refreshTodaySquats()
+    }
+  }, [liveDataTrigger, challengeProgressData, currentDate, user, dataSource])
+
   // Stable props for LeaderboardPreview to prevent constant re-renders
   const leaderboardProps = useMemo(() => ({
     refreshTrigger: leaderboardRefreshTrigger,
@@ -848,8 +1097,9 @@ export default function Home() {
     userTodaySquats: todaySquats,
     userDisplayName: effectiveUserProfile?.display_name,
     userStreak: currentStreak, // Pass the correct current streak
-    dataSource: dataSource === "local" ? "localStorage" as const : "supabase" as const
-  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, currentStreak, dataSource])
+    dataSource: dataSource === "local" ? "localStorage" as const : "supabase" as const,
+    liveDataTrigger: liveDataTrigger // Add live data trigger for real-time updates
+  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, currentStreak, dataSource, liveDataTrigger])
 
   // Calculate actual completed days (not streak) - exclude rest days
   const completedDays = useMemo(() => {
@@ -1464,6 +1714,7 @@ export default function Home() {
             streak={currentStreak}
             weeklyGoal={weeklyGoal}
             weeklyProgress={weeklyProgress}
+            liveDataTrigger={liveDataTrigger}
           />
 
           {/* Progress Chart */}
