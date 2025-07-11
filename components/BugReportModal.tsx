@@ -90,6 +90,10 @@ export default function BugReportModal({ isOpen, onClose }: BugReportModalProps)
     setSubmitStatus('idle')
 
     try {
+      // Get current domain/URL for bug report context
+      const currentDomain = typeof window !== 'undefined' ? window.location.origin : 'Unknown'
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : 'Unknown'
+      
       // Create GitHub issue body
       let issueBody = `
 ## Issue Description
@@ -100,6 +104,8 @@ ${formData.type === 'bug' ? '🐛 Bug' : formData.type === 'feature' ? '✨ Feat
 
 ## Reporter Info
 - Email: ${formData.email || 'Not provided'}
+- Domain: ${currentDomain}
+- URL: ${currentUrl}
 - Submitted via: Squat Challenge App
 - Timestamp: ${new Date().toISOString()}
 `.trim()
