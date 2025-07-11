@@ -27,6 +27,8 @@ import {
   checkUserExists,
   updateUserProfile,
 } from "@/lib/supabase"
+import { getNewMilestones, getRandomEncouragementMessage } from "@/lib/utils"
+import { useToast } from "@/hooks/use-toast"
 import { Calendar, Info, Users, LogOut, User, Trophy, Bug } from "lucide-react"
 import FooterFloat from "@/components/FooterFloat"
 import ScrollLottie from "@/components/ScrollLottie"
@@ -81,6 +83,12 @@ export default function Home() {
   const [selectedEditSquats, setSelectedEditSquats] = useState(0)
   const [modalOpenedFromChart, setModalOpenedFromChart] = useState(false)
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false)
+
+  // Toast hook for encouragement messages
+  const { toast } = useToast()
+
+  // Track achieved milestones for today to avoid duplicate messages
+  const [todayMilestones, setTodayMilestones] = useState<Set<50 | 75 | 100>>(new Set())
 
   // Load local user profile on startup
   useEffect(() => {
@@ -785,6 +793,25 @@ export default function Home() {
         // Update local state immediately for responsive UI
         setTodaySquats(newTotalSquats)
 
+        // Check for new milestones and show encouragement messages
+        const newMilestones = getNewMilestones(newTotalSquats, todayTarget, todayMilestones)
+        newMilestones.forEach(milestone => {
+          const message = getRandomEncouragementMessage(milestone)
+          const isCompletion = milestone === 100
+          toast({
+            title: isCompletion ? "🎊 GOAL COMPLETED! 🎊" : "Milestone Achieved! 🎉",
+            description: message,
+            duration: 5000, // 5 seconds for all milestones
+          })
+        })
+        if (newMilestones.length > 0) {
+          setTodayMilestones(prev => {
+            const updated = new Set(prev)
+            newMilestones.forEach(m => updated.add(m))
+            return updated
+          })
+        }
+
         // Reload both challenge progress AND recent progress to update all displays
         const [challengeResult, recentResult] = await Promise.all([
           database.getChallengeProgress(user.id),
@@ -837,6 +864,25 @@ export default function Home() {
       // Save to local storage
       storage.updateTodayProgress(newTotalSquats)
       setTodaySquats(newTotalSquats)
+
+      // Check for new milestones and show encouragement messages
+      const newMilestones = getNewMilestones(newTotalSquats, todayTarget, todayMilestones)
+      newMilestones.forEach(milestone => {
+        const message = getRandomEncouragementMessage(milestone)
+        const isCompletion = milestone === 100
+        toast({
+          title: isCompletion ? "🎊 GOAL COMPLETED! 🎊" : "Milestone Achieved! 🎉",
+          description: message,
+          duration: 5000, // 5 seconds for all milestones
+        })
+      })
+      if (newMilestones.length > 0) {
+        setTodayMilestones(prev => {
+          const updated = new Set(prev)
+          newMilestones.forEach(m => updated.add(m))
+          return updated
+        })
+      }
 
       // Update challenge progress data for local storage
       const challengeProgress = storage.getChallengeProgress()
@@ -945,9 +991,28 @@ export default function Home() {
           setProgressData(progressWithTargets)
         }
 
-        // If editing today's date, update today's squats
+        // If editing today's date, update today's squats and check milestones
         if (date === currentDate) {
           setTodaySquats(squats)
+          
+          // Check for new milestones and show encouragement messages for today's edits
+          const newMilestones = getNewMilestones(squats, target, todayMilestones)
+          newMilestones.forEach(milestone => {
+            const message = getRandomEncouragementMessage(milestone)
+            const isCompletion = milestone === 100
+            toast({
+              title: isCompletion ? "🎊 GOAL COMPLETED! 🎊" : "Milestone Achieved! 🎉",
+              description: message,
+              duration: 5000, // 5 seconds for all milestones
+            })
+          })
+          if (newMilestones.length > 0) {
+            setTodayMilestones(prev => {
+              const updated = new Set(prev)
+              newMilestones.forEach(m => updated.add(m))
+              return updated
+            })
+          }
         }
 
             // Trigger leaderboard refresh (throttled)
@@ -1006,9 +1071,28 @@ export default function Home() {
 
       setProgressData(updatedProgress.slice(-7))
 
-      // If editing today's date, update today's squats
+      // If editing today's date, update today's squats and check milestones
       if (date === currentDate) {
         setTodaySquats(squats)
+        
+        // Check for new milestones and show encouragement messages for today's edits
+        const newMilestones = getNewMilestones(squats, target, todayMilestones)
+        newMilestones.forEach(milestone => {
+          const message = getRandomEncouragementMessage(milestone)
+          const isCompletion = milestone === 100
+          toast({
+            title: isCompletion ? "🎊 GOAL COMPLETED! 🎊" : "Milestone Achieved! 🎉",
+            description: message,
+            duration: 5000, // 5 seconds for all milestones
+          })
+        })
+        if (newMilestones.length > 0) {
+          setTodayMilestones(prev => {
+            const updated = new Set(prev)
+            newMilestones.forEach(m => updated.add(m))
+            return updated
+          })
+        }
       }
 
     }
@@ -1221,6 +1305,8 @@ export default function Home() {
   // Keep ref in sync with state
   useEffect(() => {
     currentDateRef.current = currentDate
+    // Reset milestones when date changes (new day)
+    setTodayMilestones(new Set())
   }, [currentDate])
 
   useEffect(() => {
