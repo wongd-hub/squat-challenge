@@ -3,62 +3,112 @@
 import React, { useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, TooltipProps } from "recharts"
-import { CHALLENGE_CONFIG, getChallengeDay, getLocalDateString, getDateFromChallengeDay } from "@/lib/supabase"
+import { CHALLENGE_CONFIG, FOLLOWON_PROGRAMS, getChallengeDay, getLocalDateString, getDateFromChallengeDay, getFollowOnStartDate, getFollowOnDay } from "@/lib/supabase"
 
 interface ProgressChartProps {
   data: any[]
   dailyTargets: any[]
   onDayClick?: (date: string, currentSquats: number, target: number) => void
+  // Follow-on program props
+  isFollowOnMode?: boolean
+  followOnProgram?: keyof typeof FOLLOWON_PROGRAMS | null
+  followOnData?: any[]
 }
 
-export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartProps) {
+export function ProgressChart({ data, dailyTargets, onDayClick, isFollowOnMode = false, followOnProgram, followOnData }: ProgressChartProps) {
   // Memoize expensive chart data generation
   const chartData = useMemo(() => {
     const today = getLocalDateString()
-    const currentDay = getChallengeDay(today)
+    
+    if (isFollowOnMode && followOnProgram && followOnData) {
+      // Follow-on program chart data
+      const currentFollowOnDay = getFollowOnDay(today, followOnProgram)
+      const programData = FOLLOWON_PROGRAMS[followOnProgram]
+      
+      return Array.from({ length: programData.duration }, (_, index) => {
+        const day = index + 1
+        const target = programData.targets.find((t) => t.day === day)?.target_squats ?? 0
+        
+        // Calculate date for this follow-on day
+        const followOnStartDate = getFollowOnStartDate()
+        const followOnStart = new Date(followOnStartDate)
+        const dayDate = new Date(followOnStart)
+        dayDate.setDate(followOnStart.getDate() + day - 1)
+        
+        const year = dayDate.getFullYear()
+        const month = String(dayDate.getMonth() + 1).padStart(2, '0')
+        const dayStr = String(dayDate.getDate()).padStart(2, '0')
+        const dateStr = `${year}-${month}-${dayStr}`
+        
+        const progress = followOnData.find((d) => d.date === dateStr)
+        const completed = progress?.squats_completed || 0
+        
+        const isRestDay = target === 0
+        const isToday = day === currentFollowOnDay && dateStr === today
+        const isCompleted = !isRestDay && completed >= target
+        const isPartial = !isRestDay && completed > 0 && completed < target
+        
+        return {
+          day: `Day ${day}`,
+          dayNumber: day,
+          target,
+          completed,
+          percentage: isRestDay ? 100 : Math.min((completed / target) * 100, 100),
+          isRestDay,
+          isToday,
+          isCompleted,
+          isPartial,
+          date: dateStr,
+        }
+      })
+    } else {
+      // Original challenge chart data
+      const currentDay = getChallengeDay(today)
+      
+      return Array.from({ length: CHALLENGE_CONFIG.TOTAL_DAYS }, (_, index) => {
+        const day = index + 1
+        const target =
+          dailyTargets.find((t) => t.day === day)?.target_squats ??
+          CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === day)?.target_squats ??
+          50
 
-    return Array.from({ length: CHALLENGE_CONFIG.TOTAL_DAYS }, (_, index) => {
-      const day = index + 1
-      const target =
-        dailyTargets.find((t) => t.day === day)?.target_squats ??
-        CHALLENGE_CONFIG.DAILY_TARGETS.find((t) => t.day === day)?.target_squats ??
-        50
+        // Find actual progress for this day using consistent date calculation
+        const dateStr = getDateFromChallengeDay(day)
 
-      // Find actual progress for this day using consistent date calculation
-      const dateStr = getDateFromChallengeDay(day)
+        const progress = data.find((d) => d.date === dateStr)
+        const completed = progress?.squats_completed || 0
 
-      const progress = data.find((d) => d.date === dateStr)
-      const completed = progress?.squats_completed || 0
+        const isRestDay = target === 0
+        const isToday = day === currentDay
+        const isCompleted = !isRestDay && completed >= target
+        const isPartial = !isRestDay && completed > 0 && completed < target
 
-      const isRestDay = target === 0
-      const isToday = day === currentDay
-      const isCompleted = !isRestDay && completed >= target
-      const isPartial = !isRestDay && completed > 0 && completed < target
-
-      return {
-        day: `Day ${day}`,
-        dayNumber: day,
-        target,
-        completed,
-        percentage: isRestDay ? 100 : Math.min((completed / target) * 100, 100),
-        isRestDay,
-        isToday,
-        isCompleted,
-        isPartial,
-        date: dateStr,
-      }
-    })
-  }, [data, dailyTargets])
+        return {
+          day: `Day ${day}`,
+          dayNumber: day,
+          target,
+          completed,
+          percentage: isRestDay ? 100 : Math.min((completed / target) * 100, 100),
+          isRestDay,
+          isToday,
+          isCompleted,
+          isPartial,
+          date: dateStr,
+        }
+      })
+    }
+  }, [data, dailyTargets, isFollowOnMode, followOnProgram, followOnData])
 
   // Memoize stats calculations
   const stats = useMemo(() => {
     const totalTarget = chartData.reduce((sum, day) => sum + day.target, 0)
     const totalCompleted = chartData.reduce((sum, day) => sum + day.completed, 0)
     const daysCompleted = chartData.filter((day) => day.isCompleted).length
-    const overallPercentage = Math.round((totalCompleted / totalTarget) * 100)
+    const overallPercentage = totalTarget > 0 ? Math.round((totalCompleted / totalTarget) * 100) : 0
+    const totalDays = isFollowOnMode && followOnProgram ? FOLLOWON_PROGRAMS[followOnProgram].duration : CHALLENGE_CONFIG.TOTAL_DAYS
 
-    return { totalTarget, totalCompleted, daysCompleted, overallPercentage }
-  }, [chartData])
+    return { totalTarget, totalCompleted, daysCompleted, overallPercentage, totalDays }
+  }, [chartData, isFollowOnMode, followOnProgram])
 
   // Memoize Y-axis calculation
   const yAxisMax = useMemo(() => {
@@ -185,7 +235,13 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
       <CardHeader className="pb-4">
         <div className="space-y-3">
           <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-            📊 23-Day Challenge Progress
+            {isFollowOnMode && followOnProgram ? (
+              <>
+                {FOLLOWON_PROGRAMS[followOnProgram].emoji} {stats.totalDays}-Day {FOLLOWON_PROGRAMS[followOnProgram].name} Progress
+              </>
+            ) : (
+              <>📊 {stats.totalDays}-Day Challenge Progress</>
+            )}
           </CardTitle>
           
           {/* Stats Row */}
@@ -194,7 +250,12 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
               Total: {stats.totalCompleted.toLocaleString()} / {stats.totalTarget.toLocaleString()} squats
             </span>
             <span className="font-medium">Overall: {stats.overallPercentage}%</span>
-            <span className="font-medium">Days completed: {stats.daysCompleted}/23</span>
+            <span className="font-medium">Days completed: {stats.daysCompleted}/{stats.totalDays}</span>
+            {isFollowOnMode && followOnProgram && (
+              <span className="font-medium text-blue-600 dark:text-blue-400">
+                Follow-on Program Active
+              </span>
+            )}
           </div>
 
           {/* Legend */}

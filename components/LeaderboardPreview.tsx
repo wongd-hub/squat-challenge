@@ -19,12 +19,16 @@ interface LeaderboardPreviewProps {
   userStreak?: number; // User's current streak for local mode
   dataSource?: 'supabase' | 'localStorage'; // Data source indicator
   liveDataTrigger?: number; // Live data trigger for real-time updates
+  // Follow-on program props
+  isInFollowOn?: boolean; // Whether user is in follow-on program
+  userChallengeSquats?: number; // User's challenge-only squats
+  userFollowOnSquats?: number; // User's follow-on program squats
 }
 
-function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, userStreak, dataSource, liveDataTrigger }: LeaderboardPreviewProps = {}) {
+function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userTodaySquats, userDisplayName, userStreak, dataSource, liveDataTrigger, isInFollowOn = false, userChallengeSquats, userFollowOnSquats }: LeaderboardPreviewProps = {}) {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [previousData, setPreviousData] = useState<LeaderboardEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'challenge' | 'followon' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isUsingSupabase, setIsUsingSupabase] = useState(false);
@@ -59,13 +63,15 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
       
       // If we're in local mode and have user data, inject the user into the leaderboard
       if (dataSource === 'localStorage' && userDisplayName && (userTotalSquats || userTodaySquats)) {
-        const userEntry: LeaderboardEntry = {
+        const userEntry: LeaderboardEntry & { challengeSquats?: number; followOnSquats?: number } = {
           id: 'local-user',
           name: userDisplayName,
           todaySquats: userTodaySquats || 0,
           totalSquats: userTotalSquats || 0,
           streak: userStreak || 0, // Use the passed userStreak prop instead of calculating locally
           rank: 1, // Will be recalculated when sorted
+          challengeSquats: userChallengeSquats,
+          followOnSquats: userFollowOnSquats,
         };
         
         // Add user entry and remove duplicate if exists
@@ -190,14 +196,24 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
     return [...leaderboardData].sort((a, b) => {
       if (activeTab === 'today') {
         return b.todaySquats - a.todaySquats;
+      } else if (activeTab === 'challenge') {
+        // For challenge tab, prioritize challenge squats (if available) over total
+        const aChallengeSquats = (a as any).challengeSquats ?? a.totalSquats;
+        const bChallengeSquats = (b as any).challengeSquats ?? b.totalSquats;
+        return bChallengeSquats - aChallengeSquats;
+      } else if (activeTab === 'followon') {
+        // For follow-on tab, show follow-on squats
+        const aFollowOnSquats = (a as any).followOnSquats ?? 0;
+        const bFollowOnSquats = (b as any).followOnSquats ?? 0;
+        return bFollowOnSquats - aFollowOnSquats;
       }
       return b.totalSquats - a.totalSquats;
     }).slice(0, 5); // Show top 5
   }, [leaderboardData, activeTab]);
 
   const getRankIcon = useCallback((rank: number) => {
-    // Only show special icons for all-time leaderboard
-    if (activeTab === 'total') {
+    // Show special icons for all-time and challenge leaderboards
+    if (activeTab === 'total' || activeTab === 'challenge') {
       switch (rank) {
         case 1:
           return <Trophy className="w-4 h-4 text-yellow-500" />;
@@ -209,14 +225,14 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
           return <span className="w-4 h-4 flex items-center justify-center text-xs font-bold text-muted-foreground">#{rank}</span>;
       }
     } else {
-      // For daily leaderboard, just show rank numbers
+      // For daily and follow-on leaderboards, just show rank numbers
       return <span className="w-4 h-4 flex items-center justify-center text-xs font-bold text-muted-foreground">#{rank}</span>;
     }
   }, [activeTab]);
 
   const getRankBadgeColor = useCallback((rank: number) => {
-    // Only show special badges for all-time leaderboard
-    if (activeTab === 'total') {
+    // Show special badges for all-time and challenge leaderboards
+    if (activeTab === 'total' || activeTab === 'challenge') {
       switch (rank) {
         case 1:
           return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
@@ -233,7 +249,7 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
   }, [activeTab]);
 
   const getBadgeText = useCallback((rank: number) => {
-    // Only show special badges for all-time leaderboard
+    // Show special badges for all-time and challenge leaderboards
     if (activeTab === 'total') {
       switch (rank) {
         case 1:
@@ -242,6 +258,17 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
           return '🥈 Runner-up';
         case 3:
           return '🥉 Third Place';
+        default:
+          return null;
+      }
+    } else if (activeTab === 'challenge') {
+      switch (rank) {
+        case 1:
+          return '🏆 Challenge Winner';
+        case 2:
+          return '🥈 2nd Place';
+        case 3:
+          return '🥉 3rd Place';
         default:
           return null;
       }
@@ -257,7 +284,17 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
 
   // Memoize community total calculation
   const communityTotal = useMemo(() => {
-    return leaderboardData.reduce((acc, entry) => acc + (activeTab === 'today' ? entry.todaySquats : entry.totalSquats), 0);
+    return leaderboardData.reduce((acc, entry) => {
+      if (activeTab === 'today') {
+        return acc + entry.todaySquats;
+      } else if (activeTab === 'challenge') {
+        return acc + ((entry as any).challengeSquats ?? entry.totalSquats);
+      } else if (activeTab === 'followon') {
+        return acc + ((entry as any).followOnSquats ?? 0);
+      } else { // total
+        return acc + entry.totalSquats;
+      }
+    }, 0);
   }, [leaderboardData, activeTab]);
 
   return (
@@ -305,21 +342,45 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
         ) : (
           <>
             {/* Tab Navigation */}
-            <div className="flex space-x-2 mb-4">
+            <div className={`grid gap-2 mb-4 ${isInFollowOn ? 'grid-cols-4' : 'grid-cols-2'}`}>
               <Button
                 variant={activeTab === 'today' ? 'default' : 'ghost'}
                 onClick={() => setActiveTab('today')}
                 size="sm"
-                className="flex-1"
+                className="text-xs"
               >
                 <TrendingUp className="w-3 h-3 mr-1" />
                 Today
               </Button>
+              
+              {isInFollowOn && (
+                <>
+                  <Button
+                    variant={activeTab === 'challenge' ? 'default' : 'ghost'}
+                    onClick={() => setActiveTab('challenge')}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <Trophy className="w-3 h-3 mr-1" />
+                    Challenge
+                  </Button>
+                  <Button
+                    variant={activeTab === 'followon' ? 'default' : 'ghost'}
+                    onClick={() => setActiveTab('followon')}
+                    size="sm"
+                    className="text-xs"
+                  >
+                    🚀
+                    Follow-on
+                  </Button>
+                </>
+              )}
+              
               <Button
                 variant={activeTab === 'total' ? 'default' : 'ghost'}
                 onClick={() => setActiveTab('total')}
                 size="sm"
-                className="flex-1"
+                className="text-xs"
               >
                 <Trophy className="w-3 h-3 mr-1" />
                 All-Time
@@ -337,10 +398,28 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
                 <AnimatePresence mode="popLayout">
                   {sortedData.map((entry, index) => {
                     const displayRank = index + 1;
-                    const isTopThree = displayRank <= 3 && activeTab === 'total';
+                    const isTopThree = displayRank <= 3 && (activeTab === 'total' || activeTab === 'challenge');
                     const badgeText = getBadgeText(displayRank);
-                    const currentValue = activeTab === 'today' ? entry.todaySquats : entry.totalSquats;
-                    const previousValue = getPreviousValue(entry.id, activeTab === 'today' ? 'todaySquats' : 'totalSquats');
+                    
+                    // Determine current value based on active tab
+                    let currentValue = 0;
+                    let previousValueField: 'todaySquats' | 'totalSquats' = 'totalSquats';
+                    
+                    if (activeTab === 'today') {
+                      currentValue = entry.todaySquats;
+                      previousValueField = 'todaySquats';
+                    } else if (activeTab === 'challenge') {
+                      currentValue = (entry as any).challengeSquats ?? entry.totalSquats;
+                      previousValueField = 'totalSquats';
+                    } else if (activeTab === 'followon') {
+                      currentValue = (entry as any).followOnSquats ?? 0;
+                      previousValueField = 'totalSquats';
+                    } else { // total
+                      currentValue = entry.totalSquats;
+                      previousValueField = 'totalSquats';
+                    }
+                    
+                    const previousValue = getPreviousValue(entry.id, previousValueField);
                     
                     return (
                       <motion.div
@@ -434,7 +513,10 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
                     {communityTotal.toLocaleString()}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {activeTab === 'today' ? "Today's Total" : 'Community Total'}
+                    {activeTab === 'today' ? "Today's Total" : 
+                     activeTab === 'challenge' ? 'Challenge Total' :
+                     activeTab === 'followon' ? 'Follow-on Total' :
+                     'Community Total'}
                   </div>
                 </div>
                 

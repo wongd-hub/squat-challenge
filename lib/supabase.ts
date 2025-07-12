@@ -59,6 +59,164 @@ export const CHALLENGE_CONFIG = {
   ],
 }
 
+// Follow-on program configurations (start after main challenge ends)
+export const FOLLOWON_PROGRAMS = {
+  RETAIN: {
+    name: "Retain Strength",
+    description: "Maintain your strength with smart, science-based maintenance volume (~50% of peak)",
+    emoji: "🔒",
+    duration: 28, // 4 weeks
+    targets: [
+      // Week 1: Transition to maintenance (60-70% of peak)
+      { day: 1, target_squats: 140 },
+      { day: 2, target_squats: 100 },
+      { day: 3, target_squats: 150 },
+      { day: 4, target_squats: 110 },
+      { day: 5, target_squats: 160 },
+      { day: 6, target_squats: 90 },
+      { day: 7, target_squats: 0 }, // Rest day
+      
+      // Week 2: Core maintenance targets (50-60% of peak)
+      { day: 8, target_squats: 130 },
+      { day: 9, target_squats: 95 },
+      { day: 10, target_squats: 140 },
+      { day: 11, target_squats: 105 },
+      { day: 12, target_squats: 150 },
+      { day: 13, target_squats: 85 },
+      { day: 14, target_squats: 0 }, // Rest day
+      
+      // Week 3: Sustainable maintenance
+      { day: 15, target_squats: 135 },
+      { day: 16, target_squats: 100 },
+      { day: 17, target_squats: 145 },
+      { day: 18, target_squats: 110 },
+      { day: 19, target_squats: 155 },
+      { day: 20, target_squats: 90 },
+      { day: 21, target_squats: 0 }, // Rest day
+      
+      // Week 4: Long-term maintenance pattern
+      { day: 22, target_squats: 120 },
+      { day: 23, target_squats: 90 },
+      { day: 24, target_squats: 130 },
+      { day: 25, target_squats: 100 },
+      { day: 26, target_squats: 140 },
+      { day: 27, target_squats: 80 },
+      { day: 28, target_squats: 0 }, // Rest day
+    ],
+  },
+  RAMPUP: {
+    name: "Ramp Up",
+    description: "Continue building strength beyond the challenge peak",
+    emoji: "🚀",
+    duration: 28, // 4 weeks
+    targets: [
+      // Week 1: Build on challenge peak (230)
+      { day: 1, target_squats: 235 },
+      { day: 2, target_squats: 200 },
+      { day: 3, target_squats: 240 },
+      { day: 4, target_squats: 210 },
+      { day: 5, target_squats: 245 },
+      { day: 6, target_squats: 185 },
+      { day: 7, target_squats: 0 }, // Rest day
+      
+      // Week 2: Progressive increase
+      { day: 8, target_squats: 250 },
+      { day: 9, target_squats: 220 },
+      { day: 10, target_squats: 255 },
+      { day: 11, target_squats: 230 },
+      { day: 12, target_squats: 260 },
+      { day: 13, target_squats: 200 },
+      { day: 14, target_squats: 0 }, // Rest day
+      
+      // Week 3: Higher targets
+      { day: 15, target_squats: 265 },
+      { day: 16, target_squats: 235 },
+      { day: 17, target_squats: 270 },
+      { day: 18, target_squats: 245 },
+      { day: 19, target_squats: 275 },
+      { day: 20, target_squats: 210 },
+      { day: 21, target_squats: 0 }, // Rest day
+      
+      // Week 4: Peak performance
+      { day: 22, target_squats: 280 },
+      { day: 23, target_squats: 250 },
+      { day: 24, target_squats: 285 },
+      { day: 25, target_squats: 255 },
+      { day: 26, target_squats: 290 },
+      { day: 27, target_squats: 230 },
+      { day: 28, target_squats: 0 }, // Rest day
+    ],
+  },
+}
+
+// Follow-on program helper functions
+export function getFollowOnStartDate(): string {
+  // Follow-on programs start the day after main challenge ends
+  const challengeEndDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
+  const followOnStartDate = new Date(challengeEndDate)
+  followOnStartDate.setDate(followOnStartDate.getDate() + 1)
+  
+  const year = followOnStartDate.getFullYear()
+  const month = String(followOnStartDate.getMonth() + 1).padStart(2, '0')
+  const day = String(followOnStartDate.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function getFollowOnDay(date: string, program: keyof typeof FOLLOWON_PROGRAMS): number {
+  const followOnStartDate = getFollowOnStartDate()
+  const [startYear, startMonth, startDay] = followOnStartDate.split('-').map(Number)
+  const [currentYear, currentMonth, currentDay] = date.split('-').map(Number)
+  
+  const startDate = new Date(startYear, startMonth - 1, startDay, 12, 0, 0)
+  const currentDate = new Date(currentYear, currentMonth - 1, currentDay, 12, 0, 0)
+  
+  const diffTime = currentDate.getTime() - startDate.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  return Math.max(1, Math.min(diffDays + 1, FOLLOWON_PROGRAMS[program].duration))
+}
+
+export function isInFollowOnProgram(date: string): boolean {
+  const today = date || getLocalDateString()
+  const followOnStartDate = getFollowOnStartDate()
+  
+  // Check if we're after the follow-on start date
+  return today >= followOnStartDate
+}
+
+// IMPORTANT: This function only checks dates, not user program selection
+// For checking if a specific user is in a follow-on program, use database.getUserActiveFollowOnProgram()
+export function isUserInFollowOnProgram(challengeComplete: boolean, userHasActiveProgram: boolean): boolean {
+  // User is in follow-on program if:
+  // 1. Challenge is complete AND
+  // 2. User has an active follow-on program selection
+  return challengeComplete && userHasActiveProgram
+}
+
+export function getFollowOnTarget(date: string, program: keyof typeof FOLLOWON_PROGRAMS): number {
+  if (!isInFollowOnProgram(date)) return 0
+  
+  const followOnDay = getFollowOnDay(date, program)
+  const target = FOLLOWON_PROGRAMS[program].targets.find((t) => t.day === followOnDay)
+  return target?.target_squats ?? 0
+}
+
+export function isFollowOnComplete(program: keyof typeof FOLLOWON_PROGRAMS): boolean {
+  const today = getLocalDateString()
+  const followOnStartDate = getFollowOnStartDate()
+  
+  // Calculate end date for the follow-on program
+  const startDate = new Date(followOnStartDate)
+  const endDate = new Date(startDate)
+  endDate.setDate(startDate.getDate() + FOLLOWON_PROGRAMS[program].duration - 1)
+  
+  const year = endDate.getFullYear()
+  const month = String(endDate.getMonth() + 1).padStart(2, '0')
+  const day = String(endDate.getDate()).padStart(2, '0')
+  const endDateStr = `${year}-${month}-${day}`
+  
+  return today > endDateStr
+}
+
 // Helper functions
 export function getLocalDateString(): string {
   const now = new Date()
@@ -216,7 +374,128 @@ export const database = {
     }
   },
 
-  // Leaderboard functions with reduced logging
+  // Follow-on program functions
+  async getFollowOnPrograms() {
+    if (!supabase) return { data: [], error: "Supabase not configured" }
+
+    try {
+      const { data, error } = await supabase
+        .from("followon_programs")
+        .select("*")
+        .eq("is_active", true)
+        .order("id")
+
+      if (error) {
+        console.warn("⚠️ Follow-on programs not available, using hardcoded data:", error.message)
+        return { 
+          data: Object.entries(FOLLOWON_PROGRAMS).map(([id, program]) => ({
+            id,
+            name: program.name,
+            description: program.description,
+            emoji: program.emoji,
+            duration: program.duration
+          })), 
+          error: null 
+        }
+      }
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.warn("⚠️ Follow-on programs service unavailable, using hardcoded data")
+      return { 
+        data: Object.entries(FOLLOWON_PROGRAMS).map(([id, program]) => ({
+          id,
+          name: program.name,
+          description: program.description,
+          emoji: program.emoji,
+          duration: program.duration
+        })), 
+        error: null 
+             }
+     }
+   },
+
+   async getFollowOnDailyTargets(programId: string) {
+    if (!supabase) return { data: FOLLOWON_PROGRAMS[programId as keyof typeof FOLLOWON_PROGRAMS]?.targets || [], error: "Supabase not configured" }
+
+    try {
+      const { data, error } = await supabase.rpc('get_followon_daily_targets', {
+        input_program_id: programId
+      })
+
+      if (error) {
+        console.warn("⚠️ Follow-on daily targets not available, using hardcoded data:", error.message)
+        return { 
+          data: FOLLOWON_PROGRAMS[programId as keyof typeof FOLLOWON_PROGRAMS]?.targets || [], 
+          error: null 
+        }
+      }
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      console.warn("⚠️ Follow-on daily targets service unavailable, using hardcoded data")
+      return { 
+        data: FOLLOWON_PROGRAMS[programId as keyof typeof FOLLOWON_PROGRAMS]?.targets || [], 
+        error: null 
+             }
+     }
+   },
+
+   async getUserActiveFollowOnProgram(userId: string) {
+    if (!supabase) return { data: null, error: "Supabase not configured" }
+
+    try {
+      const { data, error } = await supabase.rpc('get_user_active_followon_program', {
+        input_user_id: userId
+      })
+
+      if (error) {
+        console.warn("⚠️ User follow-on program not available:", error.message)
+        return { data: null, error: null }
+      }
+
+      return { data: data && data.length > 0 ? data[0] : null, error: null }
+    } catch (error) {
+      console.warn("⚠️ User follow-on program service unavailable")
+             return { data: null, error: null }
+     }
+   },
+
+   async selectFollowOnProgram(userId: string, programId: string) {
+    if (!supabase) throw new Error("Supabase not configured")
+
+    try {
+      const { data, error } = await supabase.rpc('select_followon_program', {
+        input_user_id: userId,
+        input_program_id: programId
+      })
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Error selecting follow-on program:", error)
+             throw error
+     }
+   },
+
+   async startFollowOnProgram(userId: string, programId: string) {
+    if (!supabase) throw new Error("Supabase not configured")
+
+    try {
+      const { data, error } = await supabase.rpc('start_followon_program', {
+        input_user_id: userId,
+        input_program_id: programId
+      })
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Error starting follow-on program:", error)
+             throw error
+     }
+   },
+
+   // Leaderboard functions with reduced logging
   async getTotalLeaderboard() {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 

@@ -22,10 +22,17 @@ import {
   getDateFromChallengeDay,
   getLocalDateString,
   CHALLENGE_CONFIG,
+  FOLLOWON_PROGRAMS,
   isChallengeComplete,
   isBeforeChallengeStart,
   checkUserExists,
   updateUserProfile,
+  getFollowOnDay,
+  getFollowOnTarget,
+  getFollowOnStartDate,
+  isInFollowOnProgram,
+  isUserInFollowOnProgram,
+  isFollowOnComplete,
 } from "@/lib/supabase"
 import { getNewMilestones, getRandomEncouragementMessage } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -34,6 +41,7 @@ import FooterFloat from "@/components/FooterFloat"
 import ScrollLottie from "@/components/ScrollLottie"
 import { EditDayModal } from "@/components/EditDayModal"
 import { PreChallengeWelcome } from "@/components/PreChallengeWelcome"
+import { PostChallengeOptions } from "@/components/PostChallengeOptions"
 import BugReportModal from "@/components/BugReportModal"
 import ConfettiExplosion from "react-confetti-explosion"
 
@@ -85,6 +93,14 @@ export default function Home() {
   const [modalOpenedFromChart, setModalOpenedFromChart] = useState(false)
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false)
 
+  // Follow-on program state
+  const [selectedFollowOnProgram, setSelectedFollowOnProgram] = useState<keyof typeof FOLLOWON_PROGRAMS | null>(null)
+  const [showPostChallengeOptions, setShowPostChallengeOptions] = useState(false)
+  const [isInFollowOn, setIsInFollowOn] = useState(false)
+  const [followOnDay, setFollowOnDay] = useState(1)
+  const [followOnTarget, setFollowOnTarget] = useState(0)
+  const [followOnProgressData, setFollowOnProgressData] = useState<any[]>([])
+
   // Toast hook for encouragement messages
   const { toast } = useToast()
 
@@ -109,6 +125,64 @@ export default function Home() {
     if (typeof window !== "undefined") {
       localStorage.setItem("local_user_profile", JSON.stringify(profile))
       setLocalUserProfile(profile)
+    }
+  }
+
+  // Save follow-on program selection
+  const saveFollowOnProgramSelection = (program: keyof typeof FOLLOWON_PROGRAMS | null) => {
+    if (typeof window !== "undefined") {
+      if (program) {
+        localStorage.setItem("followon_program", program)
+      } else {
+        localStorage.removeItem("followon_program")
+      }
+      setSelectedFollowOnProgram(program)
+    }
+  }
+
+  // Load follow-on program selection
+  const loadFollowOnProgramSelection = (): keyof typeof FOLLOWON_PROGRAMS | null => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("followon_program")
+      return saved as keyof typeof FOLLOWON_PROGRAMS | null
+    }
+    return null
+  }
+
+  // Load user's active follow-on program from database
+  const loadUserActiveFollowOnProgram = async () => {
+    if (dataSource === "supabase" && user) {
+      try {
+        const { data } = await database.getUserActiveFollowOnProgram(user.id)
+        if (data) {
+          setSelectedFollowOnProgram(data.program_id as keyof typeof FOLLOWON_PROGRAMS)
+          setIsInFollowOn(true)
+          
+          // Calculate follow-on day and target
+          const followOnDayNum = getFollowOnDay(currentDate, data.program_id as keyof typeof FOLLOWON_PROGRAMS)
+          const target = getFollowOnTarget(currentDate, data.program_id as keyof typeof FOLLOWON_PROGRAMS)
+          setFollowOnDay(followOnDayNum)
+          setFollowOnTarget(target)
+        } else {
+          setSelectedFollowOnProgram(null)
+          setIsInFollowOn(false)
+        }
+      } catch (error) {
+        console.error("❌ Error loading user active follow-on program:", error)
+      }
+    } else {
+      // For local mode, check localStorage
+      const localSelection = loadFollowOnProgramSelection()
+      if (localSelection && challengeComplete) {
+        setSelectedFollowOnProgram(localSelection)
+        setIsInFollowOn(true)
+        
+        // Calculate follow-on day and target
+        const followOnDayNum = getFollowOnDay(currentDate, localSelection)
+        const target = getFollowOnTarget(currentDate, localSelection)
+        setFollowOnDay(followOnDayNum)
+        setFollowOnTarget(target)
+      }
     }
   }
 
@@ -148,8 +222,15 @@ export default function Home() {
         
         // Check if challenge status changed (start/end dates)
         const isBeforeStart = isBeforeChallengeStart()
-        const isComplete = isChallengeComplete()
-        setIsBeforeChallengeStartState(isBeforeStart)
+        let isComplete = isChallengeComplete()
+        
+        // TESTING OVERRIDE: Force challenge complete for testing follow-on programs
+        const FORCE_CHALLENGE_COMPLETE_FOR_TESTING = true
+        if (FORCE_CHALLENGE_COMPLETE_FOR_TESTING) {
+          isComplete = true
+        }
+        
+        setIsBeforeChallengeStartState(isBeforeStart && !FORCE_CHALLENGE_COMPLETE_FOR_TESTING)
         setChallengeComplete(isComplete)
       }
     }
@@ -362,14 +443,65 @@ export default function Home() {
   // Check if challenge is complete or before start
   useEffect(() => {
     const checkChallengeStatus = () => {
-      const isComplete = isChallengeComplete()
+      let isComplete = isChallengeComplete()
       const isBeforeStart = isBeforeChallengeStart()
+      
+      // TESTING OVERRIDE: Force challenge complete for testing follow-on programs
+      // Remove this when challenge dates are correct
+      const FORCE_CHALLENGE_COMPLETE_FOR_TESTING = true
+      if (FORCE_CHALLENGE_COMPLETE_FOR_TESTING) {
+        isComplete = true
+      }
+      
       setChallengeComplete(isComplete)
-      setIsBeforeChallengeStartState(isBeforeStart)
+      setIsBeforeChallengeStartState(isBeforeStart && !FORCE_CHALLENGE_COMPLETE_FOR_TESTING)
+      
+      // Show post-challenge options if challenge just completed and no program selected yet
+      if (isComplete && !selectedFollowOnProgram && !showPostChallengeOptions) {
+        setShowPostChallengeOptions(true)
+      }
     }
 
     checkChallengeStatus()
-  }, [])
+  }, [selectedFollowOnProgram]) // Removed showPostChallengeOptions from dependencies
+
+  // Load follow-on program data when user/challenge state changes
+  useEffect(() => {
+    if (challengeComplete) {
+      loadUserActiveFollowOnProgram()
+    }
+  }, [dataSource, user, challengeComplete, currentDate])
+
+  // Update follow-on program state when date changes
+  useEffect(() => {
+    if (selectedFollowOnProgram && challengeComplete) {
+      const shouldBeInFollowOn = isInFollowOnProgram(currentDate)
+      if (shouldBeInFollowOn && !isInFollowOn) {
+        setIsInFollowOn(true)
+        
+        // Calculate follow-on day and target
+        const followOnDayNum = getFollowOnDay(currentDate, selectedFollowOnProgram)
+        const target = getFollowOnTarget(currentDate, selectedFollowOnProgram)
+        setFollowOnDay(followOnDayNum)
+        setFollowOnTarget(target)
+        
+        // Auto-start program if not started yet and user is authenticated
+        if (dataSource === "supabase" && user) {
+          database.startFollowOnProgram(user.id, selectedFollowOnProgram).catch(console.error)
+        }
+      } else if (!shouldBeInFollowOn && isInFollowOn) {
+        setIsInFollowOn(false)
+        setFollowOnDay(1)
+        setFollowOnTarget(0)
+      } else if (shouldBeInFollowOn && isInFollowOn) {
+        // Update day and target for current follow-on program
+        const followOnDayNum = getFollowOnDay(currentDate, selectedFollowOnProgram)
+        const target = getFollowOnTarget(currentDate, selectedFollowOnProgram)
+        setFollowOnDay(followOnDayNum)
+        setFollowOnTarget(target)
+      }
+    }
+  }, [currentDate, selectedFollowOnProgram, challengeComplete, isInFollowOn, dataSource, user])
 
   // Load daily targets from database or fallback
   const loadDailyTargets = async () => {
@@ -439,6 +571,27 @@ export default function Home() {
 
         // Set today's squats from the most authoritative source
         setTodaySquats(todaySquatsFromData)
+        
+        // Load follow-on progress data if in follow-on mode
+        if (isInFollowOn && selectedFollowOnProgram) {
+          try {
+            const followOnStartDate = getFollowOnStartDate()
+            const programData = FOLLOWON_PROGRAMS[selectedFollowOnProgram]
+            const followOnEndDate = new Date(followOnStartDate)
+            followOnEndDate.setDate(followOnEndDate.getDate() + programData.duration - 1)
+            
+            const followOnEndStr = followOnEndDate.toISOString().split('T')[0]
+            
+            const { data: followOnData } = await database.getUserProgress(user.id, 50) // Get more data to cover follow-on period
+            
+            if (followOnData) {
+              const followOnFiltered = followOnData.filter(p => p.date >= followOnStartDate && p.date <= followOnEndStr)
+              setFollowOnProgressData(followOnFiltered)
+            }
+          } catch (error) {
+            console.error("❌ Error loading follow-on progress:", error)
+          }
+        }
       } catch (error) {
         console.error("❌ Error loading Supabase data:", error)
         if (DISABLE_OFFLINE_MODE) {
@@ -508,11 +661,81 @@ export default function Home() {
         }
       })
       setChallengeProgressData(challengeProgressWithTargets)
+      
+      // Load follow-on progress data if in follow-on mode (local storage)
+      if (isInFollowOn && selectedFollowOnProgram) {
+        const followOnStartDate = getFollowOnStartDate()
+        const programData = FOLLOWON_PROGRAMS[selectedFollowOnProgram]
+        const followOnEndDate = new Date(followOnStartDate)
+        followOnEndDate.setDate(followOnEndDate.getDate() + programData.duration - 1)
+        
+        const followOnEndStr = followOnEndDate.toISOString().split('T')[0]
+        
+        const followOnFiltered = progressWithTargets.filter(p => p.date >= followOnStartDate && p.date <= followOnEndStr)
+        setFollowOnProgressData(followOnFiltered)
+      }
     }
   }
 
-  // Get today's target
-  const todayTarget = dailyTargets.find((t) => t.day === currentDay)?.target_squats ?? 50
+  // Get today's target (follow-on program takes precedence)
+  const todayTarget = useMemo(() => {
+    if (isInFollowOn && selectedFollowOnProgram) {
+      return followOnTarget
+    }
+    return dailyTargets.find((t) => t.day === currentDay)?.target_squats ?? 50
+  }, [isInFollowOn, selectedFollowOnProgram, followOnTarget, dailyTargets, currentDay])
+
+  // Handle follow-on program selection
+  const handleFollowOnProgramSelect = async (program: keyof typeof FOLLOWON_PROGRAMS) => {
+    if (program === 'NONE' as any) {
+      // User chose to decide later
+      setShowPostChallengeOptions(false)
+      return
+    }
+
+    try {
+      if (dataSource === "supabase" && user) {
+        // Save to database
+        await database.selectFollowOnProgram(user.id, program)
+        
+        // Start the program immediately if we're past the follow-on start date
+        if (isInFollowOnProgram(currentDate)) {
+          await database.startFollowOnProgram(user.id, program)
+        }
+      } else {
+        // Save to localStorage for local mode
+        saveFollowOnProgramSelection(program)
+      }
+
+      // Update local state
+      setSelectedFollowOnProgram(program)
+      setShowPostChallengeOptions(false)
+      
+      // If we're in the follow-on period, activate follow-on mode
+      if (challengeComplete && isInFollowOnProgram(currentDate)) {
+        setIsInFollowOn(true)
+        
+        // Calculate follow-on day and target
+        const followOnDayNum = getFollowOnDay(currentDate, program)
+        const target = getFollowOnTarget(currentDate, program)
+        setFollowOnDay(followOnDayNum)
+        setFollowOnTarget(target)
+      }
+
+      toast({
+        title: "Program Selected! 🎯",
+        description: `You've selected the ${FOLLOWON_PROGRAMS[program].name} program. ${challengeComplete && isInFollowOnProgram(currentDate) ? 'You can start today!' : `It will start on ${getFollowOnStartDate()}.`}`,
+        duration: 5000,
+      })
+    } catch (error) {
+      console.error("❌ Error selecting follow-on program:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save your program selection. Please try again.",
+        duration: 5000,
+      })
+    }
+  }
   
 
 
@@ -1198,6 +1421,26 @@ export default function Home() {
     }
   }, [liveDataTrigger, challengeProgressData, currentDate, user, dataSource])
 
+  // Calculate challenge-only squats and follow-on squats separately
+  const { challengeSquats, followOnSquats } = useMemo(() => {
+    if (!isInFollowOn || !selectedFollowOnProgram) {
+      return { challengeSquats: totalSquats, followOnSquats: 0 }
+    }
+    
+    // Calculate challenge squats (from challenge period only)
+    const challengeOnlySquats = challengeProgressData.reduce((acc, day) => acc + day.squats_completed, 0)
+    
+    // Calculate follow-on squats (from follow-on period only)
+    const followOnStartDate = getFollowOnStartDate()
+    const followOnOnly = progressData.filter(day => day.date >= followOnStartDate)
+    const followOnOnlySquats = followOnOnly.reduce((acc, day) => acc + day.squats_completed, 0)
+    
+    return {
+      challengeSquats: challengeOnlySquats,
+      followOnSquats: followOnOnlySquats
+    }
+  }, [isInFollowOn, selectedFollowOnProgram, totalSquats, challengeProgressData, progressData])
+
   // Stable props for LeaderboardPreview to prevent constant re-renders
   const leaderboardProps = useMemo(() => ({
     refreshTrigger: leaderboardRefreshTrigger,
@@ -1206,8 +1449,11 @@ export default function Home() {
     userDisplayName: effectiveUserProfile?.display_name,
     userStreak: currentStreak, // Pass the correct current streak
     dataSource: dataSource === "local" ? "localStorage" as const : "supabase" as const,
-    liveDataTrigger: liveDataTrigger // Add live data trigger for real-time updates
-  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, currentStreak, dataSource, liveDataTrigger])
+    liveDataTrigger: liveDataTrigger, // Add live data trigger for real-time updates
+    isInFollowOn: isInFollowOn,
+    userChallengeSquats: challengeSquats,
+    userFollowOnSquats: followOnSquats,
+  }), [leaderboardRefreshTrigger, totalSquats, todaySquats, effectiveUserProfile?.display_name, currentStreak, dataSource, liveDataTrigger, isInFollowOn, challengeSquats, followOnSquats])
 
   // Calculate actual completed days (not streak) - exclude rest days
   const completedDays = useMemo(() => {
@@ -1239,18 +1485,25 @@ export default function Home() {
 
   // Memoize display calculations
   const displayDay = useMemo(() => {
+    if (isInFollowOn && selectedFollowOnProgram) {
+      return followOnDay
+    }
     if (challengeComplete) {
       return CHALLENGE_CONFIG.TOTAL_DAYS // Show final day instead of current day
     }
     return Math.min(currentDay, CHALLENGE_CONFIG.TOTAL_DAYS)
-  }, [challengeComplete, currentDay])
+  }, [isInFollowOn, selectedFollowOnProgram, followOnDay, challengeComplete, currentDay])
 
   const displayDayText = useMemo(() => {
+    if (isInFollowOn && selectedFollowOnProgram) {
+      const program = FOLLOWON_PROGRAMS[selectedFollowOnProgram]
+      return `${program.emoji} ${program.name} - Day ${followOnDay} of ${program.duration}`
+    }
     if (challengeComplete) {
       return `Challenge Complete (${CHALLENGE_CONFIG.TOTAL_DAYS} days)`
     }
     return `Day ${displayDay} of ${CHALLENGE_CONFIG.TOTAL_DAYS}`
-  }, [challengeComplete, displayDay])
+  }, [isInFollowOn, selectedFollowOnProgram, followOnDay, challengeComplete, displayDay])
 
   const displayName = useMemo(() => {
     if (effectiveUserProfile?.display_name) {
@@ -1346,8 +1599,15 @@ export default function Home() {
       
       // Also check challenge status when date changes
       const isBeforeStart = isBeforeChallengeStart()
-      const isComplete = isChallengeComplete()
-      setIsBeforeChallengeStartState(isBeforeStart)
+      let isComplete = isChallengeComplete()
+      
+      // TESTING OVERRIDE: Force challenge complete for testing follow-on programs
+      const FORCE_CHALLENGE_COMPLETE_FOR_TESTING = true
+      if (FORCE_CHALLENGE_COMPLETE_FOR_TESTING) {
+        isComplete = true
+      }
+      
+      setIsBeforeChallengeStartState(isBeforeStart && !FORCE_CHALLENGE_COMPLETE_FOR_TESTING)
       setChallengeComplete(isComplete)
     }
 
@@ -1438,7 +1698,7 @@ export default function Home() {
     )
   }
 
-  // Show pre-challenge welcome screen if before start date
+  // Show pre-challenge welcome screen if before start date (unless testing override active)
   if (isBeforeChallengeStartState) {
     return (
       <div className="min-h-screen gradient-bg">
@@ -1688,7 +1948,7 @@ export default function Home() {
         )}
 
         {/* Challenge Complete Message */}
-        {challengeComplete && (
+        {challengeComplete && !isInFollowOn && (
           <Card className="mb-6 md:mb-8 glass-strong border-green-500/20 max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-center justify-center">
@@ -1713,6 +1973,59 @@ export default function Home() {
                 </p>
                 <p className="text-lg font-bold text-primary mt-2">Your Total: {totalSquats.toLocaleString()} squats</p>
               </div>
+              
+              {/* Show program selection button if not already selected */}
+              {!selectedFollowOnProgram && (
+                <div className="mt-4">
+                  <Button 
+                    onClick={() => setShowPostChallengeOptions(true)} 
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  >
+                    Choose Follow-on Program 🚀
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Follow-on Program Active Message */}
+        {isInFollowOn && selectedFollowOnProgram && (
+          <Card className="mb-6 md:mb-8 glass-strong border-blue-500/20 max-w-4xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-center justify-center">
+                <span className="text-2xl">{FOLLOWON_PROGRAMS[selectedFollowOnProgram].emoji}</span>
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                  {FOLLOWON_PROGRAMS[selectedFollowOnProgram].name} Program
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-3">
+              <p className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                Day {followOnDay} of {FOLLOWON_PROGRAMS[selectedFollowOnProgram].duration}
+              </p>
+              <p className="text-muted-foreground">
+                {FOLLOWON_PROGRAMS[selectedFollowOnProgram].description}
+              </p>
+              <div className="mt-4 p-4 glass-subtle rounded-xl">
+                <p className="text-sm text-muted-foreground">
+                  Challenge completed: {totalSquats.toLocaleString()} squats
+                </p>
+                <p className="text-lg font-bold text-primary mt-2">Today's Target: {todayTarget} squats</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Post-Challenge Program Selection */}
+        {showPostChallengeOptions && (
+          <Card className="mb-6 md:mb-8 glass-strong max-w-4xl mx-auto">
+            <CardContent className="p-6">
+              <PostChallengeOptions
+                onProgramSelect={handleFollowOnProgramSelect}
+                selectedProgram={selectedFollowOnProgram}
+                isLoading={false}
+              />
             </CardContent>
           </Card>
         )}
@@ -1804,14 +2117,19 @@ export default function Home() {
 
         {/* Centered Content Layout */}
         <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
-          {/* Only show squat dial and daily target if challenge is not complete */}
-          {!challengeComplete && (
+          {/* Show squat dial and daily target for active programs (challenge or follow-on) */}
+          {(!challengeComplete || isInFollowOn) && todayTarget > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
               {/* Squat Dial */}
               <Card className="glass-strong">
                 <CardContent className="p-4 md:p-8">
                   <div className="text-center mb-6">
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Squat Dial</h2>
+                    <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
+                      {isInFollowOn && selectedFollowOnProgram ? 
+                        `${FOLLOWON_PROGRAMS[selectedFollowOnProgram].emoji} Follow-on Squats` : 
+                        'Squat Dial'
+                      }
+                    </h2>
                     <p className="text-sm md:text-base text-muted-foreground">
                       Drag clockwise to add, counter-clockwise to subtract
                     </p>
@@ -1841,11 +2159,14 @@ export default function Home() {
           />
 
           {/* Progress Chart */}
-                      <ProgressChart 
-              data={challengeProgressData} 
-              dailyTargets={dailyTargets} 
-              onDayClick={handleDayClick}
-            />
+          <ProgressChart 
+            data={challengeProgressData} 
+            dailyTargets={dailyTargets} 
+            onDayClick={handleDayClick}
+            isFollowOnMode={isInFollowOn}
+            followOnProgram={selectedFollowOnProgram}
+            followOnData={isInFollowOn ? followOnProgressData : undefined}
+          />
 
           {/* Leaderboard Preview */}
           <div ref={leaderboardRef}>
