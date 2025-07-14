@@ -21,9 +21,131 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   const lastAngle = useRef(0);
   const totalRotation = useRef(0);
   const cachedRect = useRef<DOMRect | null>(null);
+  
+  // Track previous squat count for sound triggers
+  const prevSquatsRef = useRef(0);
 
   // Use haptic feedback hook
   const { triggerHaptic } = useHaptic();
+  
+  // Audio context for click sounds
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Initialize audio context
+  useEffect(() => {
+    // Create audio context on first user interaction
+    const initAudio = () => {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+    };
+    
+    // Add event listener for first user interaction
+    document.addEventListener('pointerdown', initAudio, { once: true });
+    document.addEventListener('click', initAudio, { once: true });
+    
+    return () => {
+      document.removeEventListener('pointerdown', initAudio);
+      document.removeEventListener('click', initAudio);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
+    };
+  }, []);
+
+  // Generate satisfying chime sound with pitch based on squat count
+  const playClickSound = useCallback((squatCount: number) => {
+    if (!audioContextRef.current) return;
+    
+    try {
+      const ctx = audioContextRef.current;
+      const masterGain = ctx.createGain();
+      masterGain.connect(ctx.destination);
+      
+      // Extended pentatonic scale for wider range (C major pentatonic)
+      const baseFrequencies = [
+        196.00, // G3
+        220.00, // A3
+        261.63, // C4
+        293.66, // D4  
+        329.63, // E4
+        392.00, // G4
+        440.00, // A4
+        523.25, // C5
+        587.33, // D5
+        659.25, // E5
+        783.99, // G5
+        880.00, // A5
+        1046.50, // C6
+        1174.66, // D6
+        1318.51, // E6
+        1567.98  // G6
+      ];
+      
+      // Map squat count to scale index (clamp to available range)
+      // Range: -5 to +10 squats maps to indices 0-15 (each squat = one scale step)
+      const scaleIndex = Math.max(0, Math.min(baseFrequencies.length - 1, squatCount + 5));
+      const baseFreq = baseFrequencies[scaleIndex];
+      
+      // Create major triad based on the selected root note
+      const frequencies = [
+        baseFreq,           // Root
+        baseFreq * 1.25,    // Major third (5/4 ratio)
+        baseFreq * 1.5      // Perfect fifth (3/2 ratio)
+      ];
+      
+      const now = ctx.currentTime;
+      
+      frequencies.forEach((freq, index) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(masterGain);
+        
+        // Bell-like waveform
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(freq, now);
+        
+        // Staggered attack for arpeggio effect
+        const startTime = now + (index * 0.02);
+        const duration = 0.4 - (index * 0.05); // Higher notes fade faster
+        
+        // Quick attack, gentle decay for bell-like envelope
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      });
+      
+      // Add a subtle lower harmonic for warmth (bass note)
+      const bassOsc = ctx.createOscillator();
+      const bassGain = ctx.createGain();
+      
+      bassOsc.connect(bassGain);
+      bassGain.connect(masterGain);
+      
+      bassOsc.type = 'sine';
+      bassOsc.frequency.setValueAtTime(baseFreq * 0.5, now); // One octave lower
+      
+      bassGain.gain.setValueAtTime(0, now);
+      bassGain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      
+      bassOsc.start(now);
+      bassOsc.stop(now + 0.3);
+      
+      // Master volume envelope - slightly louder for higher notes to maintain presence
+      const volumeBoost = 1 + (scaleIndex * 0.02); // Gradual volume increase with pitch
+      masterGain.gain.setValueAtTime(0.8 * volumeBoost, now);
+      masterGain.gain.exponentialRampToValueAtTime(0.1, now + 0.4);
+      
+    } catch (error) {
+      // Silently fail if audio context issues
+    }
+  }, []);
 
   const calculateSquats = useCallback((rotation: number) => {
     return Math.floor(rotation / 36); // 360 degrees / 10 squats = 36 degrees per squat
@@ -48,6 +170,11 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     
     isDragging.current = true;
     lastAngle.current = getAngleFromPoint(centerX, centerY, clientX, clientY);
+    
+    // Initialize audio context if needed
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
   }, [getAngleFromPoint]);
 
   const handleMove = useCallback((clientX: number, clientY: number) => {
@@ -77,6 +204,13 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     
     // Clamp tempSquats to valid range
     const clampedSquats = Math.max(minSquats, Math.min(maxSquats, squats));
+    
+    // Check if we crossed an integer boundary and play click sound
+    if (clampedSquats !== prevSquatsRef.current && isDragging.current) {
+      playClickSound(clampedSquats);
+      prevSquatsRef.current = clampedSquats;
+    }
+    
     setTempSquats(clampedSquats);
     
     // If we hit a limit, adjust the rotation to match
@@ -87,13 +221,12 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     }
     
     lastAngle.current = currentAngle;
-    
-
-  }, [getAngleFromPoint, calculateSquats, currentSquats, targetSquats]);
+  }, [getAngleFromPoint, calculateSquats, currentSquats, targetSquats, playClickSound]);
 
   const handleEnd = useCallback(() => {
     isDragging.current = false;
     cachedRect.current = null; // Clear cached rect
+    prevSquatsRef.current = 0; // Reset squat tracking
   }, []);
 
   // Unified pointer events instead of separate mouse/touch
