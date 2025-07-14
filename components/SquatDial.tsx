@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useHaptic } from 'use-haptic';
 import StarBorder from './StarBorder';
 
 interface SquatDialProps {
@@ -20,6 +21,9 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   const lastAngle = useRef(0);
   const totalRotation = useRef(0);
   const cachedRect = useRef<DOMRect | null>(null);
+
+  // Use haptic feedback hook
+  const { triggerHaptic } = useHaptic();
 
   const calculateSquats = useCallback((rotation: number) => {
     return Math.floor(rotation / 36); // 360 degrees / 10 squats = 36 degrees per squat
@@ -83,6 +87,8 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
     }
     
     lastAngle.current = currentAngle;
+    
+
   }, [getAngleFromPoint, calculateSquats, currentSquats, targetSquats]);
 
   const handleEnd = useCallback(() => {
@@ -91,12 +97,6 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
   }, []);
 
   // Unified pointer events instead of separate mouse/touch
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleStart(e.clientX, e.clientY);
-  }, [handleStart]);
-
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (isDragging.current) {
       e.preventDefault();
@@ -104,6 +104,13 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
       handleMove(e.clientX, e.clientY);
     }
   }, [handleMove]);
+
+  // Unified pointer events instead of separate mouse/touch
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleStart(e.clientX, e.clientY);
+  }, [handleStart]);
 
   const handlePointerUp = useCallback(() => {
     if (isDragging.current) {
@@ -124,6 +131,30 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
 
   const bankSquats = () => {
     if (tempSquats !== 0) {
+      // Trigger haptic feedback for banking action
+      const triggerHapticFeedback = () => {
+        // Detect platform and use appropriate haptic method
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        if (isIOS && isSafari) {
+          // iOS Safari 18.0+ with use-haptic library
+          try {
+            triggerHaptic();
+          } catch (error) {
+            console.log('iOS haptic failed:', error);
+          }
+                 } else {
+           // Android/Chrome and other browsers - use navigator.vibrate
+           if (navigator.vibrate) {
+             // Success pattern: short-long-short vibration
+             navigator.vibrate([50, 30, 100]);
+           }
+         }
+      };
+      
+      triggerHapticFeedback();
+      
       const newTotal = currentSquats + tempSquats;
       onSquatsChange(newTotal);
       setTempSquats(0);
@@ -296,6 +327,8 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
           {isNegative ? 'Remove Squats' : isTargetReached ? (targetSquats === 0 ? 'Enjoying Rest Day' : 'Target Reached!') : 'Bank Squats'}
         </span>
       </StarBorder>
+
+
     </div>
   );
 }
