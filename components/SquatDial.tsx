@@ -113,7 +113,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         
         // Quick attack, gentle decay for bell-like envelope
         gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0.08, startTime + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
         
         oscillator.start(startTime);
@@ -131,16 +131,16 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
       bassOsc.frequency.setValueAtTime(baseFreq * 0.5, now); // One octave lower
       
       bassGain.gain.setValueAtTime(0, now);
-      bassGain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+      bassGain.gain.linearRampToValueAtTime(0.04, now + 0.01);
       bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
       
       bassOsc.start(now);
       bassOsc.stop(now + 0.3);
       
       // Master volume envelope - slightly louder for higher notes to maintain presence
-      const volumeBoost = 1 + (scaleIndex * 0.02); // Gradual volume increase with pitch
-      masterGain.gain.setValueAtTime(0.8 * volumeBoost, now);
-      masterGain.gain.exponentialRampToValueAtTime(0.1, now + 0.4);
+      const volumeBoost = 1 + (scaleIndex * 0.01); // Gradual volume increase with pitch
+      masterGain.gain.setValueAtTime(0.4 * volumeBoost, now);
+      masterGain.gain.exponentialRampToValueAtTime(0.05, now + 0.4);
       
     } catch (error) {
       // Silently fail if audio context issues
