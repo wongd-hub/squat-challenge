@@ -181,7 +181,7 @@ export default function LeaderboardPage() {
                   className="flex-1 text-sm"
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
-                  Today's Squats
+                  Today's Situps
                 </Button>
                 <Button
                   variant={activeTab === 'total' ? 'default' : 'ghost'}
@@ -189,7 +189,7 @@ export default function LeaderboardPage() {
                   className="flex-1 text-sm"
                 >
                   <Trophy className="w-4 h-4 mr-2" />
-                  Total Squats
+                  Total Situps
                 </Button>
               </div>
             </CardContent>
@@ -281,7 +281,7 @@ export default function LeaderboardPage() {
                             <div className="text-lg font-bold text-primary">
                               {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
                             </div>
-                            <div className="text-xs text-muted-foreground">squats</div>
+                            <div className="text-xs text-muted-foreground">situps</div>
                           </div>
                         </div>
                         <div className="flex justify-end">
@@ -316,7 +316,7 @@ export default function LeaderboardPage() {
                           <div className="text-lg font-bold text-primary">
                             {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
                           </div>
-                          <div className="text-xs text-muted-foreground">squats</div>
+                          <div className="text-xs text-muted-foreground">situps</div>
                         </div>
                         
                         <div className="col-span-3 text-center">

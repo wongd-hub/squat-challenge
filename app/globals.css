@@ -133,6 +133,92 @@
   box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.3);
 }
 
+/* Neobrutalism theme overrides (inspired by https://www.neobrutalism.dev/) */
+.theme-neobrut {
+  /* Brighter palettes and stronger borders */
+  --background: 54 100% 97%; /* light yellow background */
+  --foreground: 0 0% 7%;
+  --card: 54 100% 95%;
+  --card-foreground: 0 0% 7%;
+  --popover: 54 100% 96%;
+  --popover-foreground: 0 0% 7%;
+  --primary: 240 5% 15%; /* near-black for text and borders */
+  --primary-foreground: 54 100% 97%;
+  --secondary: 48 100% 90%;
+  --secondary-foreground: 0 0% 7%;
+  --muted: 48 100% 92%;
+  --muted-foreground: 0 0% 20%;
+  --accent: 270 100% 90%; /* violet */
+  --accent-foreground: 0 0% 7%;
+  --destructive: 0 100% 60%;
+  --destructive-foreground: 54 100% 97%;
+  --border: 240 5% 10%; /* black-ish */
+  --input: 54 100% 92%;
+  --ring: 240 5% 10%;
+  --radius: 0.5rem;
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+.theme-neobrut .glass,
+.theme-neobrut .glass-strong,
+.theme-neobrut .glass-subtle {
+  background: hsl(var(--card));
+  border: 3px solid hsl(var(--border));
+  box-shadow: 6px 6px 0 hsl(var(--border));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.theme-neobrut .glass-subtle {
+  box-shadow: 4px 4px 0 hsl(var(--border));
+}
+
+.theme-neobrut .glass-strong {
+  box-shadow: 8px 8px 0 hsl(var(--border));
+}
+
+.theme-neobrut .gradient-bg {
+  background: repeating-linear-gradient(
+    45deg,
+    hsl(54 100% 95%),
+    hsl(54 100% 95%) 10px,
+    hsl(48 100% 92%) 10px,
+    hsl(48 100% 92%) 20px
+  );
+}
+
+.theme-neobrut .gradient-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 10px 10px, rgba(0,0,0,0.08) 1.5px, transparent 2px);
+  background-size: 24px 24px;
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+}
+
+/* Dark neobrut variant */
+.dark.theme-neobrut {
+  --background: 240 5% 10%;
+  --foreground: 54 100% 97%;
+  --card: 240 5% 13%;
+  --card-foreground: 54 100% 97%;
+  --border: 54 100% 97%;
+  --muted: 240 5% 18%;
+  --muted-foreground: 54 100% 90%;
+}
+
+.dark.theme-neobrut .glass,
+.dark.theme-neobrut .glass-strong,
+.dark.theme-neobrut .glass-subtle {
+  background: hsl(var(--card));
+  border: 3px solid hsl(var(--border));
+  box-shadow: 6px 6px 0 hsl(var(--border));
+}
+
 /* Custom dial animations */
 @keyframes dialSpin {
   from { transform: rotate(0deg); }
@@ -304,3 +390,65 @@
     transparent 100%
   );
 }
+
+/* Neobrutalist refinements (CSS-only, backward compatible) */
+/* Sharper radii for neobrut theme */
+.theme-neobrut {
+  --radius: 0.375rem; /* ~6px */
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+/* Ensure larger utility radius is also slightly reduced */
+.theme-neobrut .rounded-xl { border-radius: 0.625rem !important; }
+
+/* Background: clean white with subtle grid and thick inner border */
+.theme-neobrut .gradient-bg {
+  background: #ffffff;
+  position: relative;
+}
+.theme-neobrut .gradient-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px);
+  background-size: 40px 40px, 40px 40px; /* grid size */
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+.theme-neobrut .gradient-bg::after {
+  content: '';
+  position: absolute;
+  inset: 8px; /* inner frame */
+  border: 3px solid hsl(var(--border));
+  pointer-events: none;
+}
+
+/* Buttons: slide-in hover with chunky shadow */
+.theme-neobrut button:not(:disabled) {
+  border: 3px solid hsl(var(--border));
+  box-shadow: 8px 8px 0 hsl(var(--border));
+  transform: translate(-3px, -3px);
+  transition: transform 140ms cubic-bezier(.2,.8,.2,1), box-shadow 140ms ease, background-color 140ms ease, filter 140ms ease;
+}
+.theme-neobrut button:hover:not(:disabled) {
+  transform: translate(0, 0);
+  box-shadow: 6px 6px 0 hsl(var(--border));
+}
+.theme-neobrut button:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 5px 5px 0 hsl(var(--border));
+}
+
+/* Recharts: brutalist bars with thick outlines and crisp axes */
+.theme-neobrut .recharts-wrapper rect { rx: 10px; ry: 10px; }
+.theme-neobrut .recharts-wrapper rect[stroke] { stroke: hsl(var(--border)) !important; stroke-width: 3px !important; vector-effect: non-scaling-stroke; }
+.theme-neobrut .recharts-wrapper .recharts-cartesian-grid line { stroke: rgba(0,0,0,0.25) !important; stroke-width: 1.5px; }
+.theme-neobrut .recharts-wrapper .recharts-cartesian-axis-line,
+.theme-neobrut .recharts-wrapper .recharts-cartesian-axis-tick-line { stroke: hsl(var(--border)) !important; stroke-width: 2px; }
+.theme-neobrut .recharts-wrapper .recharts-text { fill: hsl(var(--primary)) !important; font-weight: 600; }
+.theme-neobrut .recharts-wrapper g { transition: transform 120ms cubic-bezier(.2,.8,.2,1); }
+.theme-neobrut .recharts-wrapper g:hover { transform: translate(-2px, -2px); }

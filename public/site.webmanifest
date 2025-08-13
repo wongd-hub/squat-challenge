@@ -1,21 +1,20 @@
 {
-  "name": "Squat Challenge",
-  "short_name": "Squat Challenge",
+  "name": "Situp Challenge",
+  "short_name": "Situp Challenge",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     },
     {
       "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     }
   ],
+  "start_url": "/",
+  "display": "standalone",
   "theme_color": "#ffffff",
-  "background_color": "#000000",
-  "display": "standalone"
+  "background_color": "#ffffff"
 }

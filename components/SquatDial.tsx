@@ -277,13 +277,13 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
           } catch (error) {
             console.log('iOS haptic failed:', error);
           }
-                 } else {
-           // Android/Chrome and other browsers - use navigator.vibrate
-           if (navigator.vibrate) {
-             // Success pattern: short-long-short vibration
-             navigator.vibrate([50, 30, 100]);
-           }
-         }
+        } else {
+          // Android/Chrome and other browsers - use navigator.vibrate
+          if (navigator.vibrate) {
+            // Success pattern: short-long-short vibration
+            navigator.vibrate([50, 30, 100]);
+          }
+        }
       };
       
       triggerHapticFeedback();
@@ -432,17 +432,17 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         </p>
         {tempSquats !== 0 && (
           <p className={`${compact ? 'text-sm' : 'text-base'} ${isNegative ? 'text-destructive' : 'text-green-600 dark:text-green-400'} mt-2`}>
-            {isNegative ? `Removing ${Math.abs(tempSquats)} squats` : `Adding ${tempSquats} squats`}
+            {isNegative ? `Removing ${Math.abs(tempSquats)} situps` : `Adding ${tempSquats} situps`}
           </p>
         )}
         {isTargetReached && (
           <p className={`${compact ? 'text-sm' : 'text-base'} text-green-600 dark:text-green-400 mt-2 font-semibold`}>
-            {targetSquats === 0 ? '☕ Rest day! No squats needed today.' : '🎉 Target reached! Great job!'}
+            {targetSquats === 0 ? '☕ Rest day! No situps needed today.' : '🎉 Target reached! Great job!'}
           </p>
         )}
         {!compact && !hideTip && (
           <p className={`text-sm text-muted-foreground mt-3 px-4`}>
-            💡 <strong>Tip:</strong> Use the progress chart below to edit and bank squats for previous days
+            💡 <strong>Tip:</strong> Use the progress chart below to edit and bank situps for previous days
           </p>
         )}
       </div>
@@ -457,7 +457,7 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         disabled={!canBankSquats}
       >
         <span className={`${compact ? 'text-base' : 'text-base sm:text-lg md:text-lg'} font-medium`}>
-          {isNegative ? 'Remove Squats' : isTargetReached ? (targetSquats === 0 ? 'Enjoying Rest Day' : 'Target Reached!') : 'Bank Squats'}
+          {isNegative ? 'Remove Situps' : isTargetReached ? (targetSquats === 0 ? 'Enjoying Rest Day' : 'Target Reached!') : 'Bank Situps'}
         </span>
       </StarBorder>
 

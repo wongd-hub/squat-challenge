@@ -24,7 +24,7 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
         <div className="mb-6">
           <div className="text-6xl md:text-8xl mb-4">🏋️‍♂️</div>
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4 leading-normal pb-2">
-            Welcome to the Squat Challenge!
+            Welcome to the Situp Challenge!
           </h1>
           <div className="text-base md:text-xl mb-6">
             <ShinyText 
@@ -47,7 +47,7 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
           </Badge>
           <Badge variant="outline" className="text-sm glass-subtle px-4 py-2">
             <Sparkles className="w-4 h-4 mr-2" />
-            3,214 Total Squats
+            3,214 Total Situps
           </Badge>
         </div>
         {/* Testing Notice */}
@@ -87,16 +87,16 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <div className="space-y-3">
             <p>
-              <strong className="text-foreground">🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day squat challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building lower body strength and endurance.
+              <strong className="text-foreground">🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day situp challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building core strength and endurance.
             </p>
             <p>
-              <strong className="text-foreground">🎯 How It Works:</strong> Use our intuitive squat dial to count your daily squats (drag clockwise to add, counter-clockwise to subtract), then bank your progress to track your journey.
+              <strong className="text-foreground">🎯 How It Works:</strong> Use our intuitive situp dial to count your daily situps (drag clockwise to add, counter-clockwise to subtract), then bank your progress to track your journey.
             </p>
             <p>
               <strong className="text-foreground">📈 Track Your Progress:</strong> View detailed charts, edit previous days if needed, and see how you compare with others on the live leaderboard.
             </p>
             <p>
-              <strong className="text-foreground">📅 Challenge Structure:</strong> Progressive daily targets from 50-150 squats with strategic rest days for recovery. Some days are rest days (0 squats) to help you recover and stay strong.
+              <strong className="text-foreground">📅 Challenge Structure:</strong> Progressive daily targets from 50-150 situps with strategic rest days for recovery. Some days are rest days (0 situps) to help you recover and stay strong.
             </p>
           </div>
           
@@ -149,7 +149,7 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
             Get Ready to Transform Your Strength!
           </h3>
           <p className="text-sm md:text-base text-muted-foreground mb-4">
-            Use this time to prepare yourself mentally and physically. When the challenge begins, you'll have access to the squat dial, progress tracking, leaderboards, and all the tools you need to succeed.
+            Use this time to prepare yourself mentally and physically. When the challenge begins, you'll have access to the situp dial, progress tracking, leaderboards, and all the tools you need to succeed.
           </p>
           <p className="text-xs text-muted-foreground">
             Bookmark this page and sign in when you're ready to start tracking your progress!

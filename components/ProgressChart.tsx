@@ -141,7 +141,7 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">Progress:</span>
               <span className="font-medium text-foreground">
-                {data.completed} / {data.target} squats
+                {data.completed} / {data.target} situps
               </span>
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -191,7 +191,7 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
           {/* Stats Row */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
             <span className="font-medium">
-              Total: {stats.totalCompleted.toLocaleString()} / {stats.totalTarget.toLocaleString()} squats
+              Total: {stats.totalCompleted.toLocaleString()} / {stats.totalTarget.toLocaleString()} situps
             </span>
             <span className="font-medium">Overall: {stats.overallPercentage}%</span>
             <span className="font-medium">Days completed: {stats.daysCompleted}/23</span>
@@ -233,26 +233,26 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
         <div className="overflow-x-auto pb-4">
           <div className="h-80 md:h-96" style={{ minWidth: `${Math.max(chartData.length * 32, 800)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
-                              <BarChart 
-                  data={chartData} 
-                  margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-                  barCategoryGap="10%"
-                >
-                  <XAxis 
-                    dataKey="day" 
-                    tick={{ fontSize: 11 }} 
-                    interval={0} 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={50}
-                  />
-                                  <YAxis 
-                    tick={{ fontSize: 11 }} 
-                    width={50} 
-                    domain={[0, yAxisMax]}
-                    tickCount={Math.floor(yAxisMax / 50) + 1}
-                    ticks={Array.from({ length: Math.floor(yAxisMax / 50) + 1 }, (_, i) => i * 50)}
-                  />
+              <BarChart 
+                data={chartData} 
+                margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+                barCategoryGap="10%"
+              >
+                <XAxis 
+                  dataKey="day" 
+                  tick={{ fontSize: 11 }} 
+                  interval={0} 
+                  angle={-45} 
+                  textAnchor="end" 
+                  height={50}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }} 
+                  width={50} 
+                  domain={[0, yAxisMax]}
+                  tickCount={Math.floor(yAxisMax / 50) + 1}
+                  ticks={Array.from({ length: Math.floor(yAxisMax / 50) + 1 }, (_, i) => i * 50)}
+                />
                 <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }} />
                 <Bar dataKey="target" shape={<CustomBar />} />
               </BarChart>

@@ -45,7 +45,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
               <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
                 {targetSquats}
               </div>
-              <div className="text-sm text-muted-foreground">squats target</div>
+              <div className="text-sm text-muted-foreground">situps target</div>
             </>
           )}
         </div>
@@ -70,7 +70,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
             {!isCompleted && (
               <div className="text-center p-4 glass-subtle rounded-xl w-full">
                 <div className="text-2xl font-bold text-primary mb-1">{remaining}</div>
-                <div className="text-sm text-muted-foreground">squats remaining</div>
+                <div className="text-sm text-muted-foreground">situps remaining</div>
               </div>
             )}
           </>

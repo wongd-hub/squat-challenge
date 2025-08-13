@@ -779,13 +779,13 @@ export default function Home() {
     // Validate against daily target
     if (newTotalSquats > todayTarget) {
       console.warn(`🚫 Cannot exceed daily target: ${newTotalSquats} > ${todayTarget}`)
-      alert(`Cannot exceed today's target of ${todayTarget} squats.`)
+      alert(`Cannot exceed today's target of ${todayTarget} situps.`)
       return
     }
 
     if (newTotalSquats < 0) {
       console.warn(`🚫 Cannot have negative squats: ${newTotalSquats}`)
-      alert(`Cannot have negative squats.`)
+      alert(`Cannot have negative situps.`)
       return
     }
 
@@ -1628,7 +1628,7 @@ export default function Home() {
         {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
-            Squat Challenge
+            Situp Challenge
           </h1>
           <div className="text-sm md:text-lg mb-4">
             <ShinyText 
@@ -1679,7 +1679,7 @@ export default function Home() {
                     🚀 Challenge Launching July 9th, 2025 - Currently in Testing Phase
                   </h3>
                   <p className="text-xs text-blue-700 dark:text-blue-400">
-                    We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your squats, and provide feedback! All data will be preserved for the official challenge start.
+                                         We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your situps, and provide feedback! All data will be preserved for the official challenge start.
                   </p>
                 </div>
               </div>
@@ -1701,7 +1701,7 @@ export default function Home() {
             <CardContent className="text-center space-y-3">
               <div className="text-4xl mb-4">🎉</div>
               <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                Congratulations! You've completed the {CHALLENGE_CONFIG.TOTAL_DAYS}-day squat challenge!
+                Congratulations! You've completed the {CHALLENGE_CONFIG.TOTAL_DAYS}-day situp challenge!
               </p>
               <p className="text-muted-foreground">
                 Check out your progress below and see how you compare on the leaderboard.
@@ -1767,16 +1767,16 @@ export default function Home() {
               
               <div className="border-t border-border pt-4 space-y-3">
                 <p>
-                  <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day squat challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building lower body strength and endurance.
+                  <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day situp challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building core strength and endurance.
                 </p>
                 <p>
-                  <strong>🎯 How to Use the Squat Dial:</strong> Drag clockwise to count squats (each full revolution = 10 squats), drag counter-clockwise to subtract, then click "Bank Squats" to save your daily total.
+                  <strong>🎯 How to Use the Situp Dial:</strong> Drag clockwise to count situps (each full revolution = 10 situps), drag counter-clockwise to subtract, then click "Bank Situps" to save your daily total.
                 </p>
                 <p>
-                  <strong>📈 Edit Previous Days:</strong> Use the progress chart below to click on any previous day and edit your squat count - perfect for catching up or making corrections!
+                  <strong>📈 Edit Previous Days:</strong> Use the progress chart below to click on any previous day and edit your situp count - perfect for catching up or making corrections!
                 </p>
                 <p>
-                  <strong>📅 Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)} • Some days are rest days (0 squats) for recovery.
+                  <strong>📅 Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)} • Some days are rest days (0 situps) for recovery.
                 </p>
               </div>
               
@@ -1804,14 +1804,14 @@ export default function Home() {
 
         {/* Centered Content Layout */}
         <div className="space-y-4 md:space-y-6 max-w-5xl mx-auto">
-          {/* Only show squat dial and daily target if challenge is not complete */}
+          {/* Only show situp dial and daily target if challenge is not complete */}
           {!challengeComplete && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
               {/* Squat Dial */}
               <Card className="glass-strong">
                 <CardContent className="p-4 md:p-8">
                   <div className="text-center mb-6">
-                    <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Squat Dial</h2>
+                                         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Situp Dial</h2>
                     <p className="text-sm md:text-base text-muted-foreground">
                       Drag clockwise to add, counter-clockwise to subtract
                     </p>
