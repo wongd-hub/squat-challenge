@@ -14,7 +14,7 @@
 - **Retain all existing data.** Migrations are additive + backfill only. No `DELETE`, no `DROP` of data-bearing tables.
 - **Challenge id format:** `YYYY-MM`, derived from `CHALLENGE_CONFIG.START_DATE`. This run = `2026-07`. Overridable via `NEXT_PUBLIC_CHALLENGE_ID`.
 - **Half rounding:** `Math.round(prescribed / 2)`. Rest days (`prescribed === 0`) stay `0`.
-- **Name normalisation rule (identical client + server):** `lower(trim(name))`, then collapse every run of non-`[a-z0-9]` characters to a single space, then trim. Dedup on this value.
+- **Name normalisation rule (identical client + server):** `lower(name)`, then **remove** all non-`[a-z0-9]` characters. So `Sit-ups`, `situps`, `Sit-Ups`, `sit ups` all collapse to `situps`. Dedup on this value.
 - **Seed exercises (display names):** `Sit-ups`, `Push-ups`, `Squats`, `Burpees`, `Lunges`, `Crunches`. Default exercise = `Sit-ups`.
 - **Offline-first must survive:** with no Supabase configured, the app still runs using the hardcoded seed list; "add custom exercise" is disabled offline.
 - **`npm run build` must pass** at the end of every task that touches TS/TSX (`ignoreBuildErrors` is on, so also run `npx tsc --noEmit` where a task adds pure TS logic).
@@ -167,7 +167,7 @@ describe('normalizeExerciseName', () => {
     expect(normalizeExerciseName('  sit   ups  ')).toBe(key)
   })
   it('produces the expected normalised string', () => {
-    expect(normalizeExerciseName('Push-ups!!')).toBe('push ups')
+    expect(normalizeExerciseName('Push-ups!!')).toBe('pushups')
   })
 })
 
@@ -199,9 +199,7 @@ export const SEED_EXERCISES: string[] = [
 export function normalizeExerciseName(name: string): string {
   return name
     .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
+    .replace(/[^a-z0-9]+/g, '')
 }
 ```
 
@@ -249,8 +247,8 @@ CREATE POLICY "Authenticated users can add exercises"
 
 -- Seed. normalized_name matches lib/exercises.ts normalizeExerciseName.
 INSERT INTO exercises (name, normalized_name) VALUES
-  ('Sit-ups',  'sit ups'),
-  ('Push-ups', 'push ups'),
+  ('Sit-ups',  'situps'),
+  ('Push-ups', 'pushups'),
   ('Squats',   'squats'),
   ('Burpees',  'burpees'),
   ('Lunges',   'lunges'),

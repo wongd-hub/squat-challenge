@@ -68,9 +68,10 @@ exercise list (can't satisfy shared custom exercises).
 
 - RLS: anyone may `SELECT`; authenticated users may `INSERT`.
 - Seed: Sit-ups, Push-ups, Squats, Burpees, Lunges, Crunches (adjustable).
-- **Normalisation rule** (applied identically client + server): `lower(trim(name))`, then
-  collapse any run of non-`[a-z0-9]` characters to a single space, then trim. Insert is
-  idempotent: if `normalized_name` exists, reuse that row instead of erroring.
+- **Normalisation rule** (applied identically client + server): `lower(name)`, then
+  **remove** all non-`[a-z0-9]` characters (so `Sit-ups` / `situps` / `Sit-Ups` / `sit ups`
+  all collapse to `situps`). Insert is idempotent: if `normalized_name` exists, reuse that
+  row instead of erroring.
 
 ### `user_progress` — new columns
 | column | type | notes |

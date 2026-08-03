@@ -1,6 +1,7 @@
 /* Create shared exercises table with normalised dedup key.
    normalized_name must match lib/exercises.ts normalizeExerciseName:
-   lower(trim(name)) then collapse non-[a-z0-9] runs to a single space. */
+   lower(name) then REMOVE all non-[a-z0-9] characters (so "Sit-ups",
+   "situps", "Sit-Ups" and "sit ups" all collapse to "situps"). */
 CREATE TABLE IF NOT EXISTS exercises (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -19,8 +20,8 @@ CREATE POLICY "Authenticated users can add exercises"
 
 -- Seed
 INSERT INTO exercises (name, normalized_name) VALUES
-  ('Sit-ups',  'sit ups'),
-  ('Push-ups', 'push ups'),
+  ('Sit-ups',  'situps'),
+  ('Push-ups', 'pushups'),
   ('Squats',   'squats'),
   ('Burpees',  'burpees'),
   ('Lunges',   'lunges'),
