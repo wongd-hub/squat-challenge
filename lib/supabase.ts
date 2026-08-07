@@ -118,7 +118,11 @@ export const database = {
     }
 
     try {
-      const { data, error } = await supabase.from("daily_targets").select("*").order("day")
+      const { data, error } = await supabase
+        .from("daily_targets")
+        .select("*")
+        .eq("challenge_id", CHALLENGE_CONFIG.CHALLENGE_ID)
+        .order("day")
 
       if (error) {
         console.warn("⚠️ Database not available, using hardcoded targets:", error.message)
