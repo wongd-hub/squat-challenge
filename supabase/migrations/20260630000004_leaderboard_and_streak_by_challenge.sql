@@ -6,6 +6,7 @@
      completion-first. */
 
 DROP FUNCTION IF EXISTS calculate_user_streak(uuid, date, integer);
+DROP FUNCTION IF EXISTS calculate_user_streak(uuid);
 CREATE OR REPLACE FUNCTION calculate_user_streak(
   input_user_id uuid,
   challenge_start_date date,

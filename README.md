@@ -67,9 +67,9 @@ A beautiful, production-ready web application for tracking daily exercise progre
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    
    # Challenge Configuration
-   NEXT_PUBLIC_CHALLENGE_START_DATE=2025-07-09
+   NEXT_PUBLIC_CHALLENGE_START_DATE=2026-07-09
    NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
-   NEXT_PUBLIC_CHALLENGE_ID=2025-07                   # Scopes progress/leaderboard data to this challenge run (format: YYYY-MM)
+   NEXT_PUBLIC_CHALLENGE_ID=2026-07                   # Scopes progress/leaderboard data to this challenge run (format: YYYY-MM)
    
    # Theme
    THEME_STYLE=glass                                  # 'glass' (default) or 'neobrut'
@@ -221,9 +221,9 @@ This is useful for:
 Edit `lib/supabase.ts` to modify:
 ```typescript
 export const CHALLENGE_CONFIG = {
-  START_DATE: '2025-07-09',  // Challenge start date
+  START_DATE: '2026-07-09',  // Challenge start date
   TOTAL_DAYS: 23,            // Total challenge duration
-  CHALLENGE_ID: '2025-07',   // Scopes progress/leaderboard data to this run (format: YYYY-MM); defaults to a value derived from START_DATE if unset
+  CHALLENGE_ID: '2026-07',   // Scopes progress/leaderboard data to this run (format: YYYY-MM); defaults to a value derived from START_DATE if unset
   DAILY_TARGETS: [
     { day: 1, target_squats: 50 },
     { day: 2, target_squats: 55 },
@@ -249,9 +249,9 @@ NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # Optional configuration
-NEXT_PUBLIC_CHALLENGE_START_DATE=2025-07-09
+NEXT_PUBLIC_CHALLENGE_START_DATE=2026-07-09
 NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
-NEXT_PUBLIC_CHALLENGE_ID=2025-07                   # Scopes progress/leaderboard data to a specific challenge run (format: YYYY-MM)
+NEXT_PUBLIC_CHALLENGE_ID=2026-07                   # Scopes progress/leaderboard data to a specific challenge run (format: YYYY-MM)
 
 # Theme (server-side, not NEXT_PUBLIC_)
 THEME_STYLE=glass                                  # 'glass' (default) or 'neobrut'
@@ -276,7 +276,7 @@ Vercel auto-detects the Next.js app, builds it, and deploys the API route as a s
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your-production-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
-NEXT_PUBLIC_CHALLENGE_ID=2025-07
+NEXT_PUBLIC_CHALLENGE_ID=2026-07
 THEME_STYLE=glass
 ```
 

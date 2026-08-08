@@ -1097,6 +1097,7 @@ export default function Home() {
         target_squats: target,
         exercise,
         goal_mode: goalMode,
+        challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
       }
 
       if (existingIndex >= 0) {

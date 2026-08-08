@@ -12,9 +12,11 @@ CREATE TABLE IF NOT EXISTS exercises (
 
 ALTER TABLE exercises ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read exercises" ON exercises;
 CREATE POLICY "Anyone can read exercises"
   ON exercises FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can add exercises" ON exercises;
 CREATE POLICY "Authenticated users can add exercises"
   ON exercises FOR INSERT TO authenticated WITH CHECK (true);
 
