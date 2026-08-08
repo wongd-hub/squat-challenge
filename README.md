@@ -290,7 +290,7 @@ THEME_STYLE=glass
 
 ### Performance Optimizations
 - **Bundle Splitting**: Automatic code splitting with Next.js
-- **Image Optimization**: Automatic image optimization via Next.js
+- **Image Optimization**: `next/image` used with `unoptimized: true` (no external image service required)
 - **Caching Strategy**: Aggressive caching for static assets
 - **Real-time Efficiency**: Throttled updates and background sync
 - **Mobile Performance**: Optimized for touch devices and slow connections
