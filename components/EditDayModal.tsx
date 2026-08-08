@@ -56,7 +56,7 @@ export function EditDayModal({
   if (!selectedDate) return null;
 
   const challengeDay = getChallengeDay(selectedDate);
-  const prescribedTarget = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50;
+  const prescribedTarget = dailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50;
   const target = effectiveTarget(prescribedTarget, goalMode);
   const isRestDay = prescribedTarget === 0;
   const isToday = selectedDate === getLocalDateString();
