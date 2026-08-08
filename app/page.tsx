@@ -812,13 +812,13 @@ export default function Home() {
     // Validate against daily target
     if (newTotalSquats > todayTarget) {
       console.warn(`🚫 Cannot exceed daily target: ${newTotalSquats} > ${todayTarget}`)
-      alert(`Cannot exceed today's target of ${todayTarget} situps.`)
+      alert(`Cannot exceed today's target of ${todayTarget} ${exercise.toLowerCase()}.`)
       return
     }
 
     if (newTotalSquats < 0) {
       console.warn(`🚫 Cannot have negative squats: ${newTotalSquats}`)
-      alert(`Cannot have negative situps.`)
+      alert(`Cannot have negative ${exercise.toLowerCase()}.`)
       return
     }
 
