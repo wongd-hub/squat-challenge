@@ -999,14 +999,15 @@ export default function Home() {
   }
 
   // Handle saving edited day squats
-  const handleSaveEditedDay = async (date: string, squats: number) => {
+  const handleSaveEditedDay = async (date: string, squats: number, exercise: string, goalMode: 'full' | 'half') => {
     const challengeDay = getChallengeDay(date)
-    const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50
+    const prescribedTarget = dailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50
+    const target = effectiveTarget(prescribedTarget, goalMode)
 
     if (dataSource === "supabase" && user) {
       // Save to Supabase
       try {
-        await database.updateUserProgress(user.id, date, squats, target)
+        await database.updateUserProgress(user.id, date, squats, target, exercise, goalMode)
         
         // Reload both challenge progress AND recent progress to update all displays
         const [challengeResult, recentResult] = await Promise.all([
@@ -1091,6 +1092,8 @@ export default function Home() {
         date: date,
         squats_completed: squats,
         target_squats: target,
+        exercise,
+        goal_mode: goalMode,
       }
 
       if (existingIndex >= 0) {
@@ -1916,6 +1919,10 @@ export default function Home() {
           dailyTargets={dailyTargets}
           onSave={handleSaveEditedDay}
           openedFromChart={modalOpenedFromChart}
+          initialExercise={challengeProgressData.find((p) => p.date === selectedEditDate)?.exercise ?? DEFAULT_EXERCISE}
+          initialGoalMode={(challengeProgressData.find((p) => p.date === selectedEditDate)?.goal_mode as 'full' | 'half') ?? 'full'}
+          canAddCustom={dataSource === "supabase" && !!user}
+          userId={user?.id}
         />
 
         {/* Bug Report Modal */}
