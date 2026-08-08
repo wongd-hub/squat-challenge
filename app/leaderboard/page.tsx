@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ArrowLeft, Trophy, Medal, Award, Users, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
@@ -15,18 +16,26 @@ export default function LeaderboardPage() {
   const [activeTab, setActiveTab] = useState<'today' | 'total'>('today');
   const [isLoading, setIsLoading] = useState(true);
   const [isUsingSupabase, setIsUsingSupabase] = useState(false);
+  const [exerciseFilter, setExerciseFilter] = useState<string | null>(null);
+  const [exercises, setExercises] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    loadLeaderboardData();
+    database.getExercises().then(({ data }) => {
+      if (data) setExercises(data);
+    });
   }, []);
 
-  const loadLeaderboardData = async () => {
+  useEffect(() => {
+    loadLeaderboardData(exerciseFilter);
+  }, [exerciseFilter]);
+
+  const loadLeaderboardData = async (filter?: string | null) => {
     setIsLoading(true);
-    
+
     if (isSupabaseConfigured()) {
       try {
-        const { data, error } = await database.getFullLeaderboard();
-        
+        const { data, error } = await database.getFullLeaderboard(undefined, filter ?? undefined);
+
         if (error) {
           console.error('❌ Error loading leaderboard:', error);
           loadMockData();
@@ -39,8 +48,10 @@ export default function LeaderboardPage() {
             totalSquats: entry.totalSquats,
             streak: entry.streak,
             rank: index + 1,
+            daysCompleted: entry.daysCompleted,
+            favouriteExercise: entry.favouriteExercise,
           }));
-          
+
           setLeaderboardData(formattedData);
           setIsUsingSupabase(true);
         }
@@ -51,7 +62,7 @@ export default function LeaderboardPage() {
     } else {
       loadMockData();
     }
-    
+
     setIsLoading(false);
   };
 
@@ -64,12 +75,11 @@ export default function LeaderboardPage() {
 
   // Memoize expensive calculations
   const sortedData = useMemo(() => {
-    return [...leaderboardData].sort((a, b) => {
-      if (activeTab === 'today') {
-        return b.todaySquats - a.todaySquats;
-      }
-      return b.totalSquats - a.totalSquats;
-    });
+    if (activeTab === 'today') {
+      return [...leaderboardData].sort((a, b) => b.todaySquats - a.todaySquats);
+    }
+    // 'total' ranking already comes from the backend (completion-first, then reps) — do not re-sort by reps.
+    return [...leaderboardData];
   }, [leaderboardData, activeTab]);
 
   const getRankIcon = useCallback((rank: number) => {
@@ -199,10 +209,28 @@ export default function LeaderboardPage() {
         {/* Leaderboard */}
         <Card className="glass">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="w-5 h-5 text-primary" />
-              {activeTab === 'today' ? "Today's Rankings" : 'All-Time Rankings'}
-            </CardTitle>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="w-5 h-5 text-primary" />
+                {activeTab === 'today' ? "Today's Rankings" : 'All-Time Rankings'}
+              </CardTitle>
+              <Select
+                value={exerciseFilter ?? 'all'}
+                onValueChange={(value) => setExerciseFilter(value === 'all' ? null : value)}
+              >
+                <SelectTrigger className="w-[160px] h-8 text-sm">
+                  <SelectValue placeholder="All exercises" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All exercises</SelectItem>
+                  {exercises.map((exercise) => (
+                    <SelectItem key={exercise.id} value={exercise.name}>
+                      {exercise.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {/* Loading State */}
@@ -270,10 +298,19 @@ export default function LeaderboardPage() {
                             {getRankIcon(displayRank)}
                             <div>
                               <div className="font-semibold text-foreground">{entry.name}</div>
-                              {badgeText && (
-                                <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                                  {badgeText}
-                                </Badge>
+                              {(badgeText || entry.favouriteExercise) && (
+                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                  {badgeText && (
+                                    <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
+                                      {badgeText}
+                                    </Badge>
+                                  )}
+                                  {entry.favouriteExercise && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      {entry.favouriteExercise}
+                                    </Badge>
+                                  )}
+                                </div>
                               )}
                             </div>
                           </div>
@@ -281,7 +318,7 @@ export default function LeaderboardPage() {
                             <div className="text-lg font-bold text-primary">
                               {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
                             </div>
-                            <div className="text-xs text-muted-foreground">situps</div>
+                            <div className="text-xs text-muted-foreground">reps</div>
                           </div>
                         </div>
                         <div className="flex justify-end">
@@ -304,19 +341,28 @@ export default function LeaderboardPage() {
                         <div className="col-span-5 flex items-center">
                           <div>
                             <div className="font-semibold text-foreground">{entry.name}</div>
-                            {badgeText && (
-                              <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                                {badgeText}
-                              </Badge>
+                            {(badgeText || entry.favouriteExercise) && (
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {badgeText && (
+                                  <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
+                                    {badgeText}
+                                  </Badge>
+                                )}
+                                {entry.favouriteExercise && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    {entry.favouriteExercise}
+                                  </Badge>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="col-span-3 text-center">
                           <div className="text-lg font-bold text-primary">
                             {activeTab === 'today' ? entry.todaySquats : entry.totalSquats.toLocaleString()}
                           </div>
-                          <div className="text-xs text-muted-foreground">situps</div>
+                          <div className="text-xs text-muted-foreground">reps</div>
                         </div>
                         
                         <div className="col-span-3 text-center">

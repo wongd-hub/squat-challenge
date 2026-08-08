@@ -103,6 +103,8 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
             totalSquats: entry.totalSquats,
             streak: entry.streak,
             rank: index + 1,
+            daysCompleted: entry.daysCompleted,
+            favouriteExercise: entry.favouriteExercise,
           }));
           
           // Store previous data before updating for animations
@@ -187,12 +189,11 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
 
   // Memoize expensive calculations
   const sortedData = useMemo(() => {
-    return [...leaderboardData].sort((a, b) => {
-      if (activeTab === 'today') {
-        return b.todaySquats - a.todaySquats;
-      }
-      return b.totalSquats - a.totalSquats;
-    }).slice(0, 5); // Show top 5
+    if (activeTab === 'today') {
+      return [...leaderboardData].sort((a, b) => b.todaySquats - a.todaySquats).slice(0, 5); // Show top 5
+    }
+    // 'total' ranking already comes from the backend (completion-first, then reps) — do not re-sort by reps.
+    return [...leaderboardData].slice(0, 5); // Show top 5
   }, [leaderboardData, activeTab]);
 
   const getRankIcon = useCallback((rank: number) => {
@@ -379,17 +380,24 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
                           </motion.div>
                           
                           <motion.div layout>
-                            <motion.div 
+                            <motion.div
                               className="font-semibold text-foreground text-sm"
                               layout
                             >
                               {entry.name}
                             </motion.div>
-                            {badgeText && (
-                              <motion.div layout>
-                                <Badge className={`text-xs mt-1 ${getRankBadgeColor(displayRank)}`}>
-                                  {badgeText}
-                                </Badge>
+                            {(badgeText || entry.favouriteExercise) && (
+                              <motion.div layout className="flex flex-wrap items-center gap-1 mt-1">
+                                {badgeText && (
+                                  <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
+                                    {badgeText}
+                                  </Badge>
+                                )}
+                                {entry.favouriteExercise && (
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                    {entry.favouriteExercise}
+                                  </Badge>
+                                )}
                               </motion.div>
                             )}
                           </motion.div>

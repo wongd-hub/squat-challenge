@@ -391,12 +391,12 @@ export const database = {
     }
   },
 
-  async getFullLeaderboard(date?: string) {
+  async getFullLeaderboard(date?: string, exerciseFilter?: string) {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
       // Get total leaderboard data
-      const { data: totalData, error: totalError } = await this.getTotalLeaderboard()
+      const { data: totalData, error: totalError } = await this.getTotalLeaderboard(exerciseFilter)
       if (totalError) throw totalError
 
       // Get daily leaderboard data
