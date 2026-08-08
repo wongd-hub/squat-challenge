@@ -512,6 +512,9 @@ export default function Home() {
           date: dateStr,
           squats_completed: Math.floor(Math.random() * 150) + 50, // Higher values: 50-200
           target_squats: target,
+          exercise: DEFAULT_EXERCISE,
+          goal_mode: 'full' as const,
+          challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
         }
       })
       setProgressData(sampleData)
@@ -1669,7 +1672,7 @@ export default function Home() {
         {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
           <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
-            Situp Challenge
+            Exercise Challenge
           </h1>
           <div className="text-sm md:text-lg mb-4">
             <ShinyText 
@@ -1720,7 +1723,7 @@ export default function Home() {
                     🚀 Challenge Launching July 9th, 2025 - Currently in Testing Phase
                   </h3>
                   <p className="text-xs text-blue-700 dark:text-blue-400">
-                                         We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your situps, and provide feedback! All data will be preserved for the official challenge start.
+                                         We're currently testing all features and functionality before the official launch. Feel free to explore the app, track your reps, and provide feedback! All data will be preserved for the official challenge start.
                   </p>
                 </div>
               </div>
@@ -1742,7 +1745,7 @@ export default function Home() {
             <CardContent className="text-center space-y-3">
               <div className="text-4xl mb-4">🎉</div>
               <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                Congratulations! You've completed the {CHALLENGE_CONFIG.TOTAL_DAYS}-day situp challenge!
+                Congratulations! You've completed the {CHALLENGE_CONFIG.TOTAL_DAYS}-day challenge!
               </p>
               <p className="text-muted-foreground">
                 Check out your progress below and see how you compare on the leaderboard.
@@ -1808,7 +1811,7 @@ export default function Home() {
               
               <div className="border-t border-border pt-4 space-y-3">
                 <p>
-                  <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day situp challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building core strength and endurance.
+                  <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building strength and endurance.
                 </p>
                 <p>
                   <strong>🎯 How to Use the {exercise} Dial:</strong> Drag clockwise to count {exercise.toLowerCase()} (each full revolution = 10 {exercise.toLowerCase()}), drag counter-clockwise to subtract — your count saves automatically as you go.
