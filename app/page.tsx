@@ -1872,12 +1872,13 @@ export default function Home() {
                     targetSquats={todayTarget}
                     currentDay={displayDay}
                     compact={false}
+                    exerciseLabel={exercise}
                   />
                 </CardContent>
               </Card>
 
               {/* Daily Target */}
-              <DailyTarget targetSquats={todayTarget} completedSquats={todaySquats} day={displayDay} />
+              <DailyTarget targetSquats={todayTarget} completedSquats={todaySquats} day={displayDay} exerciseLabel={exercise} />
             </div>
           )}
 

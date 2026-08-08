@@ -8,9 +8,10 @@ interface DailyTargetProps {
   targetSquats: number;
   completedSquats: number;
   day: number;
+  exerciseLabel?: string;
 }
 
-export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetProps) {
+export function DailyTarget({ targetSquats, completedSquats, day, exerciseLabel = "reps" }: DailyTargetProps) {
   const isRestDay = targetSquats === 0;
   const completionPercentage = isRestDay ? 100 : Math.min((completedSquats / targetSquats) * 100, 100);
   const isCompleted = isRestDay || completedSquats >= targetSquats;
@@ -45,7 +46,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
               <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
                 {targetSquats}
               </div>
-              <div className="text-sm text-muted-foreground">situps target</div>
+              <div className="text-sm text-muted-foreground">{exerciseLabel.toLowerCase()} target</div>
             </>
           )}
         </div>
@@ -70,7 +71,7 @@ export function DailyTarget({ targetSquats, completedSquats, day }: DailyTargetP
             {!isCompleted && (
               <div className="text-center p-4 glass-subtle rounded-xl w-full">
                 <div className="text-2xl font-bold text-primary mb-1">{remaining}</div>
-                <div className="text-sm text-muted-foreground">situps remaining</div>
+                <div className="text-sm text-muted-foreground">{exerciseLabel.toLowerCase()} remaining</div>
               </div>
             )}
           </>
