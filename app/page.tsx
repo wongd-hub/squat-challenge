@@ -36,6 +36,10 @@ import { EditDayModal } from "@/components/EditDayModal"
 import { PreChallengeWelcome } from "@/components/PreChallengeWelcome"
 import BugReportModal from "@/components/BugReportModal"
 import ConfettiExplosion from "react-confetti-explosion"
+import ExercisePicker from "@/components/ExercisePicker"
+import GoalModeToggle from "@/components/GoalModeToggle"
+import { effectiveTarget } from "@/lib/challenge"
+import { DEFAULT_EXERCISE } from "@/lib/exercises"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
@@ -52,6 +56,10 @@ export default function Home() {
   const [isBeforeChallengeStartState, setIsBeforeChallengeStartState] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [leaderboardRefreshTrigger, setLeaderboardRefreshTrigger] = useState(0)
+
+  // Per-day exercise choice + full/half goal mode
+  const [exercise, setExercise] = useState<string>(DEFAULT_EXERCISE)
+  const [goalMode, setGoalMode] = useState<'full' | 'half'>('full')
 
   // Ref for leaderboard section
   const leaderboardRef = useRef<HTMLDivElement>(null)
@@ -421,6 +429,17 @@ export default function Home() {
           // Get today's progress from the authoritative challenge data
           const todayProgress = challengeProgressWithTargets.find((p) => p.date === currentDate)
           todaySquatsFromData = todayProgress?.squats_completed || 0
+
+          // Initialise today's exercise/goal choice: prefer an already-banked
+          // row for today, otherwise fall back to the user's last choice
+          if (todayProgress && todayProgress.exercise) {
+            setExercise(todayProgress.exercise)
+            setGoalMode((todayProgress.goal_mode as 'full' | 'half') || 'full')
+          } else {
+            const lastChoice = await database.getLastChoice(user.id)
+            setExercise(lastChoice.exercise)
+            setGoalMode(lastChoice.goalMode)
+          }
         }
 
         // Process recent progress for chart display
@@ -463,6 +482,19 @@ export default function Home() {
     setTodaySquats(today)
 
     const savedProgress = storage.getUserProgress()
+
+    // Initialise today's exercise/goal choice: prefer today's already-saved
+    // local entry (if any), otherwise fall back to the last choice
+    const todayLocalEntry = savedProgress.find((p) => p.date === currentDate)
+    if (todayLocalEntry && todayLocalEntry.exercise) {
+      setExercise(todayLocalEntry.exercise)
+      setGoalMode((todayLocalEntry.goal_mode as 'full' | 'half') || 'full')
+    } else {
+      const lastChoice = storage.getLastChoice()
+      setExercise(lastChoice.exercise)
+      setGoalMode(lastChoice.goalMode)
+    }
+
     if (savedProgress.length === 0) {
       // Generate sample data for demo with higher values to show count-up effect
       const sampleData = Array.from({ length: 7 }, (_, i) => {
@@ -512,7 +544,8 @@ export default function Home() {
   }
 
   // Get today's target
-  const todayTarget = dailyTargets.find((t) => t.day === currentDay)?.target_squats ?? 50
+  const prescribedTarget = dailyTargets.find((t) => t.day === currentDay)?.target_squats ?? 50
+  const todayTarget = effectiveTarget(prescribedTarget, goalMode)
   
 
 
@@ -792,8 +825,10 @@ export default function Home() {
     if (dataSource === "supabase" && user) {
       // Save to Supabase
       try {
-        await database.updateUserProgress(user.id, currentDate, newTotalSquats, todayTarget)
-        
+        await database.updateUserProgress(user.id, currentDate, newTotalSquats, todayTarget, exercise, goalMode)
+        // Mirror the choice locally so offline defaults stay in sync
+        storage.setLastChoice(exercise, goalMode)
+
         // Update local state immediately for responsive UI
         setTodaySquats(newTotalSquats)
 
@@ -866,12 +901,12 @@ export default function Home() {
           return // Don't update local state if we can't save to Supabase
         } else {
           // Fallback to local storage
-          storage.updateTodayProgress(newTotalSquats)
+          storage.updateTodayProgress(newTotalSquats, exercise, goalMode)
         }
       }
     } else {
       // Save to local storage
-      storage.updateTodayProgress(newTotalSquats)
+      storage.updateTodayProgress(newTotalSquats, exercise, goalMode)
       setTodaySquats(newTotalSquats)
 
       // Check for new milestones and show encouragement messages
@@ -1236,6 +1271,9 @@ export default function Home() {
   }, [challengeProgressData])
 
   const weeklyGoal = 850
+
+  // Whether today's count has already been banked (locks exercise/goal choice)
+  const hasBankedToday = todaySquats > 0
 
   // Memoize display calculations
   const displayDay = useMemo(() => {
@@ -1770,13 +1808,13 @@ export default function Home() {
                   <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day situp challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building core strength and endurance.
                 </p>
                 <p>
-                  <strong>🎯 How to Use the Situp Dial:</strong> Drag clockwise to count situps (each full revolution = 10 situps), drag counter-clockwise to subtract, then click "Bank Situps" to save your daily total.
+                  <strong>🎯 How to Use the {exercise} Dial:</strong> Drag clockwise to count {exercise.toLowerCase()} (each full revolution = 10 {exercise.toLowerCase()}), drag counter-clockwise to subtract — your count saves automatically as you go.
                 </p>
                 <p>
-                  <strong>📈 Edit Previous Days:</strong> Use the progress chart below to click on any previous day and edit your situp count - perfect for catching up or making corrections!
+                  <strong>📈 Edit Previous Days:</strong> Use the progress chart below to click on any previous day and edit your {exercise.toLowerCase()} count - perfect for catching up or making corrections!
                 </p>
                 <p>
-                  <strong>📅 Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)} • Some days are rest days (0 situps) for recovery.
+                  <strong>📅 Challenge Period:</strong> {CHALLENGE_CONFIG.START_DATE} to {getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)} • Some days are rest days (0 {exercise.toLowerCase()}) for recovery.
                 </p>
               </div>
               
@@ -1811,10 +1849,22 @@ export default function Home() {
               <Card className="glass-strong">
                 <CardContent className="p-4 md:p-8">
                   <div className="text-center mb-6">
-                                         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">Situp Dial</h2>
+                                         <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">{exercise} Dial</h2>
                     <p className="text-sm md:text-base text-muted-foreground">
                       Drag clockwise to add, counter-clockwise to subtract
                     </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between mb-4">
+                    <div className="flex-1">
+                      <ExercisePicker
+                        value={exercise}
+                        onChange={setExercise}
+                        canAddCustom={dataSource === "supabase" && !!user}
+                        userId={user?.id}
+                        disabled={hasBankedToday}
+                      />
+                    </div>
+                    <GoalModeToggle value={goalMode} onChange={setGoalMode} disabled={hasBankedToday} />
                   </div>
                   <SquatDial
                     onSquatsChange={handleSquatsUpdate}

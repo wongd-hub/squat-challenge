@@ -3,15 +3,15 @@
 Plan: docs/superpowers/plans/2026-06-30-arbitrary-exercises.md
 Branch: feature/arbitrary-exercises
 
-- Task 1: pending (vitest + lib/challenge.ts) — subagent
-- Task 2: pending (lib/exercises.ts) — subagent
+- Task 1: complete (commits dd82e69..d800dbc, review clean)
+- Task 2: complete (commit 6943189, review clean; +eb89e15 fix: normalise rule = remove non-alnum)
 - Task 3: SQL file created, DB apply MANUAL by user, needs final review
 - Task 4: SQL file created, DB apply MANUAL by user, needs final review
 - Task 5: SQL file created, DB apply MANUAL by user, needs final review
 - Task 6: SQL file created, DB apply MANUAL by user, needs final review
-- Task 7: pending (lib/supabase.ts wiring) — subagent
-- Task 8: pending (ExercisePicker) — subagent
-- Task 9: pending (GoalModeToggle) — subagent
+- Task 7: complete (commits 6943189..170b1b2, review clean; +c02726b fix: scope getDailyTargets by challenge_id)
+- Task 8: complete (commits c02726b..cea51a5, review clean)
+- Task 9: complete (commits cea51a5..33f3929, review clean)
 - Task 10: pending (page.tsx wiring) — subagent
 - Task 11: pending (DailyTarget + SquatDial labels) — subagent
 - Task 12: pending (EditDayModal) — subagent
