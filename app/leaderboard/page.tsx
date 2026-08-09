@@ -49,7 +49,7 @@ export default function LeaderboardPage() {
             streak: entry.streak,
             rank: index + 1,
             daysCompleted: entry.daysCompleted,
-            favouriteExercise: entry.favouriteExercise,
+            exerciseBreakdown: entry.exerciseBreakdown,
           }));
 
           setLeaderboardData(formattedData);
@@ -298,16 +298,16 @@ export default function LeaderboardPage() {
                             {getRankIcon(displayRank)}
                             <div>
                               <div className="font-semibold text-foreground">{entry.name}</div>
-                              {(badgeText || entry.favouriteExercise) && (
+                              {(badgeText || entry.exerciseBreakdown) && (
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
                                   {badgeText && (
                                     <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
                                       {badgeText}
                                     </Badge>
                                   )}
-                                  {entry.favouriteExercise && (
+                                  {entry.exerciseBreakdown && (
                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                      {entry.favouriteExercise}
+                                      {entry.exerciseBreakdown}
                                     </Badge>
                                   )}
                                 </div>
@@ -341,16 +341,16 @@ export default function LeaderboardPage() {
                         <div className="col-span-5 flex items-center">
                           <div>
                             <div className="font-semibold text-foreground">{entry.name}</div>
-                            {(badgeText || entry.favouriteExercise) && (
+                            {(badgeText || entry.exerciseBreakdown) && (
                               <div className="flex flex-wrap items-center gap-1 mt-1">
                                 {badgeText && (
                                   <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
                                     {badgeText}
                                   </Badge>
                                 )}
-                                {entry.favouriteExercise && (
+                                {entry.exerciseBreakdown && (
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                    {entry.favouriteExercise}
+                                    {entry.exerciseBreakdown}
                                   </Badge>
                                 )}
                               </div>

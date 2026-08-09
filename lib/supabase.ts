@@ -294,7 +294,7 @@ export const database = {
               daysActive: Number(entry.days_active),
               streak: streakError ? 0 : (streakData || 0),
               daysCompleted: Number(entry.days_completed),
-              favouriteExercise: entry.favourite_exercise as string | null,
+              exerciseBreakdown: entry.exercise_breakdown as string | null,
             }
           } catch (error) {
             console.error("❌ Exception calculating streak for user", entry.user_id, ":", error)
@@ -306,7 +306,7 @@ export const database = {
               daysActive: Number(entry.days_active),
               streak: 0,
               daysCompleted: 0,
-              favouriteExercise: null,
+              exerciseBreakdown: null,
             }
           }
         })
@@ -415,7 +415,7 @@ export const database = {
           streak: totalEntry.streak,
           daysActive: totalEntry.daysActive,
           daysCompleted: totalEntry.daysCompleted,
-          favouriteExercise: totalEntry.favouriteExercise,
+          exerciseBreakdown: totalEntry.exerciseBreakdown,
         }
       })
 
@@ -431,7 +431,7 @@ export const database = {
             streak: dailyEntry.streak,
             daysActive: 1,
             daysCompleted: 0,
-            favouriteExercise: null,
+            exerciseBreakdown: null,
           })
         }
       })

@@ -104,7 +104,7 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
             streak: entry.streak,
             rank: index + 1,
             daysCompleted: entry.daysCompleted,
-            favouriteExercise: entry.favouriteExercise,
+            exerciseBreakdown: entry.exerciseBreakdown,
           }));
           
           // Store previous data before updating for animations
@@ -386,16 +386,16 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
                             >
                               {entry.name}
                             </motion.div>
-                            {(badgeText || entry.favouriteExercise) && (
+                            {(badgeText || entry.exerciseBreakdown) && (
                               <motion.div layout className="flex flex-wrap items-center gap-1 mt-1">
                                 {badgeText && (
                                   <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
                                     {badgeText}
                                   </Badge>
                                 )}
-                                {entry.favouriteExercise && (
+                                {entry.exerciseBreakdown && (
                                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                    {entry.favouriteExercise}
+                                    {entry.exerciseBreakdown}
                                   </Badge>
                                 )}
                               </motion.div>
