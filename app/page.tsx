@@ -1279,9 +1279,6 @@ export default function Home() {
 
   const weeklyGoal = 850
 
-  // Whether today's count has already been banked (locks exercise/goal choice)
-  const hasBankedToday = todaySquats > 0
-
   // Memoize display calculations
   const displayDay = useMemo(() => {
     if (challengeComplete) {
@@ -1868,10 +1865,9 @@ export default function Home() {
                         onChange={setExercise}
                         canAddCustom={dataSource === "supabase" && !!user}
                         userId={user?.id}
-                        disabled={hasBankedToday}
                       />
                     </div>
-                    <GoalModeToggle value={goalMode} onChange={setGoalMode} disabled={hasBankedToday} />
+                    <GoalModeToggle value={goalMode} onChange={setGoalMode} />
                   </div>
                   <SquatDial
                     onSquatsChange={handleSquatsUpdate}
