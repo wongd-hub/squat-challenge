@@ -215,6 +215,57 @@ export const database = {
     }
   },
 
+  // Logs one bank action's delta as its own entry, tagged with the
+  // exercise selected at that moment. Purely additive/audit — does not
+  // affect the day's row (squats_completed/target_squats stay the
+  // single source of truth for streaks/completion). No-op for a zero delta.
+  async addProgressEntry(userId: string, date: string, exercise: string, reps: number) {
+    if (!supabase || reps === 0) return { data: null, error: null }
+    try {
+      const { data, error } = await supabase
+        .from("user_progress_entries")
+        .insert({
+          user_id: userId, date, exercise, reps,
+          challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+        })
+        .select()
+      if (error) { console.error("❌ Error inserting progress entry:", error); return { data: null, error } }
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Exception in addProgressEntry:", error)
+      return { data: null, error }
+    }
+  },
+
+  // Editing a past day sets one absolute number, not an incremental delta —
+  // there's no way to know the historical mix for an edited value, so this
+  // replaces the day's entries with a single new one under the given exercise.
+  async replaceProgressEntriesForDay(userId: string, date: string, exercise: string, totalReps: number) {
+    if (!supabase) return { data: null, error: null }
+    try {
+      const { error: deleteError } = await supabase
+        .from("user_progress_entries")
+        .delete()
+        .eq('user_id', userId).eq('date', date)
+      if (deleteError) { console.error("❌ Error clearing progress entries:", deleteError); return { data: null, error: deleteError } }
+
+      if (totalReps <= 0) return { data: null, error: null }
+
+      const { data, error } = await supabase
+        .from("user_progress_entries")
+        .insert({
+          user_id: userId, date, exercise, reps: totalReps,
+          challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+        })
+        .select()
+      if (error) { console.error("❌ Error inserting replacement progress entry:", error); return { data: null, error } }
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Exception in replaceProgressEntriesForDay:", error)
+      return { data: null, error }
+    }
+  },
+
   async getExercises(): Promise<{ data: Exercise[]; error: any }> {
     if (!supabase) {
       return { data: SEED_EXERCISES.map((name) => ({ id: name, name, normalized_name: normalizeExerciseName(name) })), error: null }

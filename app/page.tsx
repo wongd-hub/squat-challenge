@@ -828,7 +828,9 @@ export default function Home() {
     if (dataSource === "supabase" && user) {
       // Save to Supabase
       try {
+        const deltaReps = newTotalSquats - todaySquats
         await database.updateUserProgress(user.id, currentDate, newTotalSquats, todayTarget, exercise, goalMode)
+        await database.addProgressEntry(user.id, currentDate, exercise, deltaReps)
         // Mirror the choice locally so offline defaults stay in sync
         storage.setLastChoice(exercise, goalMode)
 
@@ -1011,7 +1013,8 @@ export default function Home() {
       // Save to Supabase
       try {
         await database.updateUserProgress(user.id, date, squats, target, exercise, goalMode)
-        
+        await database.replaceProgressEntriesForDay(user.id, date, exercise, squats)
+
         // Reload both challenge progress AND recent progress to update all displays
         const [challengeResult, recentResult] = await Promise.all([
           database.getChallengeProgress(user.id),
