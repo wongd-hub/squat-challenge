@@ -47,7 +47,7 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
           </Badge>
           <Badge variant="outline" className="text-sm glass-subtle px-4 py-2">
             <Sparkles className="w-4 h-4 mr-2" />
-            3,214 Total Reps
+            {CHALLENGE_CONFIG.DAILY_TARGETS.reduce((sum, d) => sum + d.target_squats, 0).toLocaleString()} Total Reps
           </Badge>
         </div>
         {/* Testing Notice */}
