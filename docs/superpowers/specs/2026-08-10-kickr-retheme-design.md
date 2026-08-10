@@ -111,14 +111,24 @@ already relies on in places.
 | Token | Dark (hex → rgb triplet) | Light (hex → rgb triplet) |
 |---|---|---|
 | `background` | `#0b0b0c` → `11 11 12` | `#faf8f6` → `250 248 246` |
-| `card` / `muted` / `secondary` / `popover` (flat panel surface) | `#141416` → `20 20 22` | `#ffffff` → `255 255 255` |
+| `card` / `muted` / `secondary` (flat panel surface) | `#141416` → `20 20 22` | `#ffffff` → `255 255 255` |
+| `popover` (dropdowns/modals — kickr's "raised" tier, one step up from `card`) | `#1c1c1f` → `28 28 31` | `#ffffff` → `255 255 255` (no distinct raised tier in light mode — `card` is already the lightest surface) |
 | `foreground` | `#ededef` → `237 237 239` | `#1c1a18` → `28 26 24` |
 | `muted-foreground` | `#8b8b93` → `139 139 147` | `#8a8378` → `138 131 120` |
 | `border` / `input` | `#2a2a2e` → `42 42 46` | `#e4e0da` → `228 224 218` |
 | `accent` / `primary` | `#d97757` → `217 119 87` | `#d97757` → `217 119 87` |
 | `accent-foreground` / `primary-foreground` | `#0b0b0c` → `11 11 12` | `#ffffff` → `255 255 255` |
 | `ring` | same as `accent` | same as `accent` |
-| `destructive` / `destructive-foreground` | **unchanged** — stays the existing warning red; still used by `AuthModal` and `form.tsx` for genuine error states | unchanged |
+| `destructive` / `destructive-foreground` | **same rendered red as today**, converted to the new format: `239 68 68` / `250 250 250` | dark-mode-only red preserved: `127 29 29` / `250 250 250` |
+
+`destructive` keeps rendering as the exact same warning red as today (still used by `AuthModal`
+and `form.tsx` for genuine error states) — only its *storage format* changes alongside every
+other token, converting its existing HSL values (`0 84.2% 60.2%` light / `0 62.8% 30.6%` dark)
+to the equivalent RGB triplet so the format switch doesn't silently shift its color.
+
+`--chart-1` through `--chart-5` are explicitly out of scope (see below) and keep both their
+current values *and* their current `hsl(var(--chart-N))` wrapper in `tailwind.config.ts` —
+they are not touched by the RGB-triplet migration at all.
 
 `--radius` (`0.5rem`) is unchanged — it already matches kickr's `rounded-lg`. The
 neobrut-specific sharper-radius override is deleted along with the rest of `.theme-neobrut`.
