@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useHaptic } from 'use-haptic';
-import StarBorder from './StarBorder';
+import { Button } from './ui/button';
 
 interface SquatDialProps {
   onSquatsChange: (squats: number) => void;
@@ -324,44 +324,24 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         >
           {/* Progress Ring */}
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" style={{ pointerEvents: 'none' }}>
-            <defs>
-              {/* Purple gradient for positive progress */}
-              <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f9a8d4" /> {/* from-pink-300 */}
-                <stop offset="50%" stopColor="#c4b5fd" /> {/* via-purple-300 */}
-                <stop offset="100%" stopColor="#818cf8" /> {/* to-indigo-400 */}
-              </linearGradient>
-              {/* Alternative gradient for better circular effect */}
-              <linearGradient id="purpleGradientCircular" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#f9a8d4" />
-                <stop offset="33%" stopColor="#c4b5fd" />
-                <stop offset="66%" stopColor="#a78bfa" />
-                <stop offset="100%" stopColor="#818cf8" />
-              </linearGradient>
-              {/* Orange to rose gradient for negative progress */}
-              <linearGradient id="orangeRoseGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#fb923c" /> {/* from-orange-400 */}
-                <stop offset="100%" stopColor="#fb7185" /> {/* to-rose-400 */}
-              </linearGradient>
-            </defs>
             {/* Background circle */}
             <circle
               cx="50"
               cy="50"
               r="45"
               fill="none"
-              stroke="hsl(var(--border))"
+              stroke="rgb(var(--border))"
               strokeWidth="2"
               opacity="0.3"
             />
-            {/* Progress circle */}
+            {/* Progress circle: accent when adding, dedicated blue when removing */}
             {tempSquats !== 0 && (
               <circle
                 cx="50"
                 cy="50"
                 r="45"
                 fill="none"
-                stroke={isNegative ? 'url(#orangeRoseGradient)' : 'url(#purpleGradientCircular)'}
+                stroke={isNegative ? '#4a90d9' : '#d97757'}
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeDasharray="282.7"
@@ -388,10 +368,11 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
             onPointerDown={handlePointerDown}
           >
             {/* Center Number - Fixed position to prevent rotation */}
-            <div 
-              className={`absolute inset-0 flex items-center justify-center ${compact ? 'text-4xl' : 'text-4xl sm:text-5xl md:text-6xl'} font-bold ${isNegative ? 'text-destructive' : 'text-foreground'}`}
+            <div
+              className={`absolute inset-0 flex items-center justify-center font-mono ${compact ? 'text-4xl' : 'text-4xl sm:text-5xl md:text-6xl'} font-bold`}
               style={{
                 transform: `rotate(${-dialRotation}deg)`, // Counter-rotate to keep number upright
+                color: isNegative ? '#4a90d9' : 'rgb(var(--foreground))',
               }}
             >
               {tempSquats > 0 ? `+${tempSquats}` : tempSquats}
@@ -409,8 +390,8 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
               {/* Outer circle with border */}
               <div 
                 className={`${compact ? 'w-5 h-5' : 'w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7'} rounded-full border-2 border-white shadow-lg flex items-center justify-center`}
-                style={{ 
-                  background: isNegative ? 'linear-gradient(135deg, #fb923c 0%, #fb7185 100%)' : 'linear-gradient(135deg, #f9a8d4 0%, #c4b5fd 50%, #818cf8 100%)',
+                style={{
+                  background: isNegative ? '#4a90d9' : '#d97757',
                 }}
               >
                 {/* Inner dot */}
@@ -432,7 +413,10 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
           {currentSquats} of {targetSquats}
         </p>
         {tempSquats !== 0 && (
-          <p className={`${compact ? 'text-sm' : 'text-base'} ${isNegative ? 'text-destructive' : 'text-green-600 dark:text-green-400'} mt-2`}>
+          <p
+            className={`${compact ? 'text-sm' : 'text-base'} mt-2`}
+            style={{ color: isNegative ? '#4a90d9' : '#d97757' }}
+          >
             {isNegative ? `Removing ${Math.abs(tempSquats)} ${exerciseLabel.toLowerCase()}` : `Adding ${tempSquats} ${exerciseLabel.toLowerCase()}`}
           </p>
         )}
@@ -448,19 +432,14 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         )}
       </div>
 
-      {/* Bank Button with StarBorder */}
-      <StarBorder
-        as="button"
-        className={`${compact ? 'w-48 h-12' : 'w-52 h-12 sm:w-56 sm:h-12 md:w-64 md:h-14'} ${!canBankSquats ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        color="cyan"
-        speed="5s"
+      {/* Bank Button */}
+      <Button
+        className={`${compact ? 'w-48 h-12' : 'w-52 h-12 sm:w-56 sm:h-12 md:w-64 md:h-14'} ${compact ? 'text-base' : 'text-base sm:text-lg md:text-lg'} font-medium rounded-full`}
         onClick={bankSquats}
         disabled={!canBankSquats}
       >
-        <span className={`${compact ? 'text-base' : 'text-base sm:text-lg md:text-lg'} font-medium`}>
-          {isNegative ? `Remove ${exerciseLabel}` : isTargetReached ? (targetSquats === 0 ? 'Enjoying Rest Day' : 'Target Reached!') : `Bank ${exerciseLabel}`}
-        </span>
-      </StarBorder>
+        {isNegative ? `Remove ${exerciseLabel}` : isTargetReached ? (targetSquats === 0 ? 'Enjoying Rest Day' : 'Target Reached!') : `Bank ${exerciseLabel}`}
+      </Button>
 
 
     </div>
