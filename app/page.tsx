@@ -1672,7 +1672,7 @@ export default function Home() {
 
         {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-pink-400 dark:via-red-400 dark:to-amber-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-pink-600 via-red-600 to-amber-600 dark:from-pink-400 dark:via-red-400 dark:to-amber-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
             Exercise Challenge
           </h1>
           <div className="text-sm md:text-lg mb-4">
