@@ -133,7 +133,6 @@ squat-challenge/
 │   ├── ScrollLottie.tsx         # Lottie animation component
 │   ├── ShinyText.tsx            # Text animation effects
 │   ├── SquatDial.tsx            # Interactive counting dial
-│   ├── StarBorder.tsx           # Animated border component
 │   ├── StatsOverview.tsx        # Statistics cards overview
 │   └── theme-*.tsx              # Theme management components
 ├── hooks/                       # Custom React hooks
