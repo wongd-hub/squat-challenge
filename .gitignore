@@ -28,3 +28,6 @@ next-env.d.ts
 
 # supabase temp files
 supabase/.temp/
+
+# superpowers scratch (sdd ledger, brainstorm mockups)
+.superpowers/
