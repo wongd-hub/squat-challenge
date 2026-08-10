@@ -21,15 +21,18 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
                     0% {
                         background-position: 200% 0;
                     }
-                    40% {
-                        background-position: -200% 0;
-                    }
                     100% {
-                        background-position: -200% 0;
+                        background-position: -80% 0;
                     }
                 }
                 .custom-shine-animation {
-                    animation: customShine 4s linear;
+                    animation: customShine 2.4s ease-in-out;
+                }
+                @media (prefers-reduced-motion: reduce) {
+                    .custom-shine-animation {
+                        animation: none;
+                        background-position: 100% 0;
+                    }
                 }
             `;
             document.head.appendChild(style);
@@ -42,16 +45,16 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
         const scheduleNextShine = () => {
             // Random interval between 5-10 seconds (5000-10000ms)
             const randomDelay = Math.random() * 5000 + 5000;
-            
+
             setTimeout(() => {
                 setIsShining(true);
-                
-                // Remove the animation after it completes (4 seconds)
+
+                // Remove the animation after it completes (2.4 seconds)
                 setTimeout(() => {
                     setIsShining(false);
                     // Schedule the next shine
                     scheduleNextShine();
-                }, 4000);
+                }, 2400);
             }, randomDelay);
         };
 
@@ -63,14 +66,14 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
         <div
             className={`inline-block ${isShining ? 'custom-shine-animation' : ''} ${className}`}
             style={{
-                backgroundImage: disabled 
+                backgroundImage: disabled
                     ? 'none'
-                    : 'linear-gradient(110deg, hsl(var(--muted-foreground)) 45%, #fff 55%, hsl(var(--muted-foreground)) 65%)',
-                backgroundSize: '200% 100%',
+                    : 'linear-gradient(100deg, rgb(var(--foreground)) 40%, #d97757 50%, rgb(var(--foreground)) 60%)',
+                backgroundSize: '250% 100%',
                 WebkitBackgroundClip: disabled ? 'initial' : 'text',
                 backgroundClip: disabled ? 'initial' : 'text',
-                WebkitTextFillColor: disabled ? 'hsl(var(--muted-foreground))' : 'transparent',
-                color: disabled ? 'hsl(var(--muted-foreground))' : 'transparent',
+                WebkitTextFillColor: disabled ? 'rgb(var(--muted-foreground))' : 'transparent',
+                color: disabled ? 'rgb(var(--muted-foreground))' : 'transparent',
             }}
         >
             {text}
@@ -78,4 +81,4 @@ const ShinyText: React.FC<ShinyTextProps> = ({ text, disabled = false, speed = 5
     );
 };
 
-export default ShinyText; 
+export default ShinyText;
