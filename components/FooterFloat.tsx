@@ -11,7 +11,7 @@ const FooterFloat: React.FC = () => {
         href="https://www.herdmentality.xyz/"
         target="_blank"
         rel="noopener noreferrer"
-        className="block w-full text-muted-foreground hover:opacity-70 transition-opacity"
+        className="block w-full hover:opacity-70 transition-opacity"
       >
         <TextLoop
           text="made by the herd"
@@ -20,7 +20,7 @@ const FooterFloat: React.FC = () => {
           curviness={50}
           ribbon
           ribbonColor="#d97757"
-          color="currentColor"
+          color="#ffffff"
           fontSize={28}
           fontWeight={600}
           letterSpacing={1}

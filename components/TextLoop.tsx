@@ -33,7 +33,7 @@ interface Metrics {
 }
 
 const VIEW_W = 1200;
-const VIEW_H = 220;
+const VIEW_H = 360;
 const CX = VIEW_W / 2;
 const CY = VIEW_H / 2;
 const EDGE_PAD = 6;
@@ -202,6 +202,7 @@ const TextLoop = ({
     <div ref={rootRef} className={`relative w-full overflow-hidden ${className}`.trim()} style={style}>
       <svg
         className="block w-full h-auto"
+        style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}` }}
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
