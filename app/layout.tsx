@@ -26,11 +26,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const themeStyle = (process.env.THEME_STYLE || 'glass').toLowerCase();
-  const themeClass = themeStyle === 'glass' ? 'theme-glass' : 'theme-neobrut';
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} ${themeClass}`}>
+      <body className={inter.className}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
