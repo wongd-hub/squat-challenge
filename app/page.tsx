@@ -1572,9 +1572,6 @@ export default function Home() {
         {/* Footer */}
         <FooterFloat />
 
-        {/* Scroll Lottie Animation */}
-        <ScrollLottie />
-
         {/* Bug Report Modal */}
         <BugReportModal
           isOpen={bugReportModalOpen}
