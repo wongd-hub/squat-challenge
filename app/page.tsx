@@ -1734,7 +1734,7 @@ export default function Home() {
 
         {/* Challenge Complete Message */}
         {challengeComplete && (
-          <Card className="mb-6 md:mb-8 glass-strong border-green-500/20 max-w-4xl mx-auto">
+          <Card className="mb-6 md:mb-8 glass-strong grain-strong border-green-500/20 max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-center justify-center">
                 <Trophy className="w-6 h-6 text-yellow-500" />
