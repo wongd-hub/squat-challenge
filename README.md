@@ -71,9 +71,6 @@ A beautiful, production-ready web application for tracking daily exercise progre
    NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
    NEXT_PUBLIC_CHALLENGE_ID=2026-07                   # Scopes progress/leaderboard data to this challenge run (format: YYYY-MM)
    
-   # Theme
-   THEME_STYLE=glass                                  # 'glass' (default) or 'neobrut'
-   
    # GitHub Integration (for bug reports)
    GITHUB_TOKEN=your-github-token
    GITHUB_REPO=yourusername/your-repo
@@ -136,7 +133,6 @@ squat-challenge/
 │   ├── ScrollLottie.tsx         # Lottie animation component
 │   ├── ShinyText.tsx            # Text animation effects
 │   ├── SquatDial.tsx            # Interactive counting dial
-│   ├── StarBorder.tsx           # Animated border component
 │   ├── StatsOverview.tsx        # Statistics cards overview
 │   └── theme-*.tsx              # Theme management components
 ├── hooks/                       # Custom React hooks
@@ -232,13 +228,6 @@ export const CHALLENGE_CONFIG = {
 }
 ```
 
-### Theming
-Set `THEME_STYLE` to switch the visual style:
-```env
-THEME_STYLE=glass     # Glassmorphism UI (default)
-THEME_STYLE=neobrut   # Neobrutalist UI (alternative)
-```
-
 ### Environment Variables
 ```env
 # Test Mode Control
@@ -252,9 +241,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 NEXT_PUBLIC_CHALLENGE_START_DATE=2026-07-09
 NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
 NEXT_PUBLIC_CHALLENGE_ID=2026-07                   # Scopes progress/leaderboard data to a specific challenge run (format: YYYY-MM)
-
-# Theme (server-side, not NEXT_PUBLIC_)
-THEME_STYLE=glass                                  # 'glass' (default) or 'neobrut'
 
 # GitHub Integration (for bug reports)
 GITHUB_TOKEN=your-github-token
@@ -277,7 +263,6 @@ Vercel auto-detects the Next.js app, builds it, and deploys the API route as a s
 NEXT_PUBLIC_SUPABASE_URL=your-production-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
 NEXT_PUBLIC_CHALLENGE_ID=2026-07
-THEME_STYLE=glass
 ```
 
 ## 🔒 Security & Performance

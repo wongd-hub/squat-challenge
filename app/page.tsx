@@ -1489,7 +1489,7 @@ export default function Home() {
       <div className="min-h-screen gradient-bg">
         {/* Sticky Header */}
         <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
-          isScrolled ? "backdrop-blur-xl bg-background/10 border-b border-white/10 shadow-xl" : "bg-transparent"
+          isScrolled ? "backdrop-blur-xl bg-background/80 border-b border-border" : "bg-transparent"
         }`}>
           <div className="container mx-auto px-4 py-3 max-w-6xl">
             <div className="flex justify-between items-center">
@@ -1508,7 +1508,7 @@ export default function Home() {
                     <>
                       <Badge
                         variant="outline"
-                        className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
+                        className="glass-subtle text-xs"
                       >
                         <User className="w-3 h-3 mr-1" />
                         {displayName}
@@ -1517,7 +1517,7 @@ export default function Home() {
                         variant="ghost"
                         size="icon"
                         onClick={handleSignOut}
-                        className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20"
+                        className="glass-subtle w-10 h-10 md:w-8 md:h-8"
                       >
                         <LogOut className="w-4 h-4 md:w-3 md:h-3" />
                       </Button>
@@ -1528,7 +1528,7 @@ export default function Home() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20"
+                          className="glass-subtle text-xs px-2 py-1"
                         >
                           <User className="w-3 h-3 mr-1" />
                           Sign In
@@ -1543,7 +1543,7 @@ export default function Home() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setBugReportModalOpen(true)}
-                  className={`glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none transition-all duration-500 ${
+                  className={`glass-subtle w-10 h-10 md:w-8 md:h-8 touch-manipulation select-none transition-all duration-500 ${
                     isScrolled ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
                   }`}
                   style={{ touchAction: 'manipulation' }}
@@ -1589,7 +1589,7 @@ export default function Home() {
       {/* Sticky Glassmorphic Header */}
       <div
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out ${
-          isScrolled ? "backdrop-blur-xl bg-background/10 border-b border-white/10 shadow-xl" : "bg-transparent"
+          isScrolled ? "backdrop-blur-xl bg-background/80 border-b border-border" : "bg-transparent"
         }`}
       >
         <div className="container mx-auto px-4 py-3 max-w-6xl">
@@ -1612,7 +1612,7 @@ export default function Home() {
                   <>
                     <Badge
                       variant="outline"
-                      className="glass-subtle text-xs border-white/20 bg-white/10 backdrop-blur-sm"
+                      className="glass-subtle text-xs"
                     >
                       <User className="w-3 h-3 mr-1" />
                       {displayName}
@@ -1621,7 +1621,7 @@ export default function Home() {
                       variant="ghost"
                       size="icon"
                       onClick={handleSignOut}
-                      className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none"
+                      className="glass-subtle w-10 h-10 md:w-8 md:h-8 touch-manipulation select-none"
                       style={{ touchAction: 'manipulation' }}
                     >
                       <LogOut className="w-4 h-4 md:w-3 md:h-3" />
@@ -1633,7 +1633,7 @@ export default function Home() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="glass-subtle text-xs px-2 py-1 hover:bg-white/10 border-white/20 touch-manipulation min-h-[40px] md:min-h-[32px]"
+                        className="glass-subtle text-xs px-2 py-1 touch-manipulation min-h-[40px] md:min-h-[32px]"
                         style={{ touchAction: 'manipulation' }}
                         onClick={() => {}}
                       >
@@ -1650,7 +1650,7 @@ export default function Home() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setBugReportModalOpen(true)}
-                className={`glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation select-none transition-all duration-500 ${
+                className={`glass-subtle w-10 h-10 md:w-8 md:h-8 touch-manipulation select-none transition-all duration-500 ${
                   isScrolled ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
                 }`}
                 style={{ touchAction: 'manipulation' }}
@@ -1672,7 +1672,7 @@ export default function Home() {
 
         {/* Centered Header */}
         <div className="text-center mb-6 md:mb-8">
-          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
+          <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-pink-600 via-red-600 to-amber-600 dark:from-pink-400 dark:via-red-400 dark:to-amber-400 bg-clip-text text-transparent mb-2 leading-normal overflow-visible pb-1">
             Exercise Challenge
           </h1>
           <div className="text-sm md:text-lg mb-4">
@@ -1734,7 +1734,7 @@ export default function Home() {
 
         {/* Challenge Complete Message */}
         {challengeComplete && (
-          <Card className="mb-6 md:mb-8 glass-strong border-green-500/20 max-w-4xl mx-auto">
+          <Card className="mb-6 md:mb-8 glass-strong grain-strong border-green-500/20 max-w-4xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-center justify-center">
                 <Trophy className="w-6 h-6 text-yellow-500" />
@@ -1934,9 +1934,10 @@ export default function Home() {
           onClose={() => setBugReportModalOpen(false)}
         />
 
-        {/* Footer */}
-        <FooterFloat />
       </div>
+
+      {/* Footer -- deliberately outside the max-w-6xl content container so it can span the full page width */}
+      <FooterFloat />
     </div>
   )
 }

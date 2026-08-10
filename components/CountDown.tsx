@@ -64,9 +64,9 @@ export function Countdown({ targetDate, onComplete }: CountdownProps) {
   )
 
   return (
-    <Card className="glass-strong bg-gradient-to-br from-white/80 to-white/60 dark:from-gray-900/80 dark:to-gray-800/60 border-white/30 dark:border-gray-700/30 shadow-2xl max-w-4xl mx-auto rounded-3xl">
+    <Card className="glass-strong max-w-4xl mx-auto rounded-3xl">
       <CardContent className="p-4 xs:p-6 sm:p-8 md:p-12">
-        <div className="flex items-center justify-between xs:justify-center xs:gap-2 sm:gap-4 md:gap-8 lg:gap-12 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+        <div className="flex items-center justify-between xs:justify-center xs:gap-2 sm:gap-4 md:gap-8 lg:gap-12 bg-gradient-to-r from-pink-600 via-red-600 to-amber-600 dark:from-pink-400 dark:via-red-400 dark:to-amber-400 bg-clip-text text-transparent">
           <TimeUnit value={timeRemaining.days} label="Days" />
           
           {/* Separator - Hidden on very small mobile */}

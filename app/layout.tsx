@@ -1,10 +1,20 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 
-const inter = Inter({ subsets: ['latin'] });
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-sans',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-mono',
+});
 
 export const metadata: Metadata = {
   title: 'Exercise Challenge - Track Your Progress',
@@ -26,18 +36,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const themeStyle = (process.env.THEME_STYLE || 'glass').toLowerCase();
-  const themeClass = themeStyle === 'glass' ? 'theme-glass' : 'theme-neobrut';
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} ${themeClass}`}>
+      <body className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen gradient-bg">
+          <div className="gradient-bg fixed inset-0 -z-10" aria-hidden="true" />
+          <div className="min-h-screen">
             {children}
           </div>
           <Toaster />
