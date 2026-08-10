@@ -23,7 +23,7 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
       <div className="text-center mb-8 md:mb-12">
         <div className="mb-6">
           <div className="text-6xl md:text-8xl mb-4">🏋️‍♂️</div>
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent mb-4 leading-normal pb-2">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-pink-600 via-red-600 to-amber-600 dark:from-pink-400 dark:via-red-400 dark:to-amber-400 bg-clip-text text-transparent mb-4 leading-normal pb-2">
             Welcome to the Challenge!
           </h1>
           <div className="text-base md:text-xl mb-6">
@@ -37,15 +37,15 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
 
         {/* Challenge Info Badges */}
         <div className="flex flex-wrap justify-center gap-3 mb-8">
-          <Badge variant="outline" className="text-sm glass-subtle px-4 py-2">
+          <Badge variant="outline" className="text-sm font-normal glass-subtle px-4 py-2">
             <Trophy className="w-4 h-4 mr-2" />
             {CHALLENGE_CONFIG.TOTAL_DAYS} Days
           </Badge>
-          <Badge variant="outline" className="text-sm glass-subtle px-4 py-2">
+          <Badge variant="outline" className="text-sm font-normal glass-subtle px-4 py-2">
             <Calendar className="w-4 h-4 mr-2" />
             {CHALLENGE_CONFIG.START_DATE} - {challengeEndDate}
           </Badge>
-          <Badge variant="outline" className="text-sm glass-subtle px-4 py-2">
+          <Badge variant="outline" className="text-sm font-normal glass-subtle px-4 py-2">
             <Sparkles className="w-4 h-4 mr-2" />
             {CHALLENGE_CONFIG.DAILY_TARGETS.reduce((sum, d) => sum + d.target_squats, 0).toLocaleString()} Total Reps
           </Badge>
@@ -54,17 +54,17 @@ export function PreChallengeWelcome({ onCountdownComplete }: PreChallengeWelcome
         {process.env.NEXT_PUBLIC_SHOW_TEST_MODE === 'true' && (
           <Card className="mb-8 glass-strong border-yellow-300/30 dark:border-yellow-800/30 bg-yellow-50/40 dark:bg-yellow-900/20">
             <CardContent className="p-4 text-center text-sm text-yellow-800 dark:text-yellow-300">
-              ⚠️ This environment is in testing mode. The real challenge starts on <strong>9&nbsp;July&nbsp;2025</strong>. Feel free to explore!
+              ⚠️ This environment is in testing mode. The real challenge starts on <strong>{new Date(CHALLENGE_CONFIG.START_DATE + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>. Feel free to explore!
             </CardContent>
           </Card>
         )}
       </div>
 
       {/* Countdown Section */}
-      <Card className="mb-8 md:mb-12 glass-strong bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200/30 dark:border-blue-800/30">
+      <Card className="mb-8 md:mb-12 glass-strong">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-xl md:text-2xl">
-            <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <Calendar className="w-6 h-6 text-primary" />
             Challenge Starts In
           </CardTitle>
         </CardHeader>
