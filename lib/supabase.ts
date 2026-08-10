@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
+import { deriveChallengeId } from "./challenge"
+import { normalizeExerciseName, SEED_EXERCISES, DEFAULT_EXERCISE, type Exercise } from "./exercises"
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -31,31 +33,34 @@ export const auth = supabase?.auth
 // Challenge configuration
 export const CHALLENGE_CONFIG = {
   START_DATE: process.env.NEXT_PUBLIC_CHALLENGE_START_DATE || "2025-06-15",
-  TOTAL_DAYS: parseInt(process.env.NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS || "23"),
+  TOTAL_DAYS: parseInt(process.env.NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS || "24"),
+  CHALLENGE_ID: process.env.NEXT_PUBLIC_CHALLENGE_ID
+    || deriveChallengeId(process.env.NEXT_PUBLIC_CHALLENGE_START_DATE || "2025-06-15"),
   DAILY_TARGETS: [
-    { day: 1, target_squats: 120 },
-    { day: 2, target_squats: 75 },
-    { day: 3, target_squats: 140 },
-    { day: 4, target_squats: 143 },
+    { day: 1, target_squats: 100 },
+    { day: 2, target_squats: 72 },
+    { day: 3, target_squats: 120 },
+    { day: 4, target_squats: 150 },
     { day: 5, target_squats: 0 }, // Rest day
-    { day: 6, target_squats: 128 },
-    { day: 7, target_squats: 103 },
-    { day: 8, target_squats: 170 },
-    { day: 9, target_squats: 167 },
-    { day: 10, target_squats: 130 },
-    { day: 11, target_squats: 200 },
+    { day: 6, target_squats: 140 },
+    { day: 7, target_squats: 170 },
+    { day: 8, target_squats: 130 },
+    { day: 9, target_squats: 160 },
+    { day: 10, target_squats: 167 },
+    { day: 11, target_squats: 191 },
     { day: 12, target_squats: 0 }, // Rest day
-    { day: 13, target_squats: 163 },
-    { day: 14, target_squats: 174 },
+    { day: 13, target_squats: 120 },
+    { day: 14, target_squats: 220 },
     { day: 15, target_squats: 160 },
-    { day: 16, target_squats: 170 },
-    { day: 17, target_squats: 210 },
-    { day: 18, target_squats: 191 },
+    { day: 16, target_squats: 190 },
+    { day: 17, target_squats: 170 },
+    { day: 18, target_squats: 208 },
     { day: 19, target_squats: 0 }, // Rest day
-    { day: 20, target_squats: 220 },
-    { day: 21, target_squats: 170 },
-    { day: 22, target_squats: 230 },
-    { day: 23, target_squats: 150 },
+    { day: 20, target_squats: 120 },
+    { day: 21, target_squats: 180 },
+    { day: 22, target_squats: 229 },
+    { day: 23, target_squats: 160 },
+    { day: 24, target_squats: 150 },
   ],
 }
 
@@ -114,7 +119,11 @@ export const database = {
     }
 
     try {
-      const { data, error } = await supabase.from("daily_targets").select("*").order("day")
+      const { data, error } = await supabase
+        .from("daily_targets")
+        .select("*")
+        .eq("challenge_id", CHALLENGE_CONFIG.CHALLENGE_ID)
+        .order("day")
 
       if (error) {
         console.warn("⚠️ Database not available, using hardcoded targets:", error.message)
@@ -160,6 +169,7 @@ export const database = {
         .from("user_progress")
         .select("*")
         .eq("user_id", userId)
+        .eq("challenge_id", CHALLENGE_CONFIG.CHALLENGE_ID)
         .gte("date", startDate)
         .lte("date", endDate)
         .order("date")
@@ -172,64 +182,137 @@ export const database = {
     }
   },
 
-  async updateUserProgress(userId: string, date: string, squats: number, target: number) {
+  async updateUserProgress(
+    userId: string, date: string, squats: number, target: number,
+    exercise: string, goalMode: 'full' | 'half'
+  ) {
     if (!supabase) throw new Error("Supabase not configured")
-
     try {
-      // First, try to update existing record
       const { data: updateData, error: updateError } = await supabase
         .from("user_progress")
         .update({
           squats_completed: squats,
           target_squats: target,
+          exercise,
+          goal_mode: goalMode,
+          challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
-        .eq('date', date)
-        .select()
-
-      // If update succeeded (row existed), return
+        .eq('user_id', userId).eq('date', date).select()
       if (!updateError && updateData && updateData.length > 0) {
         return { data: updateData, error: null }
       }
-
-      // If no rows were updated (record doesn't exist), insert new one
       const { data: insertData, error: insertError } = await supabase
         .from("user_progress")
         .insert({
-          user_id: userId,
-          date: date,
-          squats_completed: squats,
-          target_squats: target,
+          user_id: userId, date, squats_completed: squats, target_squats: target,
+          exercise, goal_mode: goalMode, challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
         })
         .select()
-
-      if (insertError) {
-        console.error("❌ Error inserting user progress:", insertError)
-        throw insertError
-      }
-
+      if (insertError) { console.error("❌ Error inserting user progress:", insertError); throw insertError }
       return { data: insertData, error: null }
     } catch (error) {
-      console.error("❌ Exception in updateUserProgress:", error)
-      throw error
+      console.error("❌ Exception in updateUserProgress:", error); throw error
+    }
+  },
+
+  // Logs one bank action's delta as its own entry, tagged with the
+  // exercise selected at that moment. Purely additive/audit — does not
+  // affect the day's row (squats_completed/target_squats stay the
+  // single source of truth for streaks/completion). No-op for a zero delta.
+  async addProgressEntry(userId: string, date: string, exercise: string, reps: number) {
+    if (!supabase || reps === 0) return { data: null, error: null }
+    try {
+      const { data, error } = await supabase
+        .from("user_progress_entries")
+        .insert({
+          user_id: userId, date, exercise, reps,
+          challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+        })
+        .select()
+      if (error) { console.error("❌ Error inserting progress entry:", error); return { data: null, error } }
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Exception in addProgressEntry:", error)
+      return { data: null, error }
+    }
+  },
+
+  // Editing a past day sets one absolute number, not an incremental delta —
+  // there's no way to know the historical mix for an edited value, so this
+  // replaces the day's entries with a single new one under the given exercise.
+  async replaceProgressEntriesForDay(userId: string, date: string, exercise: string, totalReps: number) {
+    if (!supabase) return { data: null, error: null }
+    try {
+      const { error: deleteError } = await supabase
+        .from("user_progress_entries")
+        .delete()
+        .eq('user_id', userId).eq('date', date)
+      if (deleteError) { console.error("❌ Error clearing progress entries:", deleteError); return { data: null, error: deleteError } }
+
+      if (totalReps <= 0) return { data: null, error: null }
+
+      const { data, error } = await supabase
+        .from("user_progress_entries")
+        .insert({
+          user_id: userId, date, exercise, reps: totalReps,
+          challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+        })
+        .select()
+      if (error) { console.error("❌ Error inserting replacement progress entry:", error); return { data: null, error } }
+      return { data, error: null }
+    } catch (error) {
+      console.error("❌ Exception in replaceProgressEntriesForDay:", error)
+      return { data: null, error }
+    }
+  },
+
+  async getExercises(): Promise<{ data: Exercise[]; error: any }> {
+    if (!supabase) {
+      return { data: SEED_EXERCISES.map((name) => ({ id: name, name, normalized_name: normalizeExerciseName(name) })), error: null }
+    }
+    const { data, error } = await supabase.from("exercises").select("*").order("name")
+    if (error || !data) return { data: [], error }
+    return { data: data as Exercise[], error: null }
+  },
+
+  async addExercise(name: string, userId?: string): Promise<{ data: Exercise | null; error: any }> {
+    if (!supabase) return { data: null, error: "Supabase not configured" }
+    const normalized = normalizeExerciseName(name)
+    const existing = await supabase.from("exercises").select("*").eq("normalized_name", normalized).maybeSingle()
+    if (existing.data) return { data: existing.data as Exercise, error: null }
+    const { data, error } = await supabase.from("exercises")
+      .insert({ name: name.trim(), normalized_name: normalized, created_by: userId || null })
+      .select().single()
+    if (error) {
+      const retry = await supabase.from("exercises").select("*").eq("normalized_name", normalized).maybeSingle()
+      if (retry.data) return { data: retry.data as Exercise, error: null }
+      return { data: null, error }
+    }
+    return { data: data as Exercise, error: null }
+  },
+
+  async getLastChoice(userId: string): Promise<{ exercise: string; goalMode: 'full' | 'half' }> {
+    if (!supabase) return { exercise: DEFAULT_EXERCISE, goalMode: 'full' }
+    const { data } = await supabase.from("user_progress")
+      .select("exercise, goal_mode").eq("user_id", userId)
+      .order("date", { ascending: false }).limit(1).maybeSingle()
+    return {
+      exercise: (data?.exercise as string) || DEFAULT_EXERCISE,
+      goalMode: (data?.goal_mode as 'full' | 'half') || 'full',
     }
   },
 
   // Leaderboard functions with reduced logging
-  async getTotalLeaderboard() {
+  async getTotalLeaderboard(exerciseFilter?: string) {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
-      // Calculate challenge date range
-      const startDate = CHALLENGE_CONFIG.START_DATE
-      const endDate = getDateFromChallengeDay(CHALLENGE_CONFIG.TOTAL_DAYS)
-      
       const { data, error } = await supabase.rpc('get_total_leaderboard', {
-        start_date: startDate,
-        end_date: endDate
+        p_challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+        p_exercise_filter: exerciseFilter ?? null,
       })
-      
+
       if (error) {
         console.warn("⚠️ Leaderboard not available:", error.message)
         return { data: [], error: null }
@@ -244,16 +327,17 @@ export const database = {
       const leaderboardWithStreaks = await Promise.allSettled(
         data.map(async (entry: any) => {
           try {
-            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { 
+            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', {
               input_user_id: entry.user_id,
               challenge_start_date: CHALLENGE_CONFIG.START_DATE,
-              total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS
+              total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS,
+              p_challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
             })
-            
+
             if (streakError) {
               console.error("❌ Streak calculation error for user", entry.user_id, ":", streakError)
             }
-            
+
             return {
               id: entry.user_id,
               name: entry.display_name,
@@ -261,6 +345,8 @@ export const database = {
               totalSquats: Number(entry.total_squats),
               daysActive: Number(entry.days_active),
               streak: streakError ? 0 : (streakData || 0),
+              daysCompleted: Number(entry.days_completed),
+              exerciseBreakdown: entry.exercise_breakdown as string | null,
             }
           } catch (error) {
             console.error("❌ Exception calculating streak for user", entry.user_id, ":", error)
@@ -271,6 +357,8 @@ export const database = {
               totalSquats: Number(entry.total_squats),
               daysActive: Number(entry.days_active),
               streak: 0,
+              daysCompleted: 0,
+              exerciseBreakdown: null,
             }
           }
         })
@@ -317,12 +405,13 @@ export const database = {
       const dailyLeaderboard = await Promise.allSettled(
         data.map(async (entry: any) => {
           try {
-            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', { 
+            const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', {
               input_user_id: entry.user_id,
               challenge_start_date: CHALLENGE_CONFIG.START_DATE,
-              total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS
+              total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS,
+              p_challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
             })
-            
+
             return {
               id: entry.user_id,
               name: entry.profiles.display_name,
@@ -354,12 +443,12 @@ export const database = {
     }
   },
 
-  async getFullLeaderboard(date?: string) {
+  async getFullLeaderboard(date?: string, exerciseFilter?: string) {
     if (!supabase) return { data: [], error: "Supabase not configured" }
 
     try {
       // Get total leaderboard data
-      const { data: totalData, error: totalError } = await this.getTotalLeaderboard()
+      const { data: totalData, error: totalError } = await this.getTotalLeaderboard(exerciseFilter)
       if (totalError) throw totalError
 
       // Get daily leaderboard data
@@ -377,6 +466,8 @@ export const database = {
           totalSquats: totalEntry.totalSquats,
           streak: totalEntry.streak,
           daysActive: totalEntry.daysActive,
+          daysCompleted: totalEntry.daysCompleted,
+          exerciseBreakdown: totalEntry.exerciseBreakdown,
         }
       })
 
@@ -391,6 +482,8 @@ export const database = {
             totalSquats: dailyEntry.todaySquats, // Same as today if no history
             streak: dailyEntry.streak,
             daysActive: 1,
+            daysCompleted: 0,
+            exerciseBreakdown: null,
           })
         }
       })
@@ -412,7 +505,7 @@ export const storage = {
     return saved ? Number.parseInt(saved, 10) : 0
   },
 
-  updateTodayProgress(squats: number): void {
+  updateTodayProgress(squats: number, exercise: string, goalMode: 'full' | 'half'): void {
     if (typeof window === "undefined") return
     const today = getLocalDateString()
     localStorage.setItem(`squats_${today}`, squats.toString())
@@ -427,6 +520,9 @@ export const storage = {
       date: today,
       squats_completed: squats,
       target_squats: target,
+      exercise,
+      goal_mode: goalMode,
+      challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
     }
 
     if (existingIndex >= 0) {
@@ -436,6 +532,21 @@ export const storage = {
     }
 
     localStorage.setItem("squat_progress", JSON.stringify(history))
+    this.setLastChoice(exercise, goalMode)
+  },
+
+  getLastChoice(): { exercise: string; goalMode: 'full' | 'half' } {
+    if (typeof window === "undefined") return { exercise: DEFAULT_EXERCISE, goalMode: 'full' }
+    return {
+      exercise: localStorage.getItem("last_exercise") || DEFAULT_EXERCISE,
+      goalMode: (localStorage.getItem("last_goal_mode") as 'full' | 'half') || 'full',
+    }
+  },
+
+  setLastChoice(exercise: string, goalMode: 'full' | 'half'): void {
+    if (typeof window === "undefined") return
+    localStorage.setItem("last_exercise", exercise)
+    localStorage.setItem("last_goal_mode", goalMode)
   },
 
   getUserProgress(): any[] {

@@ -7,8 +7,8 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Squat Challenge - Track Your Progress',
-  description: 'The ultimate squat challenge app. Track your daily squats with an intuitive dial interface and compete with friends.',
+  title: 'Exercise Challenge - Track Your Progress',
+  description: 'The ultimate exercise challenge app. Track your daily reps with an intuitive dial interface and compete with friends.',
   generator: 'v0.dev',
   icons: {
     icon: [
@@ -26,9 +26,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const themeStyle = (process.env.THEME_STYLE || 'glass').toLowerCase();
+  const themeClass = themeStyle === 'glass' ? 'theme-glass' : 'theme-neobrut';
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${themeClass}`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

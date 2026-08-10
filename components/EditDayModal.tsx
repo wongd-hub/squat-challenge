@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, Target, Coffee, X } from 'lucide-react';
 import { SquatDial } from './SquatDial';
 import { getChallengeDay, getLocalDateString } from '@/lib/supabase';
+import ExercisePicker from '@/components/ExercisePicker';
+import GoalModeToggle from '@/components/GoalModeToggle';
+import { effectiveTarget } from '@/lib/challenge';
+import { DEFAULT_EXERCISE } from '@/lib/exercises';
 
 interface EditDayModalProps {
   isOpen: boolean;
@@ -14,8 +18,12 @@ interface EditDayModalProps {
   selectedDate: string | null;
   currentSquats: number;
   dailyTargets: any[];
-  onSave: (date: string, squats: number) => Promise<void>;
+  onSave: (date: string, squats: number, exercise: string, goalMode: 'full' | 'half') => Promise<void>;
   openedFromChart?: boolean;
+  initialExercise?: string;
+  initialGoalMode?: 'full' | 'half';
+  canAddCustom: boolean;
+  userId?: string;
 }
 
 export function EditDayModal({
@@ -25,15 +33,32 @@ export function EditDayModal({
   currentSquats,
   dailyTargets,
   onSave,
-  openedFromChart = false
+  openedFromChart = false,
+  initialExercise,
+  initialGoalMode,
+  canAddCustom,
+  userId
 }: EditDayModalProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [exercise, setExercise] = useState(initialExercise ?? DEFAULT_EXERCISE);
+  const [goalMode, setGoalMode] = useState<'full' | 'half'>(initialGoalMode ?? 'full');
+
+  // The Dialog stays mounted between opens (Radix pattern), so useState's
+  // initial value only applies once. Reset local state whenever the modal
+  // transitions to open for a (possibly different) date.
+  useEffect(() => {
+    if (isOpen) {
+      setExercise(initialExercise ?? DEFAULT_EXERCISE);
+      setGoalMode(initialGoalMode ?? 'full');
+    }
+  }, [isOpen, selectedDate, initialExercise, initialGoalMode]);
 
   if (!selectedDate) return null;
 
   const challengeDay = getChallengeDay(selectedDate);
-  const target = dailyTargets.find((t) => t.day === challengeDay)?.target_squats || 50;
-  const isRestDay = target === 0;
+  const prescribedTarget = dailyTargets.find((t) => t.day === challengeDay)?.target_squats ?? 50;
+  const target = effectiveTarget(prescribedTarget, goalMode);
+  const isRestDay = prescribedTarget === 0;
   const isToday = selectedDate === getLocalDateString();
   const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -44,10 +69,10 @@ export function EditDayModal({
 
   const handleSquatsChange = async (newSquats: number) => {
     if (isSaving) return;
-    
+
     setIsSaving(true);
     try {
-      await onSave(selectedDate, newSquats);
+      await onSave(selectedDate, newSquats, exercise, goalMode);
       onClose();
     } catch (error) {
       console.error('Error saving day:', error);
@@ -75,7 +100,7 @@ export function EditDayModal({
               <div className="flex justify-center">
                 <Badge variant="outline" className="text-sm px-3 py-1">
                   <Target className="w-4 h-4 mr-2" />
-                  Target: {target} squats
+                  Target: {target} {exercise.toLowerCase()}
                 </Badge>
               </div>
             )}
@@ -114,14 +139,28 @@ export function EditDayModal({
               </Button>
             </div>
           ) : (
-            <SquatDial
-              currentSquats={currentSquats}
-              targetSquats={target}
-              onSquatsChange={handleSquatsChange}
-              currentDay={challengeDay}
-              compact={false}
-              hideTip={openedFromChart}
-            />
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+                <div className="w-full sm:w-64">
+                  <ExercisePicker
+                    value={exercise}
+                    onChange={setExercise}
+                    canAddCustom={canAddCustom}
+                    userId={userId}
+                  />
+                </div>
+                <GoalModeToggle value={goalMode} onChange={setGoalMode} />
+              </div>
+              <SquatDial
+                currentSquats={currentSquats}
+                targetSquats={target}
+                onSquatsChange={handleSquatsChange}
+                currentDay={challengeDay}
+                compact={false}
+                hideTip={openedFromChart}
+                exerciseLabel={exercise}
+              />
+            </div>
           )}
         </div>
       </DialogContent>

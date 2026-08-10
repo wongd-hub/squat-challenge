@@ -106,7 +106,7 @@ ${formData.type === 'bug' ? '🐛 Bug' : formData.type === 'feature' ? '✨ Feat
 - Email: ${formData.email || 'Not provided'}
 - Domain: ${currentDomain}
 - URL: ${currentUrl}
-- Submitted via: Squat Challenge App
+- Submitted via: Situp Challenge App
 - Timestamp: ${new Date().toISOString()}
 `.trim()
 
@@ -217,7 +217,7 @@ ${formData.type === 'bug' ? '🐛 Bug' : formData.type === 'feature' ? '✨ Feat
             Report an Issue
           </DialogTitle>
           <DialogDescription>
-            Help us improve the Squat Challenge app by reporting bugs or suggesting features.
+            Help us improve the Situp Challenge app by reporting bugs or suggesting features.
           </DialogDescription>
 
           {/* dev indicator removed from here */}

@@ -1,6 +1,6 @@
-# 🏋️‍♂️ Squat Challenge
+# 🏋️‍♂️ Exercise Challenge
 
-A beautiful, production-ready web application for tracking daily squat progress through a 23-day challenge. Built with Next.js, TypeScript, and Supabase, featuring an intuitive dial interface, real-time progress tracking, and competitive leaderboards with social features.
+A beautiful, production-ready web application for tracking daily exercise progress through a multi-day challenge. Pick any exercise per day (with a full or half target option), and track it with an intuitive dial interface. Built with Next.js, TypeScript, and Supabase, featuring real-time progress tracking and competitive leaderboards with social features.
 
 ## ✨ Key Features
 
@@ -67,8 +67,12 @@ A beautiful, production-ready web application for tracking daily squat progress 
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    
    # Challenge Configuration
-   NEXT_PUBLIC_CHALLENGE_START_DATE=2025-07-09
+   NEXT_PUBLIC_CHALLENGE_START_DATE=2026-07-09
    NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
+   NEXT_PUBLIC_CHALLENGE_ID=2026-07                   # Scopes progress/leaderboard data to this challenge run (format: YYYY-MM)
+   
+   # Theme
+   THEME_STYLE=glass                                  # 'glass' (default) or 'neobrut'
    
    # GitHub Integration (for bug reports)
    GITHUB_TOKEN=your-github-token
@@ -91,9 +95,10 @@ A beautiful, production-ready web application for tracking daily squat progress 
 # Build for production
 npm run build
 
-# Start production server (or deploy the 'out' folder)
+# Start production server locally
 npm start
 ```
+Deploy to Vercel (or any Node-capable host) — see the [Deployment](#-deployment) section below.
 
 ## 🏗️ Architecture
 
@@ -107,7 +112,7 @@ npm start
 - **Charts**: Recharts for data visualization
 - **Animation**: Framer Motion for smooth transitions
 - **Icons**: Lucide React
-- **Deployment**: Static export ready for any hosting platform
+- **Deployment**: Server-rendered Next.js app on Vercel (or any Node-capable host)
 
 ### Project Structure
 ```
@@ -216,14 +221,22 @@ This is useful for:
 Edit `lib/supabase.ts` to modify:
 ```typescript
 export const CHALLENGE_CONFIG = {
-  START_DATE: '2025-07-09',  // Challenge start date
+  START_DATE: '2026-07-09',  // Challenge start date
   TOTAL_DAYS: 23,            // Total challenge duration
+  CHALLENGE_ID: '2026-07',   // Scopes progress/leaderboard data to this run (format: YYYY-MM); defaults to a value derived from START_DATE if unset
   DAILY_TARGETS: [
     { day: 1, target_squats: 50 },
     { day: 2, target_squats: 55 },
     // ... complete target array
   ]
 }
+```
+
+### Theming
+Set `THEME_STYLE` to switch the visual style:
+```env
+THEME_STYLE=glass     # Glassmorphism UI (default)
+THEME_STYLE=neobrut   # Neobrutalist UI (alternative)
 ```
 
 ### Environment Variables
@@ -236,8 +249,12 @@ NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # Optional configuration
-NEXT_PUBLIC_CHALLENGE_START_DATE=2025-07-09
+NEXT_PUBLIC_CHALLENGE_START_DATE=2026-07-09
 NEXT_PUBLIC_CHALLENGE_TOTAL_DAYS=23
+NEXT_PUBLIC_CHALLENGE_ID=2026-07                   # Scopes progress/leaderboard data to a specific challenge run (format: YYYY-MM)
+
+# Theme (server-side, not NEXT_PUBLIC_)
+THEME_STYLE=glass                                  # 'glass' (default) or 'neobrut'
 
 # GitHub Integration (for bug reports)
 GITHUB_TOKEN=your-github-token
@@ -246,24 +263,21 @@ GITHUB_REPO=yourusername/your-repo
 
 ## 📱 Deployment
 
-### Static Export (Recommended)
-```bash
-npm run build
-```
-Outputs to `out/` directory - deploy to any static hosting:
+### Vercel (Recommended)
+This is a standard **server-rendered Next.js app**, not a static export — it includes a serverless API route (`app/api/github-issue/route.ts`) for bug reports, and `next.config.js` does not set `output: 'export'`. It should be deployed to a host that runs Next.js server-side, such as [Vercel](https://vercel.com):
 
-#### Hosting Options
-- **Vercel** (Recommended): `vercel deploy`
-- **Netlify**: Drag & drop the `out` folder
-- **GitHub Pages**: Upload `out` contents to gh-pages branch
-- **Cloudflare Pages**: Connect repository for automatic deployments
-- **AWS S3**: Upload `out` folder and enable static website hosting
-- **Surge.sh**: `surge ./out your-domain.surge.sh`
+```bash
+vercel deploy
+```
+
+Vercel auto-detects the Next.js app, builds it, and deploys the API route as a serverless function. Any other Node-capable host that supports Next.js SSR/serverless routes (e.g. a self-hosted Node server via `npm run build && npm start`) will also work. Static-only hosts (GitHub Pages, S3 static website hosting, Surge, etc.) are **not** suitable since they can't run the API route.
 
 ### Environment Variables for Production
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your-production-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
+NEXT_PUBLIC_CHALLENGE_ID=2026-07
+THEME_STYLE=glass
 ```
 
 ## 🔒 Security & Performance
@@ -276,7 +290,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
 
 ### Performance Optimizations
 - **Bundle Splitting**: Automatic code splitting with Next.js
-- **Image Optimization**: Optimized for static export
+- **Image Optimization**: `next/image` used with `unoptimized: true` (no external image service required)
 - **Caching Strategy**: Aggressive caching for static assets
 - **Real-time Efficiency**: Throttled updates and background sync
 - **Mobile Performance**: Optimized for touch devices and slow connections

@@ -6,6 +6,8 @@ export interface LeaderboardEntry {
   totalSquats: number;
   streak: number;
   rank: number;
+  daysCompleted?: number;
+  exerciseBreakdown?: string | null;
 }
 
 // Function to scramble names for privacy (only when using mock data)
