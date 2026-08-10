@@ -64,20 +64,22 @@ const FooterFloat: React.FC = () => {
           {renderText("made by ")}
           
           {/* "the herd" with gradient */}
-          <Link 
-            href="https://www.herdmentality.xyz/" 
-            target="_blank" 
+          <Link
+            href="https://www.herdmentality.xyz/"
+            target="_blank"
             rel="noopener noreferrer"
             className="hover:opacity-70 transition-opacity"
           >
-            {renderText("the herd").map((char, index) => (
-              <span 
-                key={index} 
-                className="float-char inline-block text-purple-600 dark:text-purple-400"
-              >
-                {char}
-              </span>
-            ))}
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-pink-700 dark:via-red-600 dark:to-amber-600 bg-clip-text text-transparent">
+              {renderText("the herd").map((char, index) => (
+                <span
+                  key={index}
+                  className="float-char inline-block"
+                >
+                  {char}
+                </span>
+              ))}
+            </span>
           </Link>
           
           {/* space */}

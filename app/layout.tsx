@@ -45,7 +45,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="min-h-screen gradient-bg">
+          <div className="gradient-bg fixed inset-0 -z-10" aria-hidden="true" />
+          <div className="min-h-screen">
             {children}
           </div>
           <Toaster />
