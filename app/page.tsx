@@ -1934,9 +1934,10 @@ export default function Home() {
           onClose={() => setBugReportModalOpen(false)}
         />
 
-        {/* Footer */}
-        <FooterFloat />
       </div>
+
+      {/* Footer -- deliberately outside the max-w-6xl content container so it can span the full page width */}
+      <FooterFloat />
     </div>
   )
 }
