@@ -14,7 +14,7 @@ export function ThemeToggle() {
         <Button 
           variant="ghost" 
           size="icon" 
-          className="glass-subtle w-10 h-10 md:w-8 md:h-8 hover:bg-white/10 border-white/20 touch-manipulation"
+          className="glass-subtle w-10 h-10 md:w-8 md:h-8 touch-manipulation"
           style={{ touchAction: 'manipulation' }}
         >
           <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

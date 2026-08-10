@@ -155,36 +155,12 @@
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Backdrop: flat background with two soft radial gradient pools (warm
-   accent top-left, cool blue bottom-right) plus a grain layer. Opaque
-   flat panels sit on top -- the gradient/grain never shows through them. */
+/* Backdrop: flat background color only for now -- the radial-gradient-pool
+   + grain treatment didn't read well and produced a visible artifact, so
+   it's parked here (not deleted) as a documented starting point if it's
+   worth revisiting later. */
 .gradient-bg {
-  background:
-    radial-gradient(40rem 30rem at 15% 0%, color-mix(in oklab, rgb(var(--accent)) 22%, transparent), transparent 70%),
-    radial-gradient(36rem 28rem at 95% 100%, color-mix(in oklab, #4a90d9 16%, transparent), transparent 70%),
-    rgb(var(--background));
-}
-
-.dark .gradient-bg {
-  background:
-    radial-gradient(40rem 30rem at 15% 0%, color-mix(in oklab, rgb(var(--accent)) 30%, transparent), transparent 70%),
-    radial-gradient(36rem 28rem at 95% 100%, color-mix(in oklab, #4a90d9 22%, transparent), transparent 70%),
-    rgb(var(--background));
-}
-
-.gradient-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
-  opacity: 0.35;
-}
-
-.dark .gradient-bg::before {
-  mix-blend-mode: soft-light;
-  opacity: 0.5;
+  background: rgb(var(--background));
 }
 
 /* Stronger grain reserved for exactly one celebratory surface (the

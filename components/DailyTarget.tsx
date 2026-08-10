@@ -36,14 +36,14 @@ export function DailyTarget({ targetSquats, completedSquats, day, exerciseLabel 
         <div className="text-center w-full">
           {isRestDay ? (
             <>
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent mb-2">
+              <div className="text-4xl md:text-5xl font-bold mb-2">
                 🛌
               </div>
               <div className="text-sm text-muted-foreground">Rest & Recovery Day</div>
             </>
           ) : (
             <>
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
+              <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
                 {targetSquats}
               </div>
               <div className="text-sm text-muted-foreground">{exerciseLabel.toLowerCase()} target</div>
