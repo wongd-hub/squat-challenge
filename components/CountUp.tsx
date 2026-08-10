@@ -44,7 +44,7 @@ export default function CountUp({ end, duration = 2000, start = 0, suffix = "", 
   }, [end, duration, start])
 
   return (
-    <span>
+    <span className="font-mono">
       {prefix}
       {count.toLocaleString()}
       {suffix}
