@@ -156,7 +156,7 @@ export default function LeaderboardPage() {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 dark:from-blue-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-pink-600 via-red-600 to-amber-600 dark:from-pink-400 dark:via-red-400 dark:to-amber-400 bg-clip-text text-transparent">
                   Leaderboard
                   {!isUsingSupabase && (
                     <Badge variant="outline" className="text-xs ml-2 text-muted-foreground">
@@ -192,7 +192,7 @@ export default function LeaderboardPage() {
                   className="flex-1 text-sm"
                 >
                   <TrendingUp className="w-4 h-4 mr-2" />
-                  Today's Situps
+                  Today's Reps
                 </Button>
                 <Button
                   variant={activeTab === 'total' ? 'default' : 'ghost'}
@@ -200,7 +200,7 @@ export default function LeaderboardPage() {
                   className="flex-1 text-sm"
                 >
                   <Trophy className="w-4 h-4 mr-2" />
-                  Total Situps
+                  Total Reps
                 </Button>
               </div>
             </CardContent>
