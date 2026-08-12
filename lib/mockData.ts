@@ -8,6 +8,7 @@ export interface LeaderboardEntry {
   rank: number;
   daysCompleted?: number;
   exerciseBreakdown?: string | null;
+  todayExerciseBreakdown?: string | null;
 }
 
 // Function to scramble names for privacy (only when using mock data)
