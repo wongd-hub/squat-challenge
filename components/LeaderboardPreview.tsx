@@ -105,6 +105,7 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
             rank: index + 1,
             daysCompleted: entry.daysCompleted,
             exerciseBreakdown: entry.exerciseBreakdown,
+            todayExerciseBreakdown: entry.todayExerciseBreakdown,
           }));
           
           // Store previous data before updating for animations
@@ -386,20 +387,23 @@ function LeaderboardPreviewComponent({ refreshTrigger, userTotalSquats, userToda
                             >
                               {entry.name}
                             </motion.div>
-                            {(badgeText || entry.exerciseBreakdown) && (
-                              <motion.div layout className="flex flex-wrap items-center gap-1 mt-1">
-                                {badgeText && (
-                                  <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
-                                    {badgeText}
-                                  </Badge>
-                                )}
-                                {entry.exerciseBreakdown && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                    {entry.exerciseBreakdown}
-                                  </Badge>
-                                )}
-                              </motion.div>
-                            )}
+                            {(() => {
+                              const breakdown = activeTab === 'total' ? entry.exerciseBreakdown : entry.todayExerciseBreakdown;
+                              return (badgeText || breakdown) && (
+                                <motion.div layout className="flex flex-wrap items-center gap-1 mt-1">
+                                  {badgeText && (
+                                    <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
+                                      {badgeText}
+                                    </Badge>
+                                  )}
+                                  {breakdown && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      {breakdown}
+                                    </Badge>
+                                  )}
+                                </motion.div>
+                              );
+                            })()}
                           </motion.div>
                         </div>
                         
