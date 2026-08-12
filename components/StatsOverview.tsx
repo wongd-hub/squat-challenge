@@ -36,7 +36,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress,
             <div className="text-2xl font-bold text-foreground">
               <CountUp key={`total-${refreshKey}`} end={totalSquats} duration={2000} />
             </div>
-            <p className="text-sm text-muted-foreground">Total Situps</p>
+            <p className="text-sm text-muted-foreground">Total Reps</p>
           </CardContent>
         </Card>
 
@@ -72,7 +72,7 @@ export function StatsOverview({ totalSquats, streak, weeklyGoal, weeklyProgress,
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               <CountUp key={`progress-${refreshKey}`} end={weeklyProgress} duration={1800} />
             </div>
-            <p className="text-sm text-muted-foreground">Weekly Situps</p>
+            <p className="text-sm text-muted-foreground">Weekly Reps</p>
           </CardContent>
         </Card>
       </div>
