@@ -1812,7 +1812,7 @@ export default function Home() {
                   <strong>🏋️ The Challenge:</strong> This {CHALLENGE_CONFIG.TOTAL_DAYS}-day challenge mimics the progressive targets of the renowned Pushup Challenge, adapted for building strength and endurance.
                 </p>
                 <p>
-                  <strong>🎯 How to Use the {exercise} Dial:</strong> Drag clockwise to count {exercise.toLowerCase()} (each full revolution = 10 {exercise.toLowerCase()}), drag counter-clockwise to subtract — your count saves automatically as you go.
+                  <strong>🎯 How to Use the Reps Dial:</strong> Drag clockwise to count {exercise.toLowerCase()} (each full revolution = 10 {exercise.toLowerCase()}), drag counter-clockwise to subtract — your count saves automatically as you go.
                 </p>
                 <p>
                   <strong>📈 Edit Previous Days:</strong> Use the progress chart below to click on any previous day and edit your {exercise.toLowerCase()} count - perfect for catching up or making corrections!
