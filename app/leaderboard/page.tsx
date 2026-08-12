@@ -50,6 +50,7 @@ export default function LeaderboardPage() {
             rank: index + 1,
             daysCompleted: entry.daysCompleted,
             exerciseBreakdown: entry.exerciseBreakdown,
+            todayExerciseBreakdown: entry.todayExerciseBreakdown,
           }));
 
           setLeaderboardData(formattedData);
@@ -298,20 +299,23 @@ export default function LeaderboardPage() {
                             {getRankIcon(displayRank)}
                             <div>
                               <div className="font-semibold text-foreground">{entry.name}</div>
-                              {(badgeText || entry.exerciseBreakdown) && (
-                                <div className="flex flex-wrap items-center gap-1 mt-1">
-                                  {badgeText && (
-                                    <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
-                                      {badgeText}
-                                    </Badge>
-                                  )}
-                                  {entry.exerciseBreakdown && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                      {entry.exerciseBreakdown}
-                                    </Badge>
-                                  )}
-                                </div>
-                              )}
+                              {(() => {
+                                const breakdown = activeTab === 'total' ? entry.exerciseBreakdown : entry.todayExerciseBreakdown;
+                                return (badgeText || breakdown) && (
+                                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                                    {badgeText && (
+                                      <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
+                                        {badgeText}
+                                      </Badge>
+                                    )}
+                                    {breakdown && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                        {breakdown}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                           <div className="text-right">
@@ -341,20 +345,23 @@ export default function LeaderboardPage() {
                         <div className="col-span-5 flex items-center">
                           <div>
                             <div className="font-semibold text-foreground">{entry.name}</div>
-                            {(badgeText || entry.exerciseBreakdown) && (
-                              <div className="flex flex-wrap items-center gap-1 mt-1">
-                                {badgeText && (
-                                  <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
-                                    {badgeText}
-                                  </Badge>
-                                )}
-                                {entry.exerciseBreakdown && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                    {entry.exerciseBreakdown}
-                                  </Badge>
-                                )}
-                              </div>
-                            )}
+                            {(() => {
+                              const breakdown = activeTab === 'total' ? entry.exerciseBreakdown : entry.todayExerciseBreakdown;
+                              return (badgeText || breakdown) && (
+                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                  {badgeText && (
+                                    <Badge className={`text-xs ${getRankBadgeColor(displayRank)}`}>
+                                      {badgeText}
+                                    </Badge>
+                                  )}
+                                  {breakdown && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                      {breakdown}
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
 
