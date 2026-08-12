@@ -141,7 +141,7 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm text-muted-foreground">Progress:</span>
               <span className="font-medium text-foreground">
-                {data.completed} / {data.target} situps
+                {data.completed} / {data.target} reps
               </span>
             </div>
             <div className="flex items-center justify-between gap-4">
@@ -185,16 +185,16 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
       <CardHeader className="pb-4">
         <div className="space-y-3">
           <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-            📊 23-Day Challenge Progress
+            📊 {CHALLENGE_CONFIG.TOTAL_DAYS}-Day Challenge Progress
           </CardTitle>
-          
+
           {/* Stats Row */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-muted-foreground">
             <span className="font-medium">
-              Total: {stats.totalCompleted.toLocaleString()} / {stats.totalTarget.toLocaleString()} situps
+              Total: {stats.totalCompleted.toLocaleString()} / {stats.totalTarget.toLocaleString()} reps
             </span>
             <span className="font-medium">Overall: {stats.overallPercentage}%</span>
-            <span className="font-medium">Days completed: {stats.daysCompleted}/23</span>
+            <span className="font-medium">Days completed: {stats.daysCompleted}/{CHALLENGE_CONFIG.TOTAL_DAYS}</span>
           </div>
 
           {/* Legend */}
