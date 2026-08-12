@@ -312,6 +312,8 @@ export const database = {
       const { data, error } = await supabase.rpc('get_total_leaderboard', {
         p_challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
         p_exercise_filter: exerciseFilter ?? null,
+        p_challenge_start_date: CHALLENGE_CONFIG.START_DATE,
+        p_total_challenge_days: CHALLENGE_CONFIG.TOTAL_DAYS,
       })
 
       if (error) {
