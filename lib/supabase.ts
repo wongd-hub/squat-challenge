@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import { deriveChallengeId } from "./challenge"
 import { normalizeExerciseName, SEED_EXERCISES, DEFAULT_EXERCISE, type Exercise } from "./exercises"
+import { formatExerciseBreakdown } from "./exerciseBreakdown"
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -401,9 +402,27 @@ export const database = {
         return { data: [], error: null }
       }
 
+      const { data: entriesData, error: entriesError } = await supabase
+        .from('user_progress_entries')
+        .select('user_id, exercise, reps')
+        .eq('date', targetDate)
+        .eq('challenge_id', CHALLENGE_CONFIG.CHALLENGE_ID)
+
+      if (entriesError) {
+        console.warn("⚠️ Daily exercise entries not available:", entriesError.message)
+      }
+
+      const entriesByUser = new Map<string, { exercise: string; reps: number }[]>()
+      for (const entry of entriesData || []) {
+        const list = entriesByUser.get(entry.user_id) || []
+        list.push({ exercise: entry.exercise, reps: entry.reps })
+        entriesByUser.set(entry.user_id, list)
+      }
+
       // Get streaks for each user with timeout protection
       const dailyLeaderboard = await Promise.allSettled(
         data.map(async (entry: any) => {
+          const todayExerciseBreakdown = formatExerciseBreakdown(entriesByUser.get(entry.user_id) || [])
           try {
             const { data: streakData, error: streakError } = await supabase.rpc('calculate_user_streak', {
               input_user_id: entry.user_id,
@@ -417,6 +436,7 @@ export const database = {
               name: entry.profiles.display_name,
               email: entry.profiles.email,
               todaySquats: entry.squats_completed,
+              todayExerciseBreakdown,
               streak: streakError ? 0 : (streakData || 0),
             }
           } catch (error) {
@@ -425,6 +445,7 @@ export const database = {
               name: entry.profiles.display_name,
               email: entry.profiles.email,
               todaySquats: entry.squats_completed,
+              todayExerciseBreakdown,
               streak: 0,
             }
           }
@@ -463,6 +484,7 @@ export const database = {
           name: totalEntry.name,
           email: totalEntry.email,
           todaySquats: dailyEntry?.todaySquats || 0,
+          todayExerciseBreakdown: dailyEntry?.todayExerciseBreakdown || null,
           totalSquats: totalEntry.totalSquats,
           streak: totalEntry.streak,
           daysActive: totalEntry.daysActive,
@@ -479,6 +501,7 @@ export const database = {
             name: dailyEntry.name,
             email: dailyEntry.email,
             todaySquats: dailyEntry.todaySquats,
+            todayExerciseBreakdown: dailyEntry.todayExerciseBreakdown || null,
             totalSquats: dailyEntry.todaySquats, // Same as today if no history
             streak: dailyEntry.streak,
             daysActive: 1,
