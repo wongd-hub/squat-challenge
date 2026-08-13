@@ -32,7 +32,7 @@ export function ProgressChart({ data, dailyTargets, onDayClick }: ProgressChartP
 
       const isRestDay = target === 0
       const isToday = day === currentDay
-      const isCompleted = isRestDay || completed >= target
+      const isCompleted = (isRestDay && day <= currentDay) || completed >= target
       const isPartial = !isRestDay && completed > 0 && completed < target
 
       return {
