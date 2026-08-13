@@ -239,12 +239,39 @@ export const database = {
     }
   },
 
-  // Editing a past day sets one absolute number, not an incremental delta —
-  // there's no way to know the historical mix for an edited value, so this
-  // replaces the day's entries with a single new one under the given exercise.
+  // Editing a past day sets one absolute number, not an incremental delta.
+  // If the total went up, add the increase as its own entry so the existing
+  // per-exercise mix survives untouched (mirrors normal same-day banking).
+  // If it's unchanged, don't touch entries at all. Only a decrease collapses
+  // the day to a single entry — there's no way to know which portion of an
+  // existing mix to remove, so this remains a best-effort fallback for that
+  // one case.
   async replaceProgressEntriesForDay(userId: string, date: string, exercise: string, totalReps: number) {
     if (!supabase) return { data: null, error: null }
     try {
+      const { data: existingEntries, error: fetchError } = await supabase
+        .from("user_progress_entries")
+        .select("reps")
+        .eq('user_id', userId).eq('date', date)
+      if (fetchError) { console.error("❌ Error reading existing progress entries:", fetchError); return { data: null, error: fetchError } }
+
+      const previousTotal = (existingEntries || []).reduce((sum, entry) => sum + entry.reps, 0)
+      const delta = totalReps - previousTotal
+
+      if (delta === 0) return { data: null, error: null }
+
+      if (delta > 0) {
+        const { data, error } = await supabase
+          .from("user_progress_entries")
+          .insert({
+            user_id: userId, date, exercise, reps: delta,
+            challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+          })
+          .select()
+        if (error) { console.error("❌ Error inserting additional progress entry:", error); return { data: null, error } }
+        return { data, error: null }
+      }
+
       const { error: deleteError } = await supabase
         .from("user_progress_entries")
         .delete()
