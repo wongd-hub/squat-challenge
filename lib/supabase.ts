@@ -242,20 +242,25 @@ export const database = {
   // Editing a past day sets one absolute number, not an incremental delta.
   // If the total went up, add the increase as its own entry so the existing
   // per-exercise mix survives untouched (mirrors normal same-day banking).
-  // If it's unchanged, don't touch entries at all. Only a decrease collapses
-  // the day to a single entry — there's no way to know which portion of an
-  // existing mix to remove, so this remains a best-effort fallback for that
-  // one case.
+  // If it's unchanged, don't touch entries at all. If it went down, remove
+  // the decrease from the exercise selected in the edit modal specifically
+  // (a negative-reps entry, same pattern normal dial banking already uses)
+  // — that exercise is what the user is telling us to correct. Only when
+  // that exercise doesn't have enough logged reps to absorb the full
+  // decrease do we fall back to collapsing the whole day to a single entry,
+  // since there's no way to know how to split the remainder across the rest
+  // of the mix.
   async replaceProgressEntriesForDay(userId: string, date: string, exercise: string, totalReps: number) {
     if (!supabase) return { data: null, error: null }
     try {
       const { data: existingEntries, error: fetchError } = await supabase
         .from("user_progress_entries")
-        .select("reps")
+        .select("exercise, reps")
         .eq('user_id', userId).eq('date', date)
       if (fetchError) { console.error("❌ Error reading existing progress entries:", fetchError); return { data: null, error: fetchError } }
 
-      const previousTotal = (existingEntries || []).reduce((sum, entry) => sum + entry.reps, 0)
+      const entries = existingEntries || []
+      const previousTotal = entries.reduce((sum, entry) => sum + entry.reps, 0)
       const delta = totalReps - previousTotal
 
       if (delta === 0) return { data: null, error: null }
@@ -269,6 +274,22 @@ export const database = {
           })
           .select()
         if (error) { console.error("❌ Error inserting additional progress entry:", error); return { data: null, error } }
+        return { data, error: null }
+      }
+
+      const existingForExercise = entries
+        .filter((entry) => entry.exercise === exercise)
+        .reduce((sum, entry) => sum + entry.reps, 0)
+
+      if (existingForExercise >= -delta) {
+        const { data, error } = await supabase
+          .from("user_progress_entries")
+          .insert({
+            user_id: userId, date, exercise, reps: delta,
+            challenge_id: CHALLENGE_CONFIG.CHALLENGE_ID,
+          })
+          .select()
+        if (error) { console.error("❌ Error inserting reduction progress entry:", error); return { data: null, error } }
         return { data, error: null }
       }
 
