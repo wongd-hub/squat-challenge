@@ -79,7 +79,7 @@ export default function LeaderboardPage() {
     if (activeTab === 'today') {
       return [...leaderboardData].sort((a, b) => b.todaySquats - a.todaySquats);
     }
-    // 'total' ranking already comes from the backend (completion-first, then reps) — do not re-sort by reps.
+    // 'total' ranking already comes from the backend (reps-first, then days completed) — do not re-sort here.
     return [...leaderboardData];
   }, [leaderboardData, activeTab]);
 
