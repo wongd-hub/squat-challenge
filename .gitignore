@@ -31,3 +31,7 @@ supabase/.temp/
 
 # superpowers scratch (sdd ledger, brainstorm mockups)
 .superpowers/
+
+# editor
+.vscode/
+.cursor/
