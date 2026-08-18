@@ -239,6 +239,25 @@ export const database = {
     }
   },
 
+  // Reads today's per-exercise mix for a single user, for display in the
+  // dial (not the leaderboard, which aggregates across all users instead).
+  async getTodayExerciseBreakdown(userId: string, date: string): Promise<string | null> {
+    if (!supabase) return null
+    try {
+      const { data, error } = await supabase
+        .from("user_progress_entries")
+        .select("exercise, reps")
+        .eq("user_id", userId)
+        .eq("date", date)
+        .eq("challenge_id", CHALLENGE_CONFIG.CHALLENGE_ID)
+      if (error) throw error
+      return formatExerciseBreakdown(data || [])
+    } catch (error) {
+      console.error("❌ Error loading today's exercise breakdown:", error)
+      return null
+    }
+  },
+
   // Editing a past day sets one absolute number, not an incremental delta.
   // If the total went up, add the increase as its own entry so the existing
   // per-exercise mix survives untouched (mirrors normal same-day banking).
