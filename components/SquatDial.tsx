@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useHaptic } from 'use-haptic';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 
 interface SquatDialProps {
   onSquatsChange: (squats: number) => void;
@@ -12,9 +13,10 @@ interface SquatDialProps {
   compact?: boolean;
   hideTip?: boolean;
   exerciseLabel?: string;
+  exerciseBreakdown?: string | null;
 }
 
-export function SquatDial({ onSquatsChange, currentSquats, targetSquats, currentDay, compact = false, hideTip = false, exerciseLabel = "reps" }: SquatDialProps) {
+export function SquatDial({ onSquatsChange, currentSquats, targetSquats, currentDay, compact = false, hideTip = false, exerciseLabel = "reps", exerciseBreakdown }: SquatDialProps) {
   const [dialRotation, setDialRotation] = useState(0);
   const [tempSquats, setTempSquats] = useState(0);
   const dialRef = useRef<HTMLDivElement>(null);
@@ -412,6 +414,13 @@ export function SquatDial({ onSquatsChange, currentSquats, targetSquats, current
         <p className={`${compact ? 'text-base' : 'text-xl'} font-semibold text-foreground`}>
           {currentSquats} of {targetSquats}
         </p>
+        {exerciseBreakdown !== undefined && (
+          <div className="flex justify-center mt-1">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+              {exerciseBreakdown || 'No reps banked yet'}
+            </Badge>
+          </div>
+        )}
         {tempSquats !== 0 && (
           <p
             className={`${compact ? 'text-sm' : 'text-base'} mt-2`}
