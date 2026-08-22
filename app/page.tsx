@@ -91,6 +91,7 @@ export default function Home() {
   const [editDayModalOpen, setEditDayModalOpen] = useState(false)
   const [selectedEditDate, setSelectedEditDate] = useState<string | null>(null)
   const [selectedEditSquats, setSelectedEditSquats] = useState(0)
+  const [selectedEditExerciseBreakdown, setSelectedEditExerciseBreakdown] = useState<string | null | undefined>(undefined)
   const [modalOpenedFromChart, setModalOpenedFromChart] = useState(false)
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false)
 
@@ -1009,6 +1010,10 @@ export default function Home() {
     setSelectedEditSquats(currentSquats)
     setModalOpenedFromChart(true)
     setEditDayModalOpen(true)
+    setSelectedEditExerciseBreakdown(undefined)
+    if (dataSource === "supabase" && user) {
+      database.getExerciseBreakdownForDate(user.id, date).then(setSelectedEditExerciseBreakdown)
+    }
   }
 
   // Handle saving edited day squats
@@ -1933,6 +1938,7 @@ export default function Home() {
           initialGoalMode={(challengeProgressData.find((p) => p.date === selectedEditDate)?.goal_mode as 'full' | 'half') ?? 'full'}
           canAddCustom={dataSource === "supabase" && !!user}
           userId={user?.id}
+          exerciseBreakdown={selectedEditExerciseBreakdown}
         />
 
         {/* Bug Report Modal */}
