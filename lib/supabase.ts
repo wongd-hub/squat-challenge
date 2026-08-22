@@ -239,9 +239,11 @@ export const database = {
     }
   },
 
-  // Reads today's per-exercise mix for a single user, for display in the
+  // Reads a single user's per-exercise mix for one date, for display in the
   // dial (not the leaderboard, which aggregates across all users instead).
-  async getTodayExerciseBreakdown(userId: string, date: string): Promise<string | null> {
+  // Works for any date — used for both today's live dial and for whichever
+  // past day is open in the edit-day modal.
+  async getExerciseBreakdownForDate(userId: string, date: string): Promise<string | null> {
     if (!supabase) return null
     try {
       const { data, error } = await supabase
@@ -253,7 +255,7 @@ export const database = {
       if (error) throw error
       return formatExerciseBreakdown(data || [])
     } catch (error) {
-      console.error("❌ Error loading today's exercise breakdown:", error)
+      console.error("❌ Error loading exercise breakdown:", error)
       return null
     }
   },

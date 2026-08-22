@@ -410,7 +410,7 @@ export default function Home() {
         const [recentResult, challengeResult, todayExerciseBreakdownResult] = await Promise.all([
           database.getUserProgress(user.id, 7),
           database.getChallengeProgress(user.id),
-          database.getTodayExerciseBreakdown(user.id, currentDate)
+          database.getExerciseBreakdownForDate(user.id, currentDate)
         ])
 
         let todaySquatsFromData = 0
@@ -871,7 +871,7 @@ export default function Home() {
         const [challengeResult, recentResult, todayExerciseBreakdownResult] = await Promise.all([
           database.getChallengeProgress(user.id),
           database.getUserProgress(user.id, 7),
-          database.getTodayExerciseBreakdown(user.id, currentDate)
+          database.getExerciseBreakdownForDate(user.id, currentDate)
         ])
         setTodayExerciseBreakdown(todayExerciseBreakdownResult)
 
@@ -1058,7 +1058,7 @@ export default function Home() {
         // If editing today's date, update today's squats and check milestones
         if (date === currentDate) {
           setTodaySquats(squats)
-          setTodayExerciseBreakdown(await database.getTodayExerciseBreakdown(user.id, currentDate))
+          setTodayExerciseBreakdown(await database.getExerciseBreakdownForDate(user.id, currentDate))
 
           // Check for new milestones and show encouragement messages for today's edits
           const newMilestones = getNewMilestones(squats, target, todayMilestones)
