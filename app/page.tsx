@@ -43,6 +43,7 @@ import { DEFAULT_EXERCISE } from "@/lib/exercises"
 
 export default function Home() {
   const [todaySquats, setTodaySquats] = useState(0)
+  const [todayExerciseBreakdown, setTodayExerciseBreakdown] = useState<string | null | undefined>(undefined)
   const [progressData, setProgressData] = useState<any[]>([])
   const [challengeProgressData, setChallengeProgressData] = useState<any[]>([]) // Store challenge-only progress data
   const [currentDay, setCurrentDay] = useState(1)
@@ -90,6 +91,7 @@ export default function Home() {
   const [editDayModalOpen, setEditDayModalOpen] = useState(false)
   const [selectedEditDate, setSelectedEditDate] = useState<string | null>(null)
   const [selectedEditSquats, setSelectedEditSquats] = useState(0)
+  const [selectedEditExerciseBreakdown, setSelectedEditExerciseBreakdown] = useState<string | null | undefined>(undefined)
   const [modalOpenedFromChart, setModalOpenedFromChart] = useState(false)
   const [bugReportModalOpen, setBugReportModalOpen] = useState(false)
 
@@ -406,9 +408,10 @@ export default function Home() {
       // Load from Supabase
       try {
         // Load both datasets in parallel for better consistency
-        const [recentResult, challengeResult] = await Promise.all([
+        const [recentResult, challengeResult, todayExerciseBreakdownResult] = await Promise.all([
           database.getUserProgress(user.id, 7),
-          database.getChallengeProgress(user.id)
+          database.getChallengeProgress(user.id),
+          database.getExerciseBreakdownForDate(user.id, currentDate)
         ])
 
         let todaySquatsFromData = 0
@@ -458,6 +461,7 @@ export default function Home() {
 
         // Set today's squats from the most authoritative source
         setTodaySquats(todaySquatsFromData)
+        setTodayExerciseBreakdown(todayExerciseBreakdownResult)
       } catch (error) {
         console.error("❌ Error loading Supabase data:", error)
         if (DISABLE_OFFLINE_MODE) {
@@ -466,14 +470,17 @@ export default function Home() {
           setTodaySquats(0)
           setProgressData([])
           setChallengeProgressData([])
+          setTodayExerciseBreakdown(undefined)
         } else {
           // Fallback to local storage
           loadLocalData(freshDailyTargets)
+          setTodayExerciseBreakdown(undefined)
         }
       }
     } else {
       // Load from local storage
       loadLocalData(freshDailyTargets)
+      setTodayExerciseBreakdown(undefined)
     }
   }, [dataSource, user, currentDate, currentDay])
 
@@ -862,10 +869,12 @@ export default function Home() {
         }
 
         // Reload both challenge progress AND recent progress to update all displays
-        const [challengeResult, recentResult] = await Promise.all([
+        const [challengeResult, recentResult, todayExerciseBreakdownResult] = await Promise.all([
           database.getChallengeProgress(user.id),
-          database.getUserProgress(user.id, 7)
+          database.getUserProgress(user.id, 7),
+          database.getExerciseBreakdownForDate(user.id, currentDate)
         ])
+        setTodayExerciseBreakdown(todayExerciseBreakdownResult)
 
         // Update challenge progress data for stats
         if (challengeResult.data) {
@@ -1001,6 +1010,10 @@ export default function Home() {
     setSelectedEditSquats(currentSquats)
     setModalOpenedFromChart(true)
     setEditDayModalOpen(true)
+    setSelectedEditExerciseBreakdown(undefined)
+    if (dataSource === "supabase" && user) {
+      database.getExerciseBreakdownForDate(user.id, date).then(setSelectedEditExerciseBreakdown)
+    }
   }
 
   // Handle saving edited day squats
@@ -1050,7 +1063,8 @@ export default function Home() {
         // If editing today's date, update today's squats and check milestones
         if (date === currentDate) {
           setTodaySquats(squats)
-          
+          setTodayExerciseBreakdown(await database.getExerciseBreakdownForDate(user.id, currentDate))
+
           // Check for new milestones and show encouragement messages for today's edits
           const newMilestones = getNewMilestones(squats, target, todayMilestones)
           newMilestones.forEach(milestone => {
@@ -1876,6 +1890,7 @@ export default function Home() {
                     currentDay={displayDay}
                     compact={false}
                     exerciseLabel={exercise}
+                    exerciseBreakdown={todayExerciseBreakdown}
                   />
                 </CardContent>
               </Card>
@@ -1923,6 +1938,7 @@ export default function Home() {
           initialGoalMode={(challengeProgressData.find((p) => p.date === selectedEditDate)?.goal_mode as 'full' | 'half') ?? 'full'}
           canAddCustom={dataSource === "supabase" && !!user}
           userId={user?.id}
+          exerciseBreakdown={selectedEditExerciseBreakdown}
         />
 
         {/* Bug Report Modal */}

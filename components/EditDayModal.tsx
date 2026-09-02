@@ -24,6 +24,7 @@ interface EditDayModalProps {
   initialGoalMode?: 'full' | 'half';
   canAddCustom: boolean;
   userId?: string;
+  exerciseBreakdown?: string | null;
 }
 
 export function EditDayModal({
@@ -37,7 +38,8 @@ export function EditDayModal({
   initialExercise,
   initialGoalMode,
   canAddCustom,
-  userId
+  userId,
+  exerciseBreakdown
 }: EditDayModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [exercise, setExercise] = useState(initialExercise ?? DEFAULT_EXERCISE);
@@ -159,6 +161,7 @@ export function EditDayModal({
                 compact={false}
                 hideTip={openedFromChart}
                 exerciseLabel={exercise}
+                exerciseBreakdown={exerciseBreakdown}
               />
             </div>
           )}
